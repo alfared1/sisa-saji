@@ -20,7 +20,10 @@
     "db:verify": "tsx scripts/db-verify.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "worker": "tsx scripts/worker.ts",
+    "dev:all": "concurrently -k -n web,worker -c green,yellow \"next dev\" \"npm run worker\"",
+    "ml:train": "tsx scripts/ml-run.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",
