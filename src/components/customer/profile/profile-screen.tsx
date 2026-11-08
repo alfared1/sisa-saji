@@ -1,0 +1,360 @@
+"use client";
+
+/**
+ * /profile — Akun: name & campus edit (PATCH /profile), notifications,
+ * shortcuts, "Daftar jadi Mitra Warung", install app, logout.
+ */
+import { useState, type ComponentType, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  DownloadIcon,
+  GraduationCapIcon,
+  HeartIcon,
+  LeafIcon,
+  Loader2Icon,
+  LogOutIcon,
+  MailIcon,
+  PencilIcon,
+  PhoneIcon,
+  ReceiptTextIcon,
+  ShareIcon,
+  SmartphoneIcon,
+  StoreIcon,
+  UserRoundIcon,
+} from "lucide-react";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { ShellHeader } from "@/components/shell/customer-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import { useSession, useSetSessionUser } from "@/hooks/use-session";
+import { ApiClientError, api } from "@/lib/api/client";
+import { CAMPUSES } from "@/lib/constants";
+import type { ProfileUpdateBody, SessionUser } from "@/lib/contracts";
+import { cn } from "@/lib/utils";
+import { useLocationStore } from "@/stores/location";
+import { useTicketsStore } from "@/stores/tickets";
+import { LoginCta, TabTitle } from "../bits";
+import { PushOptIn } from "../impact/impact-screen";
+import { badgeLabel } from "../lib/format";
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function LinkRow({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  tint = "bg-muted text-foreground/80",
+  onClick,
+  trailing,
+}: {
+  href?: string;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  hint?: string;
+  tint?: string;
+  onClick?: () => void;
+  trailing?: ReactNode;
+}) {
+  const inner = (
+    <>
+      <span className={cn("inline-flex size-10 shrink-0 items-center justify-center rounded-xl", tint)}>
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        {hint && <span className="block truncate text-xs text-muted-foreground">{hint}</span>}
+      </span>
+      {trailing ?? <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />}
+    </>
+  );
+  const cls =
+    "flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:bg-muted/60";
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {inner}
+    </button>
+  );
+}
+
+function InstallRow() {
+  const { canInstall, showIOSHint, isStandalone, promptInstall } = useInstallPrompt();
+  const [showHint, setShowHint] = useState(false);
+  if (isStandalone) {
+    return (
+      <LinkRow
+        icon={SmartphoneIcon}
+        label="Aplikasi sudah terpasang"
+        hint="Kamu memakai Sisa-Saji versi aplikasi"
+        tint="bg-brand-soft text-primary"
+        trailing={<CheckIcon className="size-5 text-primary" />}
+      />
+    );
+  }
+  return (
+    <>
+      <LinkRow
+        icon={DownloadIcon}
+        label="Pasang aplikasi"
+        hint={canInstall ? "Buka lebih cepat dari layar utama, tiket tetap bisa offline" : "Tambahkan ke layar utama HP-mu"}
+        tint="bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
+        onClick={async () => {
+          if (canInstall) {
+            const r = await promptInstall();
+            if (r === "accepted") toast.success("Sisa-Saji dipasang!");
+          } else setShowHint((v) => !v);
+        }}
+      />
+      {showHint && (
+        <p className="mx-4 mb-3 flex items-start gap-2 rounded-2xl bg-muted p-3 text-xs leading-relaxed">
+          <ShareIcon className="mt-0.5 size-4 shrink-0" />
+          {showIOSHint
+            ? "Di Safari, ketuk tombol Bagikan lalu pilih “Tambahkan ke Layar Utama”."
+            : "Buka menu browser (⋮) lalu pilih “Instal aplikasi” atau “Tambahkan ke layar utama”."}
+        </p>
+      )}
+    </>
+  );
+}
+
+function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void }) {
+  const setSessionUser = useSetSessionUser();
+  const setCampus = useLocationStore((s) => s.setCampus);
+  const [name, setName] = useState(user.full_name);
+  const initialCampus = CAMPUSES.find((c) => c.name === user.campus_or_area)?.id ?? null;
+  const [campus, setCampusId] = useState<string | null>(initialCampus);
+  const [error, setError] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: (body: ProfileUpdateBody) => api.patch<{ user: SessionUser }>("/profile", body),
+    onSuccess: ({ user: u }) => {
+      setSessionUser(u);
+      const c = CAMPUSES.find((x) => x.id === campus);
+      if (c && c.id !== initialCampus) setCampus(c.id);
+      toast.success("Profil disimpan");
+      onDone();
+    },
+    onError: (err) => setError(err instanceof ApiClientError ? err.message : "Gagal menyimpan profil."),
+  });
+
+  return (
+    <form
+      className="space-y-4 border-t border-border p-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const trimmed = name.trim();
+        if (trimmed.length < 2) {
+          setError("Nama minimal 2 huruf.");
+          return;
+        }
+        const c = CAMPUSES.find((x) => x.id === campus);
+        save.mutate({
+          full_name: trimmed,
+          campus_or_area: c?.name ?? user.campus_or_area ?? null,
+          ...(c ? { default_lat: c.lat, default_lng: c.lng } : {}),
+        });
+      }}
+    >
+      <div className="space-y-1.5">
+        <label htmlFor="profile-name" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Nama lengkap
+        </label>
+        <Input
+          id="profile-name"
+          value={name}
+          maxLength={120}
+          autoComplete="name"
+          onChange={(e) => {
+            setName(e.target.value);
+            setError(null);
+          }}
+          className="h-12 rounded-2xl text-base"
+          aria-invalid={error ? true : undefined}
+        />
+      </div>
+      <fieldset>
+        <legend className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Kampus</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {CAMPUSES.map((c) => {
+            const active = campus === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setCampusId(c.id)}
+                className={cn(
+                  "flex min-h-11 items-center gap-2 rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  active ? "bg-brand-soft ring-primary/50" : "bg-card ring-border hover:bg-muted",
+                )}
+              >
+                <GraduationCapIcon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+                <span className="truncate">{c.name}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">Kampus juga dipakai sebagai titik pencarian default.</p>
+      </fieldset>
+      {error && (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {error}
+        </p>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" variant="outline" className="h-11 rounded-full" onClick={onDone} disabled={save.isPending}>
+          Batal
+        </Button>
+        <Button type="submit" className="h-11 rounded-full font-bold" disabled={save.isPending}>
+          {save.isPending && <Loader2Icon className="animate-spin" />} Simpan
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function ProfileScreen() {
+  const session = useSession();
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const user = session.user;
+
+  return (
+    <>
+      <ShellHeader>
+        <TabTitle title="Akun" subtitle="Profil, notifikasi & pengaturan" />
+      </ShellHeader>
+
+      <div className="flex flex-col gap-4 px-4 pt-4 pb-6">
+        {session.isLoading ? (
+          <Skeleton className="h-36 w-full rounded-3xl" />
+        ) : !user ? (
+          <div className="rounded-3xl bg-card shadow-soft ring-1 ring-border">
+            <LoginCta
+              title="Masuk ke Sisa-Saji"
+              description="Simpan tiket pengambilan, lacak dampakmu, dan ikuti warung favorit."
+              next="/profile"
+              icon={<UserRoundIcon className="size-9 text-primary" />}
+              className="py-10"
+            />
+          </div>
+        ) : (
+          <section className="overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
+            <div className="flex items-center gap-3 p-4">
+              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-brand-strong text-lg font-extrabold text-primary-foreground">
+                {initials(user.full_name) || "S"}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-extrabold">{user.full_name}</p>
+                <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                  {user.phone_number ? <PhoneIcon className="size-3" /> : <MailIcon className="size-3" />}
+                  {user.phone_number ?? user.email}
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-primary">
+                    <LeafIcon className="size-3" /> {badgeLabel(user.badge_tier)}
+                  </span>
+                  {user.campus_or_area && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold">
+                      <GraduationCapIcon className="size-3" /> {user.campus_or_area}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {!editing && (
+                <Button
+                  variant="outline"
+                  size="icon-lg"
+                  className="size-10 shrink-0 rounded-full"
+                  onClick={() => setEditing(true)}
+                  aria-label="Ubah profil"
+                >
+                  <PencilIcon className="size-4" />
+                </Button>
+              )}
+            </div>
+            {editing && <ProfileEditor user={user} onDone={() => setEditing(false)} />}
+          </section>
+        )}
+
+        {user && (
+          <section aria-label="Notifikasi" className="space-y-2">
+            <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notifikasi</h2>
+            <PushOptIn />
+          </section>
+        )}
+
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Menu</h2>
+          <div className="divide-y divide-border overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
+            <LinkRow href="/orders" icon={ReceiptTextIcon} label="Pesanan saya" hint="Tiket pengambilan & riwayat" />
+            <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" tint="bg-brand-soft text-primary" />
+            <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & prediksi AI" tint="bg-urgent-soft text-urgent" />
+            {user?.merchant_id ? (
+              <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" tint="bg-deal-soft text-deal" />
+            ) : (
+              <LinkRow
+                href={user ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}
+                icon={StoreIcon}
+                label="Daftar jadi Mitra Warung"
+                hint="Jual porsi surplus, kurangi makanan terbuang"
+                tint="bg-deal-soft text-deal"
+              />
+            )}
+            <InstallRow />
+          </div>
+        </section>
+
+        {user && (
+          <Button
+            variant="ghost"
+            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+            onClick={() => setConfirmLogout(true)}
+          >
+            <LogOutIcon className="size-4" /> Keluar
+          </Button>
+        )}
+        <p className="text-center text-[11px] text-muted-foreground">Sisa-Saji · Selamatkan makanan, hemat uang</p>
+      </div>
+
+      <ConfirmDialog
+        open={confirmLogout}
+        onOpenChange={setConfirmLogout}
+        destructive
+        icon={<LogOutIcon className="size-7" />}
+        title="Keluar dari akun?"
+        description="Tiket offline di perangkat ini juga akan dihapus."
+        confirmLabel="Keluar"
+        loading={session.isLoggingOut}
+        onConfirm={async () => {
+          await session.logout();
+          useTicketsStore.getState().clear();
+          setConfirmLogout(false);
+          toast("Kamu sudah keluar");
+          router.replace("/welcome");
+        }}
+      />
+    </>
+  );
+}
