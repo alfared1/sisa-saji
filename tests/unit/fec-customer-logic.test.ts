@@ -311,3 +311,20 @@ describe("formatting", () => {
     expect(lastMonths(months).map((m) => m.month)).toEqual(["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"]);
   });
 });
+
+describe("fair-use checkout responses", async () => {
+  const { unpaidOrderHref, perBuyerCaps } = await import("@/components/customer/lib/checkout-logic");
+  it("links to the unpaid order at the same warung", () => {
+    expect(unpaidOrderHref("CONFLICT", { order_id: "abc", order_number: "SS-1" })).toBe("/orders/abc");
+    expect(unpaidOrderHref("CONFLICT", { pending_order_ids: ["a", "b"] })).toBe("/orders");
+    expect(unpaidOrderHref("CONFLICT", undefined)).toBeNull();
+    expect(unpaidOrderHref("OUT_OF_STOCK", { order_id: "abc" })).toBeNull();
+  });
+  it("reads per-buyer caps from validation details", () => {
+    expect(perBuyerCaps("VALIDATION_ERROR", [{ path: "items", batch_id: "b1", max_quantity: 3 }])).toEqual([
+      { batch_id: "b1", max_quantity: 3 },
+    ]);
+    expect(perBuyerCaps("VALIDATION_ERROR", [{ path: "items", message: "x" }])).toEqual([]);
+    expect(perBuyerCaps("CONFLICT", [{ batch_id: "b1", max_quantity: 3 }])).toEqual([]);
+  });
+});

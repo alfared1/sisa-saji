@@ -96,3 +96,28 @@ export function impactShareText(args: { foodKg: string; co2Kg: string; saved: st
     `Mencegah ${args.co2Kg} CO₂e dan hemat ${args.saved}. Yuk ikut selamatkan makanan di sekitar kampus!`
   );
 }
+
+/**
+ * Fair-use responses from POST /orders/checkout:
+ *  - 409 CONFLICT { order_id } = an unpaid order at this warung already exists
+ *  - 409 CONFLICT { pending_order_ids } = too many unpaid orders overall
+ * Returns where to send the customer to finish or cancel them, else null.
+ */
+export function unpaidOrderHref(code: string, details: unknown): string | null {
+  if (code !== "CONFLICT" || !details || typeof details !== "object") return null;
+  const d = details as { order_id?: unknown; pending_order_ids?: unknown };
+  if (typeof d.order_id === "string") return `/orders/${d.order_id}`;
+  if (Array.isArray(d.pending_order_ids)) return "/orders";
+  return null;
+}
+
+/** 400 VALIDATION_ERROR per-buyer cap: [{ path: "items", batch_id, max_quantity }]. */
+export function perBuyerCaps(code: string, details: unknown): { batch_id: string; max_quantity: number }[] {
+  if (code !== "VALIDATION_ERROR" || !Array.isArray(details)) return [];
+  return details.flatMap((d) =>
+    d && typeof d === "object" && typeof (d as { batch_id?: unknown }).batch_id === "string" &&
+    typeof (d as { max_quantity?: unknown }).max_quantity === "number"
+      ? [{ batch_id: (d as { batch_id: string }).batch_id, max_quantity: (d as { max_quantity: number }).max_quantity }]
+      : [],
+  );
+}

@@ -44,7 +44,7 @@ test.describe("OTP auth", () => {
     // Logout from the profile page.
     await page.goto("/profile");
     await page.getByRole("button", { name: "Keluar" }).first().click();
-    await page.getByRole("dialog", { name: "Keluar dari akun?" }).getByRole("button", { name: "Keluar" }).click();
+    await page.getByRole("alertdialog", { name: "Keluar dari akun?" }).getByRole("button", { name: "Keluar" }).click();
     await expect
       .poll(async () => ((await (await page.request.get("/api/v1/auth/me")).json()) as typeof body).data.user)
       .toBeNull();

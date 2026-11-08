@@ -28,7 +28,7 @@ export const GET = handle(async (req) => {
   await connection();
   const { merchantId } = await requireMerchant();
   const db = getDb();
-  let cursor = resumeCursor(req.headers.get("last-event-id"), Date.now()) ?? Date.now();
+  let cursor = resumeCursor(req.headers.get("last-event-id") ?? new URL(req.url).searchParams.get("last_event_id"), Date.now()) ?? Date.now();
   const seen = new Map<string, number>(); // event key → event time (pruned past the overlap window)
 
   const encoder = new TextEncoder();

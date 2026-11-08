@@ -37,7 +37,7 @@ import { useStoresHydrated } from "@/stores/hydration";
 import { useLocationStore } from "@/stores/location";
 import { QtyStepper } from "../bits";
 import { useBatchStream } from "../hooks/use-batch-stream";
-import { checkoutErrorAction, previewTotals } from "../lib/checkout-logic";
+import { checkoutErrorAction, perBuyerCaps, previewTotals, unpaidOrderHref } from "../lib/checkout-logic";
 import { generatePickupSlots } from "../lib/pickup-slots";
 import { cartPatchFromBatch, customerKeys } from "../lib/queries";
 import {
@@ -198,8 +198,19 @@ export function CheckoutScreen() {
         case "login":
           router.replace("/auth/login?next=%2Fcheckout");
           break;
-        default:
-          toast.error(err.message);
+        default: {
+          // Fair-use limits (unpaid order waiting / per-buyer portion cap).
+          const href = unpaidOrderHref(err.code, err.details);
+          const caps = perBuyerCaps(err.code, err.details);
+          if (href) {
+            toast.error(err.message, { action: { label: "Lihat pesanan", onClick: () => router.push(href) } });
+          } else if (caps.length) {
+            for (const c of caps) updateItem(c.batch_id, { max_quantity: c.max_quantity, quantity: c.max_quantity });
+            toast.error(err.message, { description: "Jumlah porsi sudah disesuaikan dengan batas per pembeli." });
+          } else {
+            toast.error(err.message);
+          }
+        }
       }
     },
   });

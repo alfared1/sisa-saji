@@ -26,7 +26,7 @@ test("cart: two items, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay
   // Another warung → guard dialog; "Batal" keeps the original cart.
   await page.goto(`/warung/${other.slug}`);
   await page.getByRole("button", { name: `Tambah ${other.batches[0].menu_name} ke keranjang` }).click();
-  const guard = page.getByRole("dialog", { name: "Ganti warung?" });
+  const guard = page.getByRole("alertdialog", { name: "Ganti warung?" });
   await expect(guard).toBeVisible();
   await guard.getByRole("button", { name: "Batal" }).click();
   await expect(guard).toBeHidden();

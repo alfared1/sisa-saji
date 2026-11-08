@@ -28,6 +28,18 @@ export async function clearUserDeviceData(): Promise<void> {
   await clearPrivateCaches();
 }
 
+/** This device's Web Push endpoint, or null (no SW, no subscription, or unsupported). */
+async function currentPushEndpoint(): Promise<string | null> {
+  try {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return null;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager?.getSubscription();
+    return sub?.endpoint ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type SessionState = {
   user: SessionUser | null;
   /** True until the first /auth/me response (or error). */
@@ -52,7 +64,12 @@ export function useSession(): SessionState {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: () => api.post<{ ok: true }>("/auth/logout"),
+    mutationFn: async () => {
+      // Tell the server which push subscription this device holds, so it stops
+      // sending the logged-out user's notifications here.
+      const pushEndpoint = await currentPushEndpoint();
+      return api.post<{ ok: true }>("/auth/logout", pushEndpoint ? { push_endpoint: pushEndpoint } : {});
+    },
     onSettled: async () => {
       // Every logout path (customer profile, merchant sidebar, merchant settings).
       await clearUserDeviceData();

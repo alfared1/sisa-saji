@@ -166,7 +166,7 @@ Struktur folder lengkap ada di catatan developer.
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest sekali jalan (unit + integration) |
 | `npm run test:watch` | Vitest mode watch |
-| `npm run test:e2e` | Playwright end-to-end (sedang ditambahkan) |
+| `npm run test:e2e` | Playwright end-to-end: 18 test di build produksi (DB dan server sendiri) |
 | `npm run db:local` | PostgreSQL + PostGIS lokal (PGlite) di port 5433 |
 | `npm run db:generate` | Membuat migrasi SQL dari `src/db/schema.ts` |
 | `npm run db:migrate` | Menerapkan migrasi di `./drizzle` |
@@ -199,7 +199,13 @@ npm run test                # Vitest: unit + integration (PostGIS in-memory otom
 npm run typecheck && npm run lint
 ```
 
-Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan stok paralel (tanpa overselling), eskalasi diskon, alur pembayaran + webhook, dan verifikasi pickup. Pengujian end-to-end Playwright (`npm run test:e2e`) sedang ditambahkan.
+Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan stok paralel (tanpa overselling), eskalasi diskon, alur pembayaran + webhook, dan verifikasi pickup.
+
+```bash
+npm run test:e2e            # Playwright: 18 test, 11 skenario, di build produksi
+```
+
+`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan AI, onboarding mitra, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada.
 
 ---
 
@@ -247,6 +253,8 @@ Mengganti secret membuat semua sesi logout dan QR tiket lama tidak berlaku; seed
 14. **Service worker ditulis tangan** (`public/sw.js`) alih-alih plugin PWA, supaya caching tiket offline dan Web Push bisa dikontrol penuh dengan Next.js 16.
 15. **OTP mode development**: kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`) karena belum ada provider WhatsApp/SMS.
 16. **Pembayaran tersimulasi**: QRIS dinamis berformat EMVCo + CRC16 dan webhook bertanda tangan HMAC-SHA512 asli, tetapi pembayarannya dipicu tombol "Simulasi Bayar (Demo)" (`PAYMENT_PROVIDER=simulator`).
+17. **Fair-use checkout**: maksimal 1 pesanan belum dibayar per warung dan 2 secara total, serta batas porsi per pembeli per batch `max(3, ceil(stok awal / 2))`. Tujuannya mencegah satu akun mengunci seluruh stok surplus.
+18. **Pesanan tidak diambil** sampai 30 menit setelah batas waktu menjadi `EXPIRED`. Warung tetap dibayar sekali, dan pembeli tidak mendapat kredit dampak.
 
 ---
 

@@ -37,7 +37,7 @@ export async function GET(req: Request) {
   const db = getDb();
   let state: BatchStreamState;
   try {
-    state = newBatchStreamState(validCursor(req.headers.get("last-event-id")) ?? (await currentCursor(db)));
+    state = newBatchStreamState(validCursor(req.headers.get("last-event-id") ?? new URL(req.url).searchParams.get("last_event_id")) ?? (await currentCursor(db)));
   } catch (err) {
     console.error("[sse] stream/batches: database unavailable", err);
     return fail("DB_UNAVAILABLE", "Database tidak dapat dihubungi");

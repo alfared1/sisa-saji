@@ -43,7 +43,7 @@ import { QtyStepper } from "../bits";
 import { FoodThumb } from "../food-thumb";
 import { formatDistance } from "../lib/format";
 import { cartItemFromBatch, cartMerchantFromBatch, customerKeys } from "../lib/queries";
-import { previewTotals } from "../lib/checkout-logic";
+import { previewTotals, unpaidOrderHref } from "../lib/checkout-logic";
 import { clampQuickOrderQty, quickOrderBody, quickOrderError, quickOrderLoginUrl, quickOrderMaxQty } from "./quick-order-logic";
 
 export type QuickOrderOptions = {
@@ -222,8 +222,23 @@ function QuickOrderBody({
           onClose();
           refreshLists();
           return;
-        default:
+        default: {
+          // Fair-use limit: an unpaid order is already waiting — offer to open it.
+          const href = unpaidOrderHref(err.code, err.details);
+          if (href) {
+            toast.error(err.message, {
+              action: {
+                label: "Lihat pesanan",
+                onClick: () => {
+                  onClose();
+                  router.push(href);
+                },
+              },
+            });
+            return;
+          }
           toast.error(e.title, { description: e.description });
+        }
       }
     },
   });
