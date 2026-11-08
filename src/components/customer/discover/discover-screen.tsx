@@ -52,6 +52,7 @@ import { GuestImpactBanner, ImpactCard } from "../impact-card";
 import { MerchantCard } from "../merchant-card";
 import { deriveDiscoverSections, nextRadius } from "../lib/discover-sections";
 import { customerKeys } from "../lib/queries";
+import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 type Sort = (typeof DISCOVER_SORTS)[number];
 const SORT_LABELS: Record<Sort, string> = {
@@ -213,6 +214,9 @@ export function DiscoverScreen() {
   useBatchStream({ lat: params.lat, lng: params.lng, radiusM: params.radius_m, enabled: hydrated });
 
   const sections = useMemo(() => deriveDiscoverSections(query.data, now), [query.data, now]);
+  const allBatches = useMemo(() => (query.data?.merchants ?? []).flatMap((m) => m.batches), [query.data]);
+  // Quick order (≤ 3 steps): tap a card → sheet → "Pesan & Ambil Sendiri" → QRIS.
+  const { openQuickOrder, sheet } = useQuickOrder(allBatches);
   const loading = !hydrated || (query.isPending && !query.data);
   const filtered = Boolean(category || q);
   const bigger = nextRadius(params.radius_m, RADIUS_OPTIONS);
@@ -341,7 +345,13 @@ export function DiscoverScreen() {
                 />
                 <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
                   {sections.urgent.map((b) => (
-                    <DealTile key={b.batch_id} batch={b} onAdd={addToCart} width="w-52" />
+                    <DealTile
+                      key={b.batch_id}
+                      batch={b}
+                      onAdd={addToCart}
+                      onOpenDetail={() => openQuickOrder(b)}
+                      width="w-52"
+                    />
                   ))}
                 </div>
               </section>
@@ -358,7 +368,7 @@ export function DiscoverScreen() {
                 />
                 <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
                   {sections.under10k.map((b) => (
-                    <DealTile key={b.batch_id} batch={b} onAdd={addToCart} />
+                    <DealTile key={b.batch_id} batch={b} onAdd={addToCart} onOpenDetail={() => openQuickOrder(b)} />
                   ))}
                 </div>
               </section>
@@ -392,6 +402,7 @@ export function DiscoverScreen() {
         )}
       </div>
       {dialog}
+      {sheet}
     </>
   );
 }

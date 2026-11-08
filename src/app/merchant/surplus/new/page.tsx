@@ -4,8 +4,6 @@ import { SurplusPublisherView } from "@/components/merchant/publisher/publisher-
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Publikasi Surplus" };
-/** Rendered behind the client MerchantGuard (session splash), so never instant. */
-export const instant = false;
 
 export default function SurplusNewPage() {
   return (

@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import {
   OSM_ATTRIBUTION,
   OSM_TILE_URL,
+  pinBadge,
+  pinClassName,
   pinHtml,
   pinState,
   zoomForRadius,
@@ -93,25 +95,29 @@ function SurplusPinMarker({
   onClick?: (id: string) => void;
 }) {
   const state = pinState(marker, nowMs);
-  const icon = useMemo(
-    () =>
-      L.divIcon({
-        className: cn("ss-pin", `ss-pin--${state}`, selected && "ss-pin--selected"),
-        html: pinHtml(marker, state),
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      }),
-    [marker, state, selected],
-  );
+  const badge = pinBadge(marker, nowMs);
+  const variant = badge?.variant ?? null;
+  const pulse = badge?.pulse ?? false;
+  const icon = useMemo(() => {
+    // Rebuilt only when the visible state changes (variant / pulse), not every tick.
+    const b = pinBadge(marker, nowMs);
+    return L.divIcon({
+      className: pinClassName(state, b, selected),
+      html: pinHtml(marker, state, b),
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nowMs only matters through state/variant/pulse
+  }, [marker, state, variant, pulse, selected]);
   const handlers = useMemo(() => ({ click: () => onClick?.(marker.id) }), [onClick, marker.id]);
   return (
     <Marker
       position={[marker.lat, marker.lng]}
       icon={icon}
       eventHandlers={handlers}
-      title={`${marker.name}: diskon ${Math.round(marker.discount_pct)}%, sisa ${marker.stock} porsi`}
+      title={`${marker.name}: ${badge ? badge.label : `diskon ${Math.round(marker.discount_pct)}%`}, sisa ${marker.stock} porsi`}
       alt={marker.name}
-      zIndexOffset={selected ? 1000 : state === "urgent" ? 500 : 0}
+      zIndexOffset={selected ? 1000 : pulse ? 500 : 0}
       riseOnHover
     />
   );
@@ -139,6 +145,10 @@ export default function SurplusMapInner({
       <MapContainer
         center={[center.lat, center.lng]}
         zoom={zoomForRadius(radiusM)}
+        // Fractional zoom so fitBounds can make the radius circle fill a phone screen.
+        zoomSnap={0.25}
+        zoomDelta={0.5}
+        wheelPxPerZoomLevel={120}
         zoomControl={false}
         attributionControl
         className="h-full w-full"

@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
-/** Rendered behind the client MerchantGuard (session splash), so never instant. */
+/**
+ * Redirect-only segment: it never renders UI, so instant-navigation validation has nothing to check
+ * (it would only report the NEXT_REDIRECT as "an error prevented the target segment from rendering").
+ */
 export const instant = false;
 
 /** /merchant → the command center (the layout guard handles login & onboarding). */

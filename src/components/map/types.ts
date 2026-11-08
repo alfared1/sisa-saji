@@ -1,6 +1,12 @@
 /**
  * Map data shapes + pure helpers (no Leaflet import, safe for SSR and tests).
  */
+import {
+  DISCOUNT_COLORS,
+  discountBadgeState,
+  minutesUntil,
+  type DiscountBadgeState,
+} from "@/components/common/discount-logic";
 import type { MapPin, MerchantSummary } from "@/lib/contracts";
 
 export type LatLng = { lat: number; lng: number };
@@ -78,14 +84,46 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 }
 
-/** HTML for the Leaflet DivIcon: "-60%" bubble + "Sisa 3", coloured by urgency. */
-export function pinHtml(marker: SurplusMapMarker, state: PinState): string {
+/**
+ * Discount badge of an open pin — the same "Hemat N%" / "Flash Rescue N%"
+ * rule as <DiscountBadge /> (Flash at ≥ 70 % or < 45 min to close; pulses
+ * only < 45 min). Null for closed / sold-out pins and pins without discount.
+ */
+export function pinBadge(
+  marker: Pick<SurplusMapMarker, "discount_pct" | "stock" | "closes_at">,
+  nowMs: number | null,
+): DiscountBadgeState | null {
+  if (pinState(marker, nowMs) === "closed" || marker.discount_pct <= 0) return null;
+  return discountBadgeState(marker.discount_pct, minutesUntil(marker.closes_at, nowMs));
+}
+
+/** Leaflet DivIcon class names: state + Hemat/Flash variant + pulse. */
+export function pinClassName(state: PinState, badge: DiscountBadgeState | null, selected: boolean): string {
+  return [
+    "ss-pin",
+    `ss-pin--${state}`,
+    badge && `ss-pin--${badge.variant}`,
+    badge?.pulse && "ss-pin--pulse",
+    selected && "ss-pin--selected",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
+ * HTML for the Leaflet DivIcon: discount bubble + "Sisa 3". With `badge`
+ * (see pinBadge) the bubble reads "Hemat 50%" / "Flash 70%" in the badge
+ * colours; without it, the legacy "-60%" coloured by urgency state.
+ */
+export function pinHtml(marker: SurplusMapMarker, state: PinState, badge: DiscountBadgeState | null = null): string {
   const pct = Math.round(marker.discount_pct);
   const stockLabel = state === "closed" ? (marker.stock <= 0 ? "Habis" : "Tutup") : `Sisa ${marker.stock}`;
+  const color = badge ? DISCOUNT_COLORS[badge.variant] : PIN_COLOR_VAR[state];
+  const pctLabel = badge ? badge.shortLabel : pct > 0 ? `-${pct}%` : "Baru";
   return (
-    `<div class="ss-pin__wrap" style="--pin-color:${PIN_COLOR_VAR[state]}" title="${escapeHtml(marker.name)}">` +
+    `<div class="ss-pin__wrap" style="--pin-color:${color}" title="${escapeHtml(marker.name)}">` +
     `<div class="ss-pin__body">` +
-    `<span class="ss-pin__pct">${pct > 0 ? `-${pct}%` : "Baru"}</span>` +
+    `<span class="ss-pin__pct">${pctLabel}</span>` +
     `<span class="ss-pin__stock">${stockLabel}</span>` +
     `</div><div class="ss-pin__tail"></div></div>`
   );

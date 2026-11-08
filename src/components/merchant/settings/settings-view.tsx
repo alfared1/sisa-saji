@@ -44,7 +44,7 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
     (values) =>
       update.mutate(profilePayload(values), {
         onSuccess: (res) => {
-          form.reset({ ...profileToFormValues(res.merchant), bank_code: values.bank_code ?? "", bank_account_number: values.bank_account_number ?? "", bank_account_holder: values.bank_account_holder ?? "" });
+          form.reset(profileToFormValues(res.merchant));
           toast.success("Profil warung disimpan");
         },
       }),
@@ -62,8 +62,8 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
       <SectionCard title="Jam operasional" icon={ClockIcon}>
         <HoursSection form={form} idPrefix="set" />
       </SectionCard>
-      <SectionCard title="Pencairan dana" icon={LandmarkIcon} description="Data rekening tidak ditampilkan ulang demi keamanan. Isi untuk mengganti.">
-        <BankSection form={form} idPrefix="set" />
+      <SectionCard title="Pencairan dana" icon={LandmarkIcon} description="Nomor rekening tidak ditampilkan ulang demi keamanan.">
+        <BankSection form={form} idPrefix="set" savedNumberMasked={merchant.bank_account_number_masked} />
       </SectionCard>
 
       <div

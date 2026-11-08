@@ -45,7 +45,8 @@ async function main() {
       ? async () => {
           const { exitCode } = await ml.runMlTraining({
             databaseUrl,
-            onLine: (line) => log(`[ml] ${line}`),
+            // train_predict.py already tags its own lines with "[ml]".
+            onLine: (line) => log(line.startsWith("[ml]") ? line : `[ml] ${line}`),
           });
           return exitCode;
         }

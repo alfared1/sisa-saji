@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import { BrainCircuitIcon, Loader2Icon, ShieldCheckIcon, SlidersHorizontalIcon, UsersIcon, XIcon } from "lucide-react";
-import { DiscountBadge, discountTone } from "@/components/common/discount-badge";
+import { DISCOUNT_VARIANT_CLASS, DiscountBadge, discountBadgeState } from "@/components/common/discount-badge";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { EscalationStep, QuoteAiResponse } from "@/lib/contracts";
@@ -49,7 +49,8 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
       <figcaption className="mb-2 text-xs font-bold text-muted-foreground">Kurva harga otomatis</figcaption>
       <ol className="flex items-end gap-1.5" aria-label="Jadwal diskon">
         {steps.map((s, i) => {
-          const tone = discountTone(s.discount_pct);
+          // Same Hemat / Flash Rescue colours as the customer-facing badge (dev guide §7).
+          const variant = discountBadgeState(s.discount_pct, s.minutes_to_close).variant;
           const h = 28 + (s.discount_pct / maxPct) * 56;
           return (
             <li key={s.time} className="flex min-w-0 flex-1 flex-col items-center gap-1">
@@ -57,7 +58,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
               <span
                 className={cn(
                   "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-bold text-white tabular-nums transition-[height] duration-500",
-                  tone === "hot" ? "bg-urgent" : tone === "deal" ? "bg-deal" : "bg-primary",
+                  DISCOUNT_VARIANT_CLASS[variant],
                   i === 0 && "ring-2 ring-foreground/80 ring-offset-2 ring-offset-card",
                 )}
                 style={{ height: h }}

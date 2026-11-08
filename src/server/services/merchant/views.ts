@@ -6,6 +6,13 @@ import { buildEscalationSchedule, nextEscalation } from "@/server/services/escal
 
 const hhmm = (t: string) => t.slice(0, 5);
 
+/** "1234566789" → "••••6789"; null/blank → null. The full number never leaves the server. */
+export function maskAccountNumber(n: string | null | undefined): string | null {
+  const compact = (n ?? "").replace(/\s+/g, "");
+  if (!compact) return null;
+  return `••••${compact.slice(-4)}`;
+}
+
 export function toMerchantProfile(m: Merchant): MerchantProfile {
   return {
     id: m.id,
@@ -30,6 +37,9 @@ export function toMerchantProfile(m: Merchant): MerchantProfile {
     historical_conversion_rate: Number(m.historicalConversionRate),
     logo_url: m.logoUrl,
     banner_url: m.bannerUrl,
+    bank_code: m.bankCode?.trim() || null,
+    bank_account_holder: m.bankAccountHolder?.trim() || null,
+    bank_account_number_masked: maskAccountNumber(m.bankAccountNumber),
   };
 }
 

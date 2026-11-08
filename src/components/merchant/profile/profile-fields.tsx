@@ -39,10 +39,16 @@ export function profileToFormValues(m: MerchantProfile): ProfileInput {
     operational_open_time: m.operational_open_time.slice(0, 5),
     operational_close_time: m.operational_close_time.slice(0, 5),
     default_surplus_start_time: m.default_surplus_start_time.slice(0, 5),
-    bank_code: "",
-    bank_account_number: "",
-    bank_account_holder: "",
+    bank_code: normalizeBankCode(m.bank_code),
+    bank_account_number: "", // write-only: never prefilled
+    bank_account_holder: m.bank_account_holder ?? "",
   };
+}
+
+/** Saved code → matching chip label ("MANDIRI" → "Mandiri"); unknown codes are kept as-is. */
+export function normalizeBankCode(code: string | null | undefined): string {
+  if (!code) return "";
+  return BANK_OPTIONS.find((b) => b.toLowerCase() === code.toLowerCase()) ?? code;
 }
 
 /** Submit payload: blank optional fields dropped. */
@@ -230,10 +236,22 @@ export function HoursSection({ form, idPrefix = "hrs" }: { form: ProfileForm; id
   );
 }
 
-export function BankSection({ form, idPrefix = "bank" }: { form: ProfileForm; idPrefix?: string }) {
+export function BankSection({
+  form,
+  idPrefix = "bank",
+  savedNumberMasked,
+}: {
+  form: ProfileForm;
+  idPrefix?: string;
+  /** Masked saved account number ("••••6789"); the full number is write-only. */
+  savedNumberMasked?: string | null;
+}) {
   const id = useFieldIds(idPrefix);
   const { register, control, formState } = form;
   const e = formState.errors;
+  const savedCode = form.formState.defaultValues?.bank_code;
+  const options: readonly string[] =
+    savedCode && !(BANK_OPTIONS as readonly string[]).includes(savedCode) ? [...BANK_OPTIONS, savedCode] : BANK_OPTIONS;
   return (
     <div className="space-y-5">
       <fieldset>
@@ -243,7 +261,7 @@ export function BankSection({ form, idPrefix = "bank" }: { form: ProfileForm; id
           name="bank_code"
           render={({ field }) => (
             <div role="radiogroup" aria-label="Bank atau e-wallet" className="flex flex-wrap gap-2">
-              {BANK_OPTIONS.map((b) => (
+              {options.map((b) => (
                 <button
                   key={b}
                   type="button"
@@ -267,8 +285,22 @@ export function BankSection({ form, idPrefix = "bank" }: { form: ProfileForm; id
           <Label htmlFor={id("acc")} className="text-sm font-semibold">
             Nomor rekening / HP
           </Label>
-          <Input id={id("acc")} inputMode="numeric" autoComplete="off" placeholder="1234567890" className="h-12 rounded-2xl bg-card text-base tabular-nums" {...register("bank_account_number")} />
-          <FieldError>{e.bank_account_number?.message}</FieldError>
+          <Input
+            id={id("acc")}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder={savedNumberMasked ?? "1234567890"}
+            aria-describedby={savedNumberMasked && !e.bank_account_number ? id("acc-hint") : undefined}
+            className="h-12 rounded-2xl bg-card text-base tabular-nums"
+            {...register("bank_account_number")}
+          />
+          {e.bank_account_number ? (
+            <FieldError>{e.bank_account_number.message}</FieldError>
+          ) : savedNumberMasked ? (
+            <p id={id("acc-hint")} className="text-[11px] text-muted-foreground">
+              Tersimpan: <span className="tabular-nums">{savedNumberMasked}</span> — isi untuk mengganti
+            </p>
+          ) : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor={id("holder")} className="text-sm font-semibold">

@@ -4,8 +4,6 @@ import { ListSkeleton } from "@/components/common/list-skeleton";
 import { MerchantMenusView } from "@/components/merchant/menus/menus-view";
 
 export const metadata: Metadata = { title: "Menu" };
-/** Rendered behind the client MerchantGuard (session splash), so never instant. */
-export const instant = false;
 
 export default function MerchantMenusPage() {
   return (

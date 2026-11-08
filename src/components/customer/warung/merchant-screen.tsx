@@ -5,13 +5,12 @@
  * distance, pickup window, closing countdown), favourite/notify toggle,
  * live DynamicPriceMenuCards, directions/WhatsApp, reviews.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  BadgeCheckIcon,
   BellIcon,
   BellRingIcon,
   ClockIcon,
@@ -34,6 +33,7 @@ import { ListSkeleton } from "@/components/common/list-skeleton";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
 import { MENU_CATEGORY_LABELS, type MerchantDetail, type SubscribeBody, type SubscribeResponse } from "@/lib/contracts";
@@ -47,6 +47,7 @@ import { useBatchStream } from "../hooks/use-batch-stream";
 import { formatDateId, formatDistance, formatRating, mapsDirectionsUrl, travelMinutes, whatsappUrl } from "../lib/format";
 import { cartMerchantOf, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
+import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 function useMerchantDetail(slug: string) {
   const hydrated = useStoresHydrated();
@@ -133,11 +134,29 @@ function SubscribeButton({ merchant }: { merchant: MerchantDetail }) {
   );
 }
 
-export function MerchantScreen({ slug }: { slug: string }) {
+export function MerchantScreen({ slug, openBatchId = null }: { slug: string; openBatchId?: string | null }) {
   const q = useMerchantDetail(slug);
   const m = q.data;
+  const router = useRouter();
   const [showAllReviews, setShowAllReviews] = useState(false);
   const { addToCart, dialog } = useAddToCart();
+  const { openQuickOrder, sheet } = useQuickOrder(m?.batches);
+  const closedLabel = m && !m.is_open ? "Warung sedang tutup" : undefined;
+
+  // ?order=<batchId> (back from login after a quick order): reopen that menu's
+  // sheet once the warung is loaded, then strip the param from the URL.
+  const handledOrder = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openBatchId || !m || handledOrder.current === openBatchId) return;
+    const batch = m.batches.find((b) => b.batch_id === openBatchId);
+    const id = requestAnimationFrame(() => {
+      handledOrder.current = openBatchId;
+      if (batch) openQuickOrder(batch, { disabledLabel: m.is_open ? undefined : "Warung sedang tutup" });
+      else toast.error("Menu ini sudah tidak tersedia", { description: "Pilih menu surplus lain di warung ini." });
+      router.replace(`/warung/${encodeURIComponent(m.slug)}`, { scroll: false });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [openBatchId, m, openQuickOrder, router]);
 
   useBatchStream({ lat: m?.lat ?? 0, lng: m?.lng ?? 0, radiusM: 300, enabled: Boolean(m) });
 
@@ -242,11 +261,7 @@ export function MerchantScreen({ slug }: { slug: string }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h1 className="text-xl leading-tight font-extrabold">{m.name}</h1>
-                  {m.is_verified && (
-                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
-                      <BadgeCheckIcon className="size-3.5" /> Toko sudah terverifikasi
-                    </span>
-                  )}
+                  {m.is_verified && <VerifiedBadge label="Toko Terverifikasi" className="mt-1.5" />}
                 </div>
                 <SubscribeButton merchant={m} />
               </div>
@@ -355,6 +370,7 @@ export function MerchantScreen({ slug }: { slug: string }) {
                     merchant={cartMerchantOf(m)}
                     disabled={!m.is_open}
                     onAdd={addToCart}
+                    onOpenDetail={() => openQuickOrder(b, { disabledLabel: closedLabel })}
                   />
                 ))}
               </div>
@@ -424,6 +440,7 @@ export function MerchantScreen({ slug }: { slug: string }) {
         </div>
       )}
       {dialog}
+      {sheet}
     </>
   );
 }

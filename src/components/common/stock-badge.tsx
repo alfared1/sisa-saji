@@ -1,7 +1,7 @@
 import { FlameIcon, PackageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Low stock threshold that switches the badge to the urgent "Sisa 3 porsi!" style. */
+/** Low stock threshold that switches the badge to the urgent "Hampir Habis! Sisa 3 porsi" style. */
 export const LOW_STOCK_THRESHOLD = 3;
 
 export function StockBadge({
@@ -27,7 +27,7 @@ export function StockBadge({
       )}
     >
       <Icon className="size-3.5" aria-hidden />
-      {soldOut ? "Habis" : low ? `Sisa ${available} ${unit}!` : `Sisa ${available} ${unit}`}
+      {soldOut ? "Habis" : low ? `Hampir Habis! Sisa ${available} ${unit}` : `Sisa ${available} ${unit}`}
     </span>
   );
 }

@@ -113,6 +113,43 @@ describe("merchant onboarding", () => {
       expect(menu.min_recovery_price_idr).toBeLessThanOrEqual(menu.original_price_idr);
     }
   });
+
+  it("GET /merchant/me exposes payout details for prefill but only a masked account number", async () => {
+    const m = await demoMerchant();
+    const me = await getMerchantMe(db, m.id);
+    expect(me.merchant.bank_code).toBe(m.bankCode);
+    expect(me.merchant.bank_account_holder).toBe(m.bankAccountHolder);
+    expect(me.merchant.bank_account_number_masked).toBe(`••••${m.bankAccountNumber!.slice(-4)}`);
+    // The full number is write-only: it never appears anywhere in the response.
+    expect(JSON.stringify(me)).not.toContain(m.bankAccountNumber!);
+    expect(me.merchant).not.toHaveProperty("bank_account_number");
+  });
+
+  it("PATCH /merchant/me updates payout details; unset details come back as null", async () => {
+    const [u] = await db.select().from(users).where(eq(users.email, "budi.onboard@sisasaji.test"));
+    const [m] = await db.select().from(merchants).where(eq(merchants.ownerUserId, u.id));
+    const before = await getMerchantMe(db, m.id);
+    expect(before.merchant.bank_code).toBeNull();
+    expect(before.merchant.bank_account_holder).toBeNull();
+    expect(before.merchant.bank_account_number_masked).toBeNull();
+
+    const res = await updateMerchant(
+      db,
+      m.id,
+      MerchantUpdateBody.parse({ bank_code: "BRI", bank_account_number: "0123456789", bank_account_holder: "Budi Santoso" }),
+    );
+    expect(res.merchant.bank_code).toBe("BRI");
+    expect(res.merchant.bank_account_holder).toBe("Budi Santoso");
+    expect(res.merchant.bank_account_number_masked).toBe("••••6789");
+    expect(JSON.stringify(res)).not.toContain("0123456789");
+    const [row] = await db.select().from(merchants).where(eq(merchants.id, m.id));
+    expect(row.bankAccountNumber).toBe("0123456789");
+
+    // A profile save without a new number (prefilled code + holder only) keeps the stored number.
+    const again = await updateMerchant(db, m.id, MerchantUpdateBody.parse({ bank_code: "BRI", bank_account_holder: "Budi S." }));
+    expect(again.merchant.bank_account_number_masked).toBe("••••6789");
+    expect(again.merchant.bank_account_holder).toBe("Budi S.");
+  });
 });
 
 describe("merchant menus", () => {

@@ -550,6 +550,10 @@ export type MerchantProfile = {
   historical_conversion_rate: number;
   logo_url: string | null;
   banner_url: string | null;
+  /** Payout details for prefill. The account number is write-only: only a mask ("••••6789") is returned. */
+  bank_code: string | null;
+  bank_account_holder: string | null;
+  bank_account_number_masked: string | null;
 };
 /** GET /api/v1/merchant/me → MerchantMeResponse (404 MERCHANT_REQUIRED if no warung yet). */
 export type MerchantMeResponse = { merchant: MerchantProfile; menus: MenuView[] };

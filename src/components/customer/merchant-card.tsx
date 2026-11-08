@@ -63,11 +63,7 @@ export function MerchantCard({
         alt=""
         className={cn("shrink-0 rounded-2xl", variant === "sheet" ? "size-20" : "size-[4.5rem]", soldOut && "grayscale")}
         iconClassName="size-7"
-      >
-        {!soldOut && merchant.max_discount_pct > 0 && (
-          <DiscountBadge pct={merchant.max_discount_pct} size="sm" className="absolute bottom-1 left-1 shadow-soft" />
-        )}
-      </FoodThumb>
+      />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
@@ -98,10 +94,18 @@ export function MerchantCard({
           <StockBadge available={merchant.total_available_stock} />
           {!soldOut && merchant.closes_at && <CountdownBadge endIso={merchant.closes_at} />}
         </div>
-        {!soldOut && merchant.min_price_idr > 0 && (
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Mulai <span className="font-extrabold text-foreground tabular-nums">{formatIdr(merchant.min_price_idr)}</span>
-          </p>
+        {!soldOut && (merchant.min_price_idr > 0 || merchant.max_discount_pct > 0) && (
+          // Badge sits here (not on the 72 px thumb) so "Flash Rescue s/d 70%" is never clipped.
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {merchant.min_price_idr > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Mulai <span className="font-extrabold text-foreground tabular-nums">{formatIdr(merchant.min_price_idr)}</span>
+              </p>
+            )}
+            {merchant.max_discount_pct > 0 && (
+              <DiscountBadge pct={merchant.max_discount_pct} endIso={merchant.closes_at} upTo size="sm" />
+            )}
+          </div>
         )}
       </div>
       <ChevronRightIcon className="size-5 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5" />

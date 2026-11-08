@@ -95,7 +95,7 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
       <div className="mt-6 rounded-3xl bg-card p-4 text-left shadow-card ring-1 ring-border sm:p-5">
         <p className="text-xs font-semibold text-muted-foreground">Sedang tayang</p>
         <h2 className="mt-0.5 text-lg font-bold">{b.menu_name}</h2>
-        <PriceTag className="mt-1" original={b.original_price_idr} selling={b.current_selling_price_idr} discountPct={b.current_discount_pct} size="lg" />
+        <PriceTag className="mt-1" original={b.original_price_idr} selling={b.current_selling_price_idr} discountPct={b.current_discount_pct} endIso={b.pickup_end_time} size="lg" />
         <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
           <div className="rounded-2xl bg-surface p-3">
             <dt className="text-xs text-muted-foreground">Stok</dt>

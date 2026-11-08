@@ -7,6 +7,7 @@ export function PriceTag({
   original,
   selling,
   discountPct,
+  endIso,
   size = "md",
   showBadge = true,
   layout = "inline",
@@ -15,6 +16,8 @@ export function PriceTag({
   original: number;
   selling: number;
   discountPct?: number;
+  /** pickup_end_time — lets the badge switch to "Flash Rescue" (pulsing) under 45 min. */
+  endIso?: string | null;
   size?: "sm" | "md" | "lg";
   showBadge?: boolean;
   /** inline: all on one row; stacked: original above selling. */
@@ -42,7 +45,7 @@ export function PriceTag({
         {hasDiscount && <span className={originalCls}>{formatIdr(original)}</span>}
         <div className="flex items-center gap-1.5">
           <span className={sellingCls}>{formatIdr(selling)}</span>
-          {showBadge && hasDiscount && <DiscountBadge pct={pct} size={size === "lg" ? "md" : "sm"} />}
+          {showBadge && hasDiscount && <DiscountBadge pct={pct} endIso={endIso} size={size === "lg" ? "md" : "sm"} />}
         </div>
       </div>
     );
@@ -53,7 +56,7 @@ export function PriceTag({
       <span className={sellingCls}>{formatIdr(selling)}</span>
       {hasDiscount && <span className={originalCls}>{formatIdr(original)}</span>}
       {showBadge && hasDiscount && (
-        <DiscountBadge pct={pct} size={size === "lg" ? "md" : "sm"} className="self-center" />
+        <DiscountBadge pct={pct} endIso={endIso} size={size === "lg" ? "md" : "sm"} className="self-center" />
       )}
     </div>
   );

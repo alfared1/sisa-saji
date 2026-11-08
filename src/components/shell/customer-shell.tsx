@@ -9,7 +9,7 @@
  * checkout, order detail) get the full height. The cart bar shows where
  * shopping happens (discover, map, warung).
  */
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, LeafIcon, MapIcon, ReceiptTextIcon, UserRoundIcon, type LucideIcon } from "lucide-react";
@@ -44,6 +44,28 @@ export function CustomerShell({
   /** Dev gallery only: render as if at this path. */
   previewPathname?: string;
 }) {
+  return (
+    <div className="app-backdrop min-h-dvh">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background sm:shadow-float sm:ring-1 sm:ring-border/70">
+        <main id="konten" className="flex min-w-0 flex-1 flex-col">
+          {children}
+        </main>
+        {/*
+         * The chrome reads usePathname(), which is URL data on dynamic routes
+         * (/warung/[slug], /orders/[id]). Keeping it behind its own Suspense
+         * boundary lets the frame + page stay in the static/App Shell instead of
+         * blocking the whole route (Cache Components "instant" validation).
+         */}
+        <Suspense fallback={<div aria-hidden className="safe-bottom" />}>
+          <CustomerChrome previewPathname={previewPathname} />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+/** Bottom spacer + fixed tab bar / floating cart bar, chosen from the current path. */
+function CustomerChrome({ previewPathname }: { previewPathname?: string }) {
   const routerPathname = usePathname();
   const pathname = previewPathname ?? routerPathname ?? "/";
   const hydrated = useStoresHydrated();
@@ -52,25 +74,21 @@ export function CustomerShell({
   const showCart = hydrated && cartCount > 0 && showsCartBar(pathname);
 
   return (
-    <div className="app-backdrop min-h-dvh">
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background sm:shadow-float sm:ring-1 sm:ring-border/70">
-        <main
-          id="konten"
-          className={cn("flex min-w-0 flex-1 flex-col", showNav ? "pb-nav" : "safe-bottom", showCart && "mb-20")}
-        >
-          {children}
-        </main>
-
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
-          {showCart && (
-            <div className={cn("pointer-events-auto px-3 pb-2", !showNav && "safe-bottom")}>
-              <FloatingCartBar />
-            </div>
-          )}
-          {showNav && <CustomerBottomNav pathname={pathname} />}
-        </div>
+    <>
+      {/* Spacer so the last content clears the fixed bars (replaces padding on <main>). */}
+      <div aria-hidden className={cn("shrink-0", showNav ? "pb-nav" : "safe-bottom")}>
+        {showCart && <div className="h-20" />}
       </div>
-    </div>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+        {showCart && (
+          <div className={cn("pointer-events-auto px-3 pb-2", !showNav && "safe-bottom")}>
+            <FloatingCartBar />
+          </div>
+        )}
+        {showNav && <CustomerBottomNav pathname={pathname} />}
+      </div>
+    </>
   );
 }
 

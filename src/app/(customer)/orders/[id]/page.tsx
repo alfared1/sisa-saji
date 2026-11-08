@@ -3,9 +3,6 @@ import { Suspense } from "react";
 import { ListSkeleton } from "@/components/common/list-skeleton";
 import { OrderDetailScreen } from "@/components/customer/orders/order-detail-screen";
 
-/** The customer layout reads usePathname() for its tab bar; allow this dynamic route to block on it. */
-export const instant = false;
-
 export const metadata: Metadata = {
   title: "Detail Pesanan",
   description: "Pembayaran QRIS, tiket pengambilan, dan dampak pesananmu.",

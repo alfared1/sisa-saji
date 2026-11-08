@@ -2,21 +2,32 @@ import { BadgeCheckIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-/** "Mitra Terverifikasi" (premium / merchant_verified). `compact` = icon + tooltip. */
-export function VerifiedBadge({ compact = false, className }: { compact?: boolean; className?: string }) {
+/**
+ * "Mitra Terverifikasi" (premium / merchant_verified). `compact` = icon + tooltip.
+ * `label` overrides the copy, e.g. "Toko Terverifikasi" on the warung header.
+ */
+export function VerifiedBadge({
+  compact = false,
+  label = "Mitra Terverifikasi",
+  className,
+}: {
+  compact?: boolean;
+  label?: string;
+  className?: string;
+}) {
   if (compact) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <span
             className={cn("inline-flex shrink-0 text-sky-600 dark:text-sky-400", className)}
-            aria-label="Mitra Terverifikasi"
+            aria-label={label}
             tabIndex={0}
           >
             <BadgeCheckIcon className="size-4" aria-hidden />
           </span>
         </TooltipTrigger>
-        <TooltipContent>Mitra Terverifikasi</TooltipContent>
+        <TooltipContent>{label}</TooltipContent>
       </Tooltip>
     );
   }
@@ -28,7 +39,7 @@ export function VerifiedBadge({ compact = false, className }: { compact?: boolea
       )}
     >
       <BadgeCheckIcon className="size-3.5" aria-hidden />
-      Mitra Terverifikasi
+      {label}
     </span>
   );
 }

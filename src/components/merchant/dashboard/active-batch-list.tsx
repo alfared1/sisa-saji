@@ -163,6 +163,7 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
             original={batch.original_price_idr}
             selling={batch.current_selling_price_idr}
             discountPct={batch.current_discount_pct}
+            endIso={closed ? null : batch.pickup_end_time}
           />
         </div>
       </div>

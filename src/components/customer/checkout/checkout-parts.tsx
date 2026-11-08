@@ -10,7 +10,6 @@ import {
   BikeIcon,
   CheckIcon,
   ChevronRightIcon,
-  CloudIcon,
   FootprintsIcon,
   HandPlatterIcon,
   LeafIcon,
@@ -21,6 +20,7 @@ import {
   XIcon,
   ZapIcon,
 } from "lucide-react";
+import { ImpactLine } from "@/components/common/impact-line";
 import { Money } from "@/components/common/money";
 import { SurplusMap } from "@/components/map/surplus-map";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,6 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import type { PaymentMethod, Voucher } from "@/lib/contracts";
-import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { voucherEligibility, type PricePreview } from "../lib/checkout-logic";
@@ -462,7 +461,7 @@ export function PriceAndImpactBreakdown({ p, voucherCode }: { p: PricePreview; v
           </dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt>Subtotal harga pemulihan</dt>
+          <dt>Subtotal Harga Pemulihan</dt>
           <dd className="font-semibold">
             <Money value={p.subtotal_recovery_idr} />
           </dd>
@@ -490,14 +489,8 @@ export function PriceAndImpactBreakdown({ p, voucherCode }: { p: PricePreview; v
       </dl>
       <div className="mt-3 rounded-2xl bg-brand-soft/80 p-3">
         <p className="text-sm font-extrabold text-secondary-foreground">Kamu hemat {formatIdr(p.money_saved_idr)}</p>
-        <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-secondary-foreground/90">
-          <span className="inline-flex items-center gap-1">
-            <LeafIcon className="size-3.5" /> +{formatKg(p.food_saved_grams)} pangan diselamatkan
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <CloudIcon className="size-3.5" /> +{formatKg(p.co2_avoided_grams)} CO₂e dicegah
-          </span>
-        </p>
+        <p className="mt-1 text-[11px] font-bold tracking-wide text-secondary-foreground/80 uppercase">Total dampak pesanan</p>
+        <ImpactLine foodGrams={p.food_saved_grams} className="mt-0.5 text-xs" />
       </div>
     </CheckoutCard>
   );

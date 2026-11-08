@@ -28,6 +28,7 @@ import { useBatchStream } from "../hooks/use-batch-stream";
 import { nextRadius } from "../lib/discover-sections";
 import { customerKeys } from "../lib/queries";
 import { MerchantCard } from "../merchant-card";
+import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 export function MapScreen() {
   const hydrated = useStoresHydrated();
@@ -57,6 +58,8 @@ export function MapScreen() {
   const bigger = nextRadius(params.radius_m, RADIUS_OPTIONS);
   const empty = pins.isSuccess && markers.length === 0;
   const portions = markers.reduce((s, m) => s + m.stock, 0);
+  const allBatches = useMemo(() => (nearby.data?.merchants ?? []).flatMap((m) => m.batches), [nearby.data]);
+  const { openQuickOrder, sheet } = useQuickOrder(allBatches);
 
   return (
     <div className="relative flex h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden">
@@ -111,7 +114,7 @@ export function MapScreen() {
         </div>
         {view === "map" && (
           <p className="pointer-events-auto mx-auto mt-2 w-fit rounded-full bg-background/90 px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-soft ring-1 ring-border backdrop-blur">
-            <span className="font-extrabold text-urgent">Merah berdenyut</span> = tutup &lt; 45 menit
+            <span className="font-extrabold text-flash dark:text-flash-accent">Oranye berdenyut (Flash Rescue)</span> = tutup &lt; 45 menit
           </p>
         )}
       </div>
@@ -201,13 +204,24 @@ export function MapScreen() {
                 {selected.batches
                   .filter((b) => b.available_stock > 0)
                   .map((b) => (
-                    <li key={b.batch_id} className="w-40 shrink-0 rounded-2xl bg-muted/70 p-3">
-                      <p className="line-clamp-1 text-xs font-bold">{b.menu_name}</p>
-                      <p className="mt-1 text-sm font-extrabold tabular-nums">
-                        Rp {b.selling_price_idr.toLocaleString("id-ID")}{" "}
-                        <span className="text-[11px] font-bold text-deal">-{b.discount_pct}%</span>
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">Sisa {b.available_stock} porsi</p>
+                    <li key={b.batch_id} className="w-40 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Close the map preview first so the quick-order sheet is on top.
+                          setSelectedId(null);
+                          openQuickOrder(b, { disabledLabel: selected.is_open ? undefined : "Warung sedang tutup" });
+                        }}
+                        className="w-full rounded-2xl bg-muted/70 p-3 text-left transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
+                        aria-label={`Pesan ${b.menu_name}`}
+                      >
+                        <p className="line-clamp-1 text-xs font-bold">{b.menu_name}</p>
+                        <p className="mt-1 text-sm font-extrabold tabular-nums">
+                          Rp {b.selling_price_idr.toLocaleString("id-ID")}{" "}
+                          <span className="text-[11px] font-bold text-deal">-{b.discount_pct}%</span>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">Sisa {b.available_stock} porsi</p>
+                      </button>
                     </li>
                   ))}
               </ul>
@@ -222,6 +236,7 @@ export function MapScreen() {
           </div>
         </DrawerContent>
       </Drawer>
+      {sheet}
     </div>
   );
 }

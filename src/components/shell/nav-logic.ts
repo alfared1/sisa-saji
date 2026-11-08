@@ -28,6 +28,10 @@ export function activeNavHref(pathname: string, hrefs: readonly string[]): strin
   return best;
 }
 
+export function isOnboardingPath(pathname: string): boolean {
+  return pathname === MERCHANT_ONBOARDING_PATH || pathname.startsWith(`${MERCHANT_ONBOARDING_PATH}/`);
+}
+
 export type MerchantGuardDecision =
   | { kind: "loading" }
   | { kind: "error" }
@@ -44,7 +48,7 @@ export function merchantGuardDecision(args: {
   const { pathname, isLoading, isError, user } = args;
   if (isLoading) return { kind: "loading" };
   if (isError) return { kind: "error" };
-  const onOnboarding = pathname === MERCHANT_ONBOARDING_PATH || pathname.startsWith(`${MERCHANT_ONBOARDING_PATH}/`);
+  const onOnboarding = isOnboardingPath(pathname);
   if (!user) return { kind: "redirect", to: `/auth/login?role=MERCHANT&next=${encodeURIComponent(pathname)}` };
   if (!user.merchant_id) return onOnboarding ? { kind: "onboarding" } : { kind: "redirect", to: MERCHANT_ONBOARDING_PATH };
   if (onOnboarding) return { kind: "redirect", to: MERCHANT_HOME_PATH };

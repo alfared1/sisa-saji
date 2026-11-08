@@ -12,7 +12,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useShallow } from "zustand/react/shallow";
 import { toast } from "sonner";
 import { Loader2Icon, LockIcon, ShoppingBagIcon, StoreIcon, Trash2Icon, WalletIcon } from "lucide-react";
+import { DiscountBadge } from "@/components/common/discount-badge";
 import { EmptyState } from "@/components/common/empty-state";
+import { ImpactLine } from "@/components/common/impact-line";
 import { ListSkeleton } from "@/components/common/list-skeleton";
 import { Money } from "@/components/common/money";
 import { PageHeader } from "@/components/common/page-header";
@@ -290,8 +292,13 @@ export function CheckoutScreen() {
                     <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
                       <span className="font-extrabold tabular-nums">{formatIdr(it.unit_price_idr)}</span>
                       <span className="text-muted-foreground line-through tabular-nums">{formatIdr(it.original_price_idr)}</span>
-                      <span className="font-bold text-deal">-{it.discount_pct}%</span>
+                      {state === "ok" && (
+                        <DiscountBadge pct={it.discount_pct} endIso={it.pickup_end_time} size="sm" className="self-center" />
+                      )}
                     </p>
+                    {state === "ok" && (
+                      <ImpactLine portionWeightGrams={it.portion_weight_grams} quantity={it.quantity} className="mt-1" />
+                    )}
                     {state !== "ok" && (
                       <p className="mt-1 text-xs font-semibold text-urgent">
                         {state === "soldout" ? "Stok habis" : "Sudah tidak tersedia (warung tutup)"}

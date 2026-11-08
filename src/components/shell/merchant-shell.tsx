@@ -132,7 +132,8 @@ export function MerchantShell({
   children,
   previewPathname,
 }: {
-  user: SessionUser;
+  /** null while the session is still loading (optimistic frame from MerchantGuard). */
+  user: SessionUser | null;
   children: ReactNode;
   /** Dev gallery only: render as if at this path. */
   previewPathname?: string;
@@ -140,10 +141,11 @@ export function MerchantShell({
   const routerPathname = usePathname();
   const pathname = previewPathname ?? routerPathname ?? "";
   const active = activeMerchantHref(pathname);
-  const me = useMerchantMe(Boolean(user.merchant_id));
+  // While the session loads we already ask for the warung (it is the common case).
+  const me = useMerchantMe(user === null || Boolean(user.merchant_id));
   const merchant = me.data?.merchant;
-  const storeName = merchant?.merchant_name ?? "Warung kamu";
-  const initials = user.full_name
+  const storeName = merchant?.merchant_name ?? (me.isLoading ? "Memuat warung…" : "Warung kamu");
+  const initials = (user?.full_name ?? "")
     .split(/\s+/)
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
@@ -200,20 +202,27 @@ export function MerchantShell({
           })}
         </nav>
         <div className="border-t border-sidebar-border p-3">
-          <AccountMenu user={user}>
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 rounded-xl p-2 text-left outline-none hover:bg-sidebar-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
-                {initials || "M"}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{user.full_name}</span>
-                <span className="block text-xs text-muted-foreground">Pemilik warung</span>
-              </span>
-            </button>
-          </AccountMenu>
+          {user ? (
+            <AccountMenu user={user}>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-xl p-2 text-left outline-none hover:bg-sidebar-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <span className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                  {initials || "M"}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{user.full_name}</span>
+                  <span className="block text-xs text-muted-foreground">Pemilik warung</span>
+                </span>
+              </button>
+            </AccountMenu>
+          ) : (
+            <div className="flex items-center gap-3 p-2" aria-busy="true" aria-label="Memuat akun">
+              <span className="size-9 animate-pulse rounded-full bg-muted" />
+              <span className="h-4 flex-1 animate-pulse rounded bg-muted" />
+            </div>
+          )}
         </div>
       </aside>
 
@@ -225,15 +234,19 @@ export function MerchantShell({
             <p className="truncate text-sm leading-tight font-bold">{storeName}</p>
             <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
           </div>
-          <AccountMenu user={user}>
-            <button
-              type="button"
-              aria-label="Akun"
-              className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              {initials || "M"}
-            </button>
-          </AccountMenu>
+          {user ? (
+            <AccountMenu user={user}>
+              <button
+                type="button"
+                aria-label="Akun"
+                className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {initials || "M"}
+              </button>
+            </AccountMenu>
+          ) : (
+            <span className="size-9 animate-pulse rounded-full bg-muted" aria-hidden />
+          )}
         </div>
       </header>
 

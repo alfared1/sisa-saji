@@ -3,6 +3,7 @@
 import { SparklesIcon, TrendingDownIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
+import { ImpactLine } from "@/components/common/impact-line";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,9 @@ import { cartItemFromBatch } from "./lib/queries";
 /**
  * DynamicPriceMenuCard — a live surplus batch on the warung page: photo or
  * placeholder, strike → selling price, "Harga Turun Otomatis", live stock and
- * closing countdown, and an add button that becomes a quantity stepper.
+ * closing countdown, impact estimate, and an add button that becomes a
+ * quantity stepper. With `onOpenDetail`, tapping the card body (photo / name)
+ * opens the menu detail; the add button / stepper keep their own action.
  */
 export function DynamicPriceMenuCard({
   batch,
@@ -26,12 +29,15 @@ export function DynamicPriceMenuCard({
   disabled = false,
   disabledLabel = "Tutup",
   onAdd,
+  onOpenDetail,
 }: {
   batch: BatchCard;
   merchant: CartMerchant;
   disabled?: boolean;
   disabledLabel?: string;
   onAdd: (merchant: CartMerchant, item: CartItem) => void;
+  /** Opens the menu detail sheet; makes the card body a button "Lihat detail <menu>". */
+  onOpenDetail?: () => void;
 }) {
   const hydrated = useStoresHydrated();
   const qtyInCart = useCartStore(selectCartQuantityFor(batch.batch_id));
@@ -48,9 +54,21 @@ export function DynamicPriceMenuCard({
         "relative flex gap-3 rounded-3xl bg-card p-3 shadow-soft ring-1 ring-border transition-[box-shadow,background-color] duration-500",
         flash && "bg-deal-soft/60 ring-2 ring-deal",
         inactive && "opacity-75",
+        onOpenDetail && "has-[[data-card-body]:focus-visible]:ring-3 has-[[data-card-body]:focus-visible]:ring-ring/50",
       )}
       aria-label={batch.menu_name}
     >
+      {onOpenDetail && (
+        // Stretched button: the whole card body opens the detail; the add
+        // button / stepper sit above it (z-10) with their own action.
+        <button
+          type="button"
+          data-card-body
+          onClick={onOpenDetail}
+          className="absolute inset-0 z-[1] cursor-pointer rounded-3xl outline-none"
+          aria-label={`Lihat detail ${batch.menu_name}`}
+        />
+      )}
       <FoodThumb
         category={batch.category}
         imageUrl={batch.image_url}
@@ -58,7 +76,14 @@ export function DynamicPriceMenuCard({
         alt={batch.menu_name}
         className={cn("size-26 shrink-0 rounded-2xl", inactive && "grayscale")}
       >
-        {!inactive && <DiscountBadge pct={batch.discount_pct} size="sm" className="absolute top-1.5 left-1.5 shadow-soft" />}
+        {!inactive && (
+          <DiscountBadge
+            pct={batch.discount_pct}
+            endIso={batch.pickup_end_time}
+            size="sm"
+            className="absolute top-1.5 left-1.5 shadow-soft"
+          />
+        )}
         {soldOut && (
           <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-extrabold tracking-wide text-background uppercase">
             Habis
@@ -104,29 +129,32 @@ export function DynamicPriceMenuCard({
             {!inactive && <CountdownBadge endIso={batch.pickup_end_time} variant="plain" className="mt-1" />}
           </div>
 
-          {inactive ? (
-            <span className="rounded-full bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
-              {soldOut ? "Habis" : disabledLabel}
-            </span>
-          ) : qty > 0 ? (
-            <QtyStepper
-              value={qty}
-              min={0}
-              max={Math.min(batch.available_stock, 10)}
-              size="sm"
-              label={batch.menu_name}
-              onChange={(v) => (v <= 0 ? removeItem(batch.batch_id) : setQuantity(batch.batch_id, v))}
-            />
-          ) : (
-            <Button
-              className="h-10 shrink-0 rounded-full px-4 font-bold shadow-soft"
-              onClick={() => onAdd(merchant, cartItemFromBatch(batch))}
-              aria-label={`Tambah ${batch.menu_name} ke keranjang`}
-            >
-              Tambah
-            </Button>
-          )}
+          <div className="relative z-10 shrink-0">
+            {inactive ? (
+              <span className="rounded-full bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+                {soldOut ? "Habis" : disabledLabel}
+              </span>
+            ) : qty > 0 ? (
+              <QtyStepper
+                value={qty}
+                min={0}
+                max={Math.min(batch.available_stock, 10)}
+                size="sm"
+                label={batch.menu_name}
+                onChange={(v) => (v <= 0 ? removeItem(batch.batch_id) : setQuantity(batch.batch_id, v))}
+              />
+            ) : (
+              <Button
+                className="h-10 shrink-0 rounded-full px-4 font-bold shadow-soft"
+                onClick={() => onAdd(merchant, cartItemFromBatch(batch))}
+                aria-label={`Tambah ${batch.menu_name} ke keranjang`}
+              >
+                Tambah
+              </Button>
+            )}
+          </div>
         </div>
+        {!soldOut && <ImpactLine portionWeightGrams={batch.portion_weight_grams} className="mt-1.5" />}
       </div>
     </article>
   );
