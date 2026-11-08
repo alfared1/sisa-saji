@@ -12,7 +12,7 @@ import { useNow } from "@/hooks/use-now";
 import { api } from "@/lib/api/client";
 import type { OrderDetail, OrdersResponse } from "@/lib/contracts";
 import { DAY_NAMES_ID, formatIdr, wibDate, wibDayOfWeek } from "@/lib/time";
-import { merchantKeys } from "../lib/queries";
+import { merchantKeys, useMerchantReady } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
 import { LiveDot } from "../dashboard/store-status-header";
 import { MerchantPage, MerchantPageHeader } from "../ui";
@@ -58,10 +58,11 @@ export function MerchantOrdersView() {
   const now = useNow(60_000);
   const today = now !== null ? wibDate(new Date(now)) : "";
   const live = useMerchantLive();
+  const ready = useMerchantReady();
 
   const query = useQuery({
     queryKey: merchantKeys.orders(tab, tab === "today" ? today : tab === "history" ? historyDate : undefined),
-    enabled: tab !== "today" || today !== "",
+    enabled: ready && (tab !== "today" || today !== ""),
     queryFn: () =>
       api.get<OrdersResponse>(
         "/merchant/orders",

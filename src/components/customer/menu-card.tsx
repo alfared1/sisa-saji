@@ -126,7 +126,7 @@ export function DynamicPriceMenuCard({
               showBadge={false}
               layout="stacked"
             />
-            {!inactive && <CountdownBadge endIso={batch.pickup_end_time} variant="plain" className="mt-1" />}
+            {!inactive && <CountdownBadge endIso={batch.pickup_end_time} prefix="Tutup" variant="plain" className="mt-1" />}
           </div>
 
           <div className="relative z-10 shrink-0">

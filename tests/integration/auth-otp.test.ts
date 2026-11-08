@@ -153,6 +153,23 @@ describe("POST /auth/otp/verify", () => {
     expect(created).toHaveLength(0);
   });
 
+  it("parallel wrong guesses never compare more than OTP_MAX_ATTEMPTS codes", async () => {
+    const phone = freshPhone();
+    const { dev_code } = await request({ phone_number: phone });
+    const wrong = dev_code === "000000" ? "111111" : "000000";
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 20 }, () => verify({ phone_number: phone, code: wrong, full_name: "Siti" })),
+    );
+    const details = results.map((r) => (r.status === "rejected" ? (r.reason as ApiError).details : null));
+    const compared = details.filter((d) => d && typeof d === "object" && "remaining_attempts" in d);
+    const locked = details.filter((d) => d && typeof d === "object" && "locked" in d);
+    expect(compared).toHaveLength(OTP_MAX_ATTEMPTS);
+    expect(locked).toHaveLength(20 - OTP_MAX_ATTEMPTS);
+    const [row] = await db.select().from(otpCodes).where(eq(otpCodes.identifier, toE164(phone)));
+    expect(row.attempts).toBe(OTP_MAX_ATTEMPTS);
+  });
+
   it("expired code → OTP_EXPIRED", async () => {
     const phone = freshPhone();
     const past = new Date(Date.now() - (OTP_TTL_SECONDS + 60) * 1000);

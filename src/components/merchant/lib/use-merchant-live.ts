@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { useEventSource, type EventSourceStatus } from "@/hooks/use-event-source";
 import { api } from "@/lib/api/client";
 import type { MerchantDashboard, MerchantStreamEvent } from "@/lib/contracts";
-import { merchantKeys } from "./queries";
+import { merchantKeys, useMerchantReady } from "./queries";
 
 const REFRESH_DEBOUNCE_MS = 400;
 
@@ -72,5 +72,11 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
     [qc, refresh, router, toastOnPaid],
   );
 
-  return useEventSource<MerchantStreamEvent>(api.url("/stream/merchant"), "merchant", onEvent);
+  // No stream until /auth/me confirms a warung (avoids a 401/403 loop while
+  // MerchantGuard decides); after a drop, refetch what the gap may have hidden.
+  const enabled = useMerchantReady();
+  return useEventSource<MerchantStreamEvent>(api.url("/stream/merchant"), "merchant", onEvent, {
+    enabled,
+    onReconnect: refresh,
+  });
 }

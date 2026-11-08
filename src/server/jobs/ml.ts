@@ -27,7 +27,13 @@ export interface MlRunOptions {
   /** Called per output line (default: inherit stdout/stderr). */
   onLine?: (line: string, stream: "stdout" | "stderr") => void;
   extraArgs?: string[];
+  /** Kill the child after this long (default 15 min); resolves with exit code 1. */
+  timeoutMs?: number;
+  /** Abort (e.g. worker shutdown) kills the child. */
+  signal?: AbortSignal;
 }
+
+export const ML_DEFAULT_TIMEOUT_MS = 15 * 60_000;
 
 export interface MlRunResult {
   exitCode: number;
@@ -71,7 +77,27 @@ export function runMlTraining(opts: MlRunOptions = {}): Promise<MlRunResult> {
       pipe(child.stdout, "stdout");
       pipe(child.stderr, "stderr");
     }
-    child.on("error", reject);
-    child.on("close", (code) => resolve({ exitCode: code ?? 1, python }));
+    const kill = (why: string) => {
+      if (child.exitCode !== null || child.killed) return;
+      opts.onLine?.(`[ml] dihentikan: ${why}`, "stderr");
+      child.kill();
+    };
+    const timer = setTimeout(() => kill("melewati batas waktu"), opts.timeoutMs ?? ML_DEFAULT_TIMEOUT_MS);
+    timer.unref?.();
+    const onAbort = () => kill("worker berhenti");
+    if (opts.signal?.aborted) onAbort();
+    else opts.signal?.addEventListener("abort", onAbort, { once: true });
+    const done = () => {
+      clearTimeout(timer);
+      opts.signal?.removeEventListener("abort", onAbort);
+    };
+    child.on("error", (err) => {
+      done();
+      reject(err);
+    });
+    child.on("close", (code) => {
+      done();
+      resolve({ exitCode: code ?? 1, python });
+    });
   });
 }

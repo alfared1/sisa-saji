@@ -260,7 +260,8 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
             <div className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="text-xl leading-tight font-extrabold">{m.name}</h1>
+                  {/* The sticky PageHeader already carries the page's h1 (same name). */}
+                  <h2 className="text-xl leading-tight font-extrabold">{m.name}</h2>
                   {m.is_verified && <VerifiedBadge label="Toko Terverifikasi" className="mt-1.5" />}
                 </div>
                 <SubscribeButton merchant={m} />

@@ -4,9 +4,9 @@
  * customer totals and the merchant wallet exactly once (row lock + status guard).
  */
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { merchants, orderItems, orders, users } from "@/db/schema";
+import { merchants, orderItems, orders, pickupCodeFailures, users } from "@/db/schema";
 import { BADGE_TIERS, PICKUP_CODE_LENGTH } from "@/lib/constants";
 import type { OrderDetail } from "@/lib/contracts";
 import { badgeTierForFoodSaved, co2GramsFromFoodGrams } from "@/lib/impact";
@@ -30,17 +30,48 @@ export function parsePickupInput(raw: string): PickupInput {
   return { kind: "token", token: v, orderId: UUID_RE.test(orderId) ? orderId : null };
 }
 
+/** Wrong typed codes per warung within the window before code entry is locked. */
+export const PICKUP_CODE_MAX_FAILURES = 10;
+export const PICKUP_CODE_LOCK_WINDOW_MINUTES = 10;
+
+/**
+ * Typed 4-digit codes have only 10.000 values, so a warung must not be able to sweep
+ * them (it would find and complete tickets without the customer). QR tokens are
+ * HMAC-signed and are not limited.
+ */
+async function assertCodeEntryAllowed(db: Db, merchantId: string, now: Date) {
+  const since = new Date(now.getTime() - PICKUP_CODE_LOCK_WINDOW_MINUTES * 60_000);
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(pickupCodeFailures)
+    .where(and(eq(pickupCodeFailures.merchantId, merchantId), gt(pickupCodeFailures.createdAt, since)));
+  if ((row?.n ?? 0) >= PICKUP_CODE_MAX_FAILURES) {
+    console.warn(`[pickup] code entry locked for merchant ${merchantId}: ${row?.n} wrong codes`);
+    throw new ApiError(
+      "RATE_LIMITED",
+      "Terlalu banyak kode salah. Coba lagi dalam beberapa menit atau pindai QR pembeli.",
+      { retry_after_minutes: PICKUP_CODE_LOCK_WINDOW_MINUTES },
+    );
+  }
+}
+
+async function recordCodeFailure(db: Db, merchantId: string, now: Date) {
+  await db.insert(pickupCodeFailures).values({ merchantId, createdAt: now });
+}
+
 function invalid(): never {
   throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak valid atau tidak ditemukan");
 }
 
 export async function lookupPickup(
   db: Db,
-  args: { merchantId: string; input: string; pickupQrSecret: string },
+  args: { merchantId: string; input: string; pickupQrSecret: string; now?: Date },
 ): Promise<OrderDetail> {
+  const now = args.now ?? new Date();
   const parsed = parsePickupInput(args.input);
   let orderId: string;
   if (parsed.kind === "code") {
+    await assertCodeEntryAllowed(db, args.merchantId, now);
     const [o] = await db
       .select({ id: orders.id })
       .from(orders)
@@ -53,7 +84,10 @@ export async function lookupPickup(
       )
       .orderBy(desc(orders.createdAt))
       .limit(1);
-    if (!o) invalid();
+    if (!o) {
+      await recordCodeFailure(db, args.merchantId, now);
+      invalid();
+    }
     orderId = o.id;
   } else {
     if (!parsed.orderId) invalid();
@@ -80,7 +114,28 @@ export async function verifyPickup(
   },
 ): Promise<OrderDetail> {
   const now = args.now ?? new Date();
+  const isCode = parsePickupInput(args.input).kind === "code";
+  if (isCode) await assertCodeEntryAllowed(db, args.merchantId, now);
 
+  try {
+    await completePickup(db, args, now);
+  } catch (err) {
+    // Recorded outside the (rolled back) transaction.
+    if (isCode && err instanceof ApiError && err.code === "INVALID_PICKUP_CODE") {
+      await recordCodeFailure(db, args.merchantId, now);
+    }
+    throw err;
+  }
+
+  const [detail] = await loadOrderDetails(db, [args.orderId], "merchant");
+  return detail;
+}
+
+async function completePickup(
+  db: Db,
+  args: { merchantId: string; orderId: string; input: string; proofImageUrl?: string; pickupQrSecret: string },
+  now: Date,
+): Promise<void> {
   await db.transaction(async (tx) => {
     const [o] = await tx.select().from(orders).where(eq(orders.id, args.orderId)).for("update").limit(1);
     if (!o || o.merchantId !== args.merchantId) throw new ApiError("NOT_FOUND", "Pesanan tidak ditemukan");
@@ -148,7 +203,44 @@ export async function verifyPickup(
       .set({ walletBalanceIdr: sql`${merchants.walletBalanceIdr} + ${o.netMerchantPayoutIdr}`, updatedAt: now })
       .where(eq(merchants.id, o.merchantId));
   });
+}
 
-  const [detail] = await loadOrderDetails(db, [args.orderId], "merchant");
-  return detail;
+export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
+
+/**
+ * Job: paid orders nobody collected by pickup_deadline_at + PICKUP_GRACE_MINUTES
+ * become EXPIRED ("Tidak diambil sebelum batas waktu"). That frees their 4-digit
+ * code and drops them from the pending-pickup queues.
+ *
+ * Money policy (no-show): the portions were sold and set aside, and self-pickup is
+ * the customer's duty, so the warung is still credited net_merchant_payout_idr
+ * (exactly once, in the same transaction as the status change). The customer gets
+ * no impact / points credit — the food was not rescued by them. Stock stays sold.
+ */
+export async function closeUnclaimedOrders(db: Db, now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - PICKUP_GRACE_MINUTES * 60_000);
+  const stale = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(and(inArray(orders.status, [...PICKABLE]), sql`${orders.pickupDeadlineAt} < ${cutoff}`))
+    .orderBy(orders.pickupDeadlineAt)
+    .limit(500);
+  let closed = 0;
+  for (const { id } of stale) {
+    const done = await db.transaction(async (tx) => {
+      const [o] = await tx
+        .update(orders)
+        .set({ status: "EXPIRED", cancelReason: UNCLAIMED_ORDER_REASON, updatedAt: now })
+        .where(and(eq(orders.id, id), inArray(orders.status, [...PICKABLE])))
+        .returning({ merchantId: orders.merchantId, payout: orders.netMerchantPayoutIdr });
+      if (!o) return false;
+      await tx
+        .update(merchants)
+        .set({ walletBalanceIdr: sql`${merchants.walletBalanceIdr} + ${o.payout}`, updatedAt: now })
+        .where(eq(merchants.id, o.merchantId));
+      return true;
+    });
+    if (done) closed++;
+  }
+  return closed;
 }

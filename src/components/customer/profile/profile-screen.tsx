@@ -39,7 +39,6 @@ import { CAMPUSES } from "@/lib/constants";
 import type { ProfileUpdateBody, SessionUser } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { useLocationStore } from "@/stores/location";
-import { useTicketsStore } from "@/stores/tickets";
 import { LoginCta, TabTitle } from "../bits";
 import { PushOptIn } from "../impact/impact-screen";
 import { badgeLabel } from "../lib/format";
@@ -348,8 +347,8 @@ export function ProfileScreen() {
         confirmLabel="Keluar"
         loading={session.isLoggingOut}
         onConfirm={async () => {
+          // logout() also wipes offline tickets + the SW ticket/page caches.
           await session.logout();
-          useTicketsStore.getState().clear();
           setConfirmLogout(false);
           toast("Kamu sudah keluar");
           router.replace("/welcome");

@@ -5,7 +5,7 @@
  * minute jobs (stock expiry, scheduled activation, closing), escalation every
  * ESCALATION_INTERVAL_MINUTES, daily 00:15 / 17:30 WIB jobs and the weekly
  * Sunday 02:00 WIB ML training (only when .venv exists). Each job is caught and
- * logged on its own; SIGINT/SIGTERM finish the running tick and close the pool.
+ * logged on its own; SIGINT/SIGTERM finish the running tick, stop ML training and close the pool.
  */
 import "dotenv/config";
 import { registerHooks } from "node:module";
@@ -42,9 +42,10 @@ async function main() {
     db,
     log,
     runMl: hasVenv
-      ? async () => {
+      ? async (signal) => {
           const { exitCode } = await ml.runMlTraining({
             databaseUrl,
+            signal,
             // train_predict.py already tags its own lines with "[ml]".
             onLine: (line) => log(line.startsWith("[ml]") ? line : `[ml] ${line}`),
           });
@@ -67,9 +68,10 @@ async function main() {
   const shutdown = async (signal: string) => {
     if (stopping) return;
     stopping = true;
-    log(`[worker] ${signal} received, finishing current tick …`);
+    log(`[worker] ${signal} received, finishing current tick (ML training is stopped) …`);
     clearInterval(timer);
     await current;
+    await scheduler.stop(); // waits for the real in-flight tick and kills/awaits Python
     await pool.end();
     log("[worker] stopped");
     process.exit(0);

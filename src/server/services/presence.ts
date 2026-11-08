@@ -43,3 +43,14 @@ export async function countActiveUsersNear(
       AND ST_DWithin(geom, ST_MakePoint(${lng}, ${lat})::geography, ${radiusM})`);
   return rows[0]?.n ?? 0;
 }
+
+/** Presence rows older than this are deleted by the minute job (keeps the table small). */
+export const PRESENCE_RETENTION_HOURS = 24;
+
+export async function prunePresence(db: Db, now: Date = new Date()): Promise<number> {
+  const before = new Date(now.getTime() - PRESENCE_RETENTION_HOURS * 3_600_000);
+  const { rows } = await db.execute<{ n: number }>(sql`
+    WITH gone AS (DELETE FROM customer_presence WHERE last_seen_at < ${before} RETURNING 1)
+    SELECT COUNT(*)::int AS n FROM gone`);
+  return rows[0]?.n ?? 0;
+}

@@ -528,6 +528,23 @@ export const pushSubscriptions = pgTable(
   (t) => [index("idx_push_user").on(t.userId)],
 );
 
+/* ------------------------------------------------------------------ */
+/* 15. pickup_code_failures (lockout against 4-digit code guessing)    */
+/* ------------------------------------------------------------------ */
+
+/** One row per wrong typed pickup code entered by a warung (lookup or verify). */
+export const pickupCodeFailures = pgTable(
+  "pickup_code_failures",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_pickup_failures_merchant").on(t.merchantId, t.createdAt.desc())],
+);
+
 export type User = typeof users.$inferSelect;
 export type Merchant = typeof merchants.$inferSelect;
 export type Menu = typeof menus.$inferSelect;

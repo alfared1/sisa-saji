@@ -13,6 +13,8 @@ import { ApiError } from "@/server/http";
 import {
   batchChangesSince,
   currentCursor,
+  newBatchStreamState,
+  pollBatchStream,
   findMapPins,
   findNearby,
   getMerchantDetail,
@@ -245,5 +247,34 @@ describe("SSE change feed query", () => {
     expect(changes.cursor).not.toBe(cursor);
     // Advancing the cursor drains the feed.
     expect((await batchChangesSince(db, { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 }, changes.cursor)).events).toHaveLength(0);
+  });
+});
+
+describe("SSE stream poll (overlap + dedupe)", () => {
+  it("delivers two batches stamped with the same time across two polls, each exactly once", async () => {
+    const area = { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 };
+    const state = newBatchStreamState(await currentCursor(db));
+    const [a, b] = (await nearby({ radius_m: 2000 })).merchants.flatMap((m) => m.batches).slice(0, 2);
+    await pollBatchStream(db, area, state); // drain the replayed overlap of earlier changes
+    // One escalation tick stamps every batch with the same tick-start time, but
+    // commits them one by one, with a poll landing in between.
+    const tick = new Date(Date.now() + 500);
+    await db.update(surplusBatches).set({ currentDiscountPct: 61, updatedAt: tick }).where(eq(surplusBatches.id, a.batch_id));
+    await new Promise((r) => setTimeout(r, 700)); // the poll starts after the tick stamp
+    const p1 = await pollBatchStream(db, area, state);
+    expect(p1.events.map((e) => e.batch_id)).toEqual([a.batch_id]);
+
+    await db.update(surplusBatches).set({ currentDiscountPct: 61, updatedAt: tick }).where(eq(surplusBatches.id, b.batch_id));
+    const p2 = await pollBatchStream(db, area, state);
+    expect(p2.events.map((e) => e.batch_id)).toEqual([b.batch_id]);
+
+    // A late commit stamped before the previous poll is still delivered; nothing repeats.
+    await db
+      .update(surplusBatches)
+      .set({ availableStock: sql`${surplusBatches.availableStock} - 1`, updatedAt: new Date(Date.now() - 3_000) })
+      .where(eq(surplusBatches.id, a.batch_id));
+    const p3 = await pollBatchStream(db, area, state);
+    expect(p3.events.map((e) => e.batch_id)).toEqual([a.batch_id]);
+    expect((await pollBatchStream(db, area, state)).events).toEqual([]);
   });
 });

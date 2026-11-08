@@ -50,7 +50,8 @@ export async function processPaymentWebhook(
     if (!order) throw new ApiError("NOT_FOUND", "Pesanan tidak ditemukan");
 
     if (order.status !== "PENDING_PAYMENT") {
-      if (body.status === "PAID" && (order.status === "EXPIRED" || order.status === "CANCELLED")) {
+      // paidAt set = it was paid in time (e.g. a no-show closed later): a duplicate, not a late payment.
+      if (body.status === "PAID" && !order.paidAt && (order.status === "EXPIRED" || order.status === "CANCELLED")) {
         if (order.cancelReason !== LATE_PAYMENT_REASON) {
           console.warn(
             `[payment] PAID webhook for ${order.status} order ${order.orderNumber} (ref ${body.gateway_ref}); flagged for refund`,

@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ErrorState } from "@/components/common/error-state";
 import { Logo } from "@/components/common/logo";
 import { useSession } from "@/hooks/use-session";
+import { useTicketOwnerSync } from "@/hooks/use-ticket-owner-sync";
 import { AppSplash } from "./app-splash";
 import { MerchantShell } from "./merchant-shell";
 import { isOnboardingPath, merchantGuardDecision } from "./nav-logic";
@@ -37,6 +38,8 @@ export function MerchantGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/merchant/dashboard";
   const router = useRouter();
   const session = useSession();
+  // Merchant owners also buy as customers: keep their offline tickets scoped.
+  useTicketOwnerSync();
   const decision = merchantGuardDecision({
     pathname,
     isLoading: session.isLoading,

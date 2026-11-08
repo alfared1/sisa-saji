@@ -11,7 +11,7 @@
  * never touches the cart; "Tambah ke Keranjang" goes through useAddToCart so
  * the single-merchant DiffMerchantDialog guard still applies.
  */
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -69,6 +69,18 @@ export function useQuickOrder(batches?: readonly BatchCard[]): {
     setOpen(true);
   }, []);
 
+  // Next 16 (Cache Components) keeps a visited route alive as a hidden
+  // <Activity>; its effects are torn down while hidden. Closing here means a
+  // route the user comes Back to never re-appears with an open order sheet
+  // (and an enabled "Pesan & Ambil Sendiri" that would create a 2nd order).
+  useEffect(
+    () => () => {
+      setOpen(false);
+      setSnapshot(null);
+    },
+    [],
+  );
+
   const live = snapshot ? (batches?.find((b) => b.batch_id === snapshot.batch_id) ?? snapshot) : null;
   const sheet = (
     <QuickOrderSheet batch={live} open={open} onOpenChange={setOpen} disabledLabel={opts.disabledLabel} />
@@ -88,15 +100,27 @@ export function QuickOrderSheet({
   disabledLabel?: string;
 }) {
   const { addToCart, dialog } = useAddToCart();
+  const ctaRef = useRef<HTMLButtonElement>(null);
   return (
     <>
       <Drawer open={open && batch !== null} onOpenChange={onOpenChange}>
-        <DrawerContent className="mx-auto max-w-md rounded-t-3xl">
+        <DrawerContent
+          className="mx-auto max-w-md rounded-t-3xl"
+          onOpenAutoFocus={(e) => {
+            // Start keyboard / screen-reader users on the primary action.
+            const cta = ctaRef.current;
+            if (cta && !cta.disabled) {
+              e.preventDefault();
+              cta.focus();
+            }
+          }}
+        >
           {batch && (
             <QuickOrderBody
               key={batch.batch_id}
               batch={batch}
               disabledLabel={disabledLabel}
+              ctaRef={ctaRef}
               onClose={() => onOpenChange(false)}
               onAddToCart={(qty) => {
                 // Close first so the DiffMerchantDialog (if any) is not under the drawer.
@@ -115,11 +139,13 @@ export function QuickOrderSheet({
 function QuickOrderBody({
   batch,
   disabledLabel,
+  ctaRef,
   onClose,
   onAddToCart,
 }: {
   batch: BatchCard;
   disabledLabel?: string;
+  ctaRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
   onAddToCart: (qty: number) => void;
 }) {
@@ -169,6 +195,9 @@ function QuickOrderBody({
       qc.setQueryData(customerKeys.order(order.id), { order });
       void qc.invalidateQueries({ queryKey: customerKeys.ordersAll });
       refreshLists();
+      // Close before navigating: Back must not land on a still-open sheet
+      // whose CTA would place a duplicate PENDING_PAYMENT order.
+      onClose();
       router.push(`/orders/${order.id}`);
       toast.success("Stok dikunci 10 menit. Scan QRIS untuk bayar.", { id: "qo-ok" });
     },
@@ -251,7 +280,7 @@ function QuickOrderBody({
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <StockBadge available={batch.available_stock} />
-          {!soldOut && <CountdownBadge endIso={batch.pickup_end_time} prefix="Tutup dalam" />}
+          {!soldOut && <CountdownBadge endIso={batch.pickup_end_time} />}
         </div>
 
         <p className="mt-3 flex items-center gap-1.5 rounded-2xl bg-brand-soft/70 px-3 py-2.5 text-xs font-semibold text-secondary-foreground">
@@ -286,6 +315,7 @@ function QuickOrderBody({
 
       <DrawerFooter className="gap-2 pt-3 pb-5">
         <Button
+          ref={ctaRef}
           className="h-12 w-full rounded-full text-base font-bold shadow-soft"
           disabled={blocked || checkout.isPending || session.isLoading}
           onClick={order}

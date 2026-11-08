@@ -118,7 +118,8 @@ describe("expirePendingOrders (worker job)", () => {
     const customer = await newCustomer();
     const batch = await newBatch(4);
     const fresh = await order(customer.id, batch.id, 1);
-    const stale = await order(customer.id, batch.id, 2, new Date(Date.now() - 11 * 60_000));
+    // A different customer: one customer holds at most one unpaid order per warung.
+    const stale = await order((await newCustomer()).id, batch.id, 2, new Date(Date.now() - 11 * 60_000));
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 1, reservedStock: 3 });
 
     const n = await expirePendingOrders(db);
@@ -140,11 +141,12 @@ describe("GET /orders and GET /orders/:id", () => {
     const customer = await newCustomer();
     const batch = await newBatch(6);
     const t0 = Date.now();
+    // One unpaid order per warung at a time: settle each before the next checkout.
     const a = await order(customer.id, batch.id, 1, new Date(t0 - 3000));
-    const b = await order(customer.id, batch.id, 1, new Date(t0 - 2000));
-    const c = await order(customer.id, batch.id, 1, new Date(t0 - 1000));
     await cancelOrder(db, a.id, customer.id);
+    const b = await order(customer.id, batch.id, 1, new Date(t0 - 2000));
     await simulatePayment(db, { orderId: b.id, userId: customer.id, webhookSecret: TEST_PAYMENT_WEBHOOK_SECRET });
+    const c = await order(customer.id, batch.id, 1, new Date(t0 - 1000));
 
     const all = await listCustomerOrders(db, customer.id, OrderListQuery.parse({}));
     expect(all.map((o) => o.id)).toEqual([c.id, b.id, a.id]);

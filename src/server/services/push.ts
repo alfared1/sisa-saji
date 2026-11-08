@@ -11,6 +11,7 @@ import { customerPresence, pushSubscriptions } from "@/db/schema";
 import { getVapidKeys } from "@/lib/env";
 import type { WebPushSubscriptionInput } from "@/lib/contracts";
 import { PRESENCE_ACTIVE_MINUTES } from "@/lib/constants";
+import { ApiError } from "@/server/http";
 
 export type PushPayload = {
   title: string;
@@ -33,10 +34,54 @@ export function isPushEnabled(): boolean {
   return ensureConfigured();
 }
 
+/**
+ * Push services of the browsers we support. The server POSTs to the stored endpoint,
+ * so arbitrary URLs would let anyone aim it at internal hosts (blind SSRF).
+ */
+const PUSH_SERVICE_HOSTS = [
+  /^fcm\.googleapis\.com$/, // Chrome, Edge (Chromium), Samsung, Opera
+  /^([a-z0-9-]+\.)?push\.services\.mozilla\.com$/, // Firefox (updates.push.services.mozilla.com)
+  /^[a-z0-9-]+\.notify\.windows\.com$/, // legacy Edge / Windows
+  /^web\.push\.apple\.com$/, // Safari
+];
+
+function base64UrlBytes(v: string): number {
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(v)) return -1;
+  return Buffer.from(v.replace(/=+$/, ""), "base64url").length;
+}
+
+/** True for an https endpoint of a known push service with well-formed P-256 / auth keys. */
+export function isValidPushSubscription(sub: WebPushSubscriptionInput): boolean {
+  let url: URL;
+  try {
+    url = new URL(sub.endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:" || url.port !== "" || url.username || url.password) return false;
+  if (!PUSH_SERVICE_HOSTS.some((re) => re.test(url.hostname.toLowerCase()))) return false;
+  return base64UrlBytes(sub.keys.p256dh) === 65 && base64UrlBytes(sub.keys.auth) === 16;
+}
+
+/** Logout: the device stops receiving this account's notifications (keeps anonymous nearby pushes). */
+export async function unlinkPushSubscription(db: Db, input: { userId: string; endpoint: string }): Promise<number> {
+  const rows = await db
+    .update(pushSubscriptions)
+    .set({ userId: null })
+    .where(and(eq(pushSubscriptions.endpoint, input.endpoint), eq(pushSubscriptions.userId, input.userId)))
+    .returning({ id: pushSubscriptions.id });
+  return rows.length;
+}
+
 export async function savePushSubscription(
   db: Db,
   input: { userId: string | null; clientId: string | null; subscription: WebPushSubscriptionInput },
 ) {
+  if (!isValidPushSubscription(input.subscription)) {
+    throw new ApiError("VALIDATION_ERROR", "Langganan notifikasi tidak valid", [
+      { path: "webpush_subscription", message: "Endpoint push tidak dikenal atau kunci tidak valid" },
+    ]);
+  }
   const { endpoint, keys } = input.subscription;
   await db
     .insert(pushSubscriptions)

@@ -147,6 +147,13 @@ export const OtpVerifyBody = z
   .refine(oneIdentifier, { message: "Isi salah satu: nomor HP atau email" });
 export type OtpVerifyBody = z.input<typeof OtpVerifyBody>;
 
+/**
+ * POST /api/v1/auth/logout — optional body. `push_endpoint` = this device's
+ * PushSubscription.endpoint, so it stops receiving the account's notifications.
+ */
+export const LogoutBody = z.object({ push_endpoint: z.string().url().max(2048).optional() });
+export type LogoutBody = z.input<typeof LogoutBody>;
+
 export type SessionUser = {
   id: string;
   role: UserRole;

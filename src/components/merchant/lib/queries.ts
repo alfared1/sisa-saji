@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { toast } from "sonner";
 import { MERCHANT_ME_QUERY_KEY } from "@/components/shell/merchant-shell";
 import { errorMessage } from "@/components/common/error-state";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
 import type {
   MerchantDashboard,
@@ -28,16 +29,31 @@ export const merchantKeys = {
   insights: ["merchant", "insights"] as const,
 };
 
+/**
+ * True once /auth/me confirms the user owns a warung. MerchantGuard renders
+ * the page optimistically while the session loads; merchant queries wait for
+ * this so a logged-out visitor or a customer without a warung never fires
+ * merchant API calls (401/403 console noise) before the guard redirects.
+ */
+export function useMerchantReady(): boolean {
+  const { user } = useSession();
+  return Boolean(user?.merchant_id);
+}
+
 export function useMerchantMe() {
+  const ready = useMerchantReady();
   return useQuery({
     queryKey: MERCHANT_ME_QUERY_KEY,
     queryFn: () => api.get<MerchantMeResponse>("/merchant/me"),
+    enabled: ready,
     staleTime: 30_000,
   });
 }
 
 export function useMerchantDashboard() {
+  const ready = useMerchantReady();
   return useQuery({
+    enabled: ready,
     queryKey: merchantKeys.dashboard,
     queryFn: () => api.get<MerchantDashboard>("/merchant/dashboard"),
     staleTime: 10_000,

@@ -4,10 +4,13 @@ import * as React from "react"
 import { cn } from "cn"
 import { Drawer as DrawerPrimitive } from "vaul"
 
+// vaul defaults autoFocus to false, which cancels Radix's onOpenAutoFocus:
+// focus then stays on the trigger and the modal focus trap never engages.
 function Drawer({
+  autoFocus = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  return <DrawerPrimitive.Root data-slot="drawer" autoFocus={autoFocus} {...props} />
 }
 
 function DrawerTrigger({

@@ -4,6 +4,7 @@ import { Clock3Icon } from "lucide-react";
 import { useCountdown } from "@/hooks/use-countdown";
 import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { formatCountdownText } from "./countdown-format";
 
 /**
  * Live countdown to a closing / pickup deadline. Turns red & pulses under
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
  */
 export function CountdownBadge({
   endIso,
-  prefix = "Tutup",
+  prefix = "Tutup dalam",
   overLabel = "Sudah tutup",
   variant = "soft",
   className,
@@ -31,9 +32,7 @@ export function CountdownBadge({
     ? `s/d ${formatClockId(endIso)}`
     : over
       ? overLabel
-      : c.hours > 0
-        ? `${prefix} ${c.hours}j ${String(c.minutes).padStart(2, "0")}m`
-        : `${prefix} ${String(c.minutes).padStart(2, "0")}:${String(c.seconds).padStart(2, "0")}`;
+      : formatCountdownText(c, prefix);
 
   return (
     <span

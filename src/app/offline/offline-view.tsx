@@ -11,6 +11,7 @@ import { PICKUP_CODE_PREFIX } from "@/lib/constants";
 import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useStoresHydrated } from "@/stores/hydration";
+import { useTicketOwnerSync } from "@/hooks/use-ticket-owner-sync";
 import { selectTicketList, useTicketsStore, type SavedTicket } from "@/stores/tickets";
 
 function subscribeOnline(cb: () => void) {
@@ -87,6 +88,8 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
 }
 
 export function OfflineView() {
+  // Online: drop tickets that are not the current session's (shared phone).
+  useTicketOwnerSync();
   const online = useOnline();
   const hydrated = useStoresHydrated();
   const tickets = useTicketsStore((s) => s.tickets);

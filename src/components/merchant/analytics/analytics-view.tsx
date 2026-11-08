@@ -28,7 +28,7 @@ import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { percent } from "../lib/logic";
-import { merchantKeys, primeMerchantProfile, MERCHANT_ME_QUERY_KEY } from "../lib/queries";
+import { merchantKeys, primeMerchantProfile, MERCHANT_ME_QUERY_KEY, useMerchantReady } from "../lib/queries";
 import { MerchantPage, MerchantPageHeader, ModelBadge, SectionCard, StatTile } from "../ui";
 import { DailyPortionsChart, PredictionOutlook, TopMenusBars, WeeklySurplusHeatmap } from "./charts";
 
@@ -181,13 +181,16 @@ function AnalyticsSkeleton() {
 /** /merchant/analytics — Revenue Recovery & Waste Reduction Insights. */
 export function MerchantAnalyticsView() {
   const [range, setRange] = useState<(typeof RANGES)[number]>(30);
+  const ready = useMerchantReady();
   const analytics = useQuery({
+    enabled: ready,
     queryKey: merchantKeys.analytics(range),
     queryFn: () => api.get<AnalyticsResponse>("/merchant/analytics", { range_days: range }),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
   const insights = useQuery({
+    enabled: ready,
     queryKey: merchantKeys.insights,
     queryFn: () => api.get<InsightsResponse>("/merchant/predictions/insights"),
     staleTime: 5 * 60_000,

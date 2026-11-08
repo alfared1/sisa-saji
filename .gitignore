@@ -57,3 +57,6 @@ __pycache__/
 # playwright
 /test-results/
 /playwright-report/
+
+# per-dist-dir tsconfig written by next.config.ts (NEXT_DIST_DIR runs)
+/tsconfig.*.local.json

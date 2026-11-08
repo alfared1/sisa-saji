@@ -16,7 +16,7 @@
  * with unchanged prices is written so the push is still sent only once.
  */
 import "server-only";
-import { and, eq, gt, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { discountAdjustmentLogs, menus, merchants, surplusBatches } from "@/db/schema";
 import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
@@ -100,14 +100,17 @@ export async function runEscalation(db: Db, now: Date = new Date()): Promise<Esc
 
     const newPct = raise ? q.recommendedDiscountPct : batch.currentDiscountPct;
     const newPrice = raise ? q.recommendedSellingPriceIdr : batch.currentSellingPriceIdr;
+    // updated_at = write time (not the tick start): batches of one tick commit seconds
+    // apart (push sends in between), and the SSE cursor follows updated_at.
+    const stampedAt = sql`GREATEST(clock_timestamp(), ${now}::timestamptz)`;
     const applied = await db.transaction(async (tx) => {
       // Optimistic guard: skip if the price changed since we read it (merchant edit / parallel run).
       const [updated] = await tx
         .update(surplusBatches)
         .set(
           raise
-            ? { currentDiscountPct: newPct, currentSellingPriceIdr: newPrice, lastPriceUpdatedAt: now, updatedAt: now }
-            : { updatedAt: now },
+            ? { currentDiscountPct: newPct, currentSellingPriceIdr: newPrice, lastPriceUpdatedAt: now, updatedAt: stampedAt }
+            : { updatedAt: stampedAt },
         )
         .where(
           and(

@@ -63,6 +63,7 @@ export function MapScreen() {
 
   return (
     <div className="relative flex h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden">
+      <h1 className="sr-only">Peta surplus</h1>
       {/* Floating header */}
       <div className="safe-top pointer-events-none absolute inset-x-0 top-0 z-[600] px-3 pt-3">
         <div className="pointer-events-auto rounded-3xl bg-background/95 p-3 shadow-float ring-1 ring-border backdrop-blur-xl">

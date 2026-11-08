@@ -8,7 +8,7 @@
  */
 import "server-only";
 import { createHash, randomInt, timingSafeEqual } from "node:crypto";
-import { and, count, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { otpCodes, users } from "@/db/schema";
@@ -96,19 +96,30 @@ export async function verifyOtp(db: Db, input: OtpVerifyInput, now: Date = new D
   }
   if (otp.expiresAt <= now) throw new ApiError("OTP_EXPIRED", "Kode OTP sudah kedaluwarsa. Minta kode baru.");
 
+  // Reserve the attempt atomically BEFORE comparing: a check-then-increment lets
+  // parallel guesses all pass the check, exceeding OTP_MAX_ATTEMPTS.
+  const [reserved] = await db
+    .update(otpCodes)
+    .set({ attempts: sql`${otpCodes.attempts} + 1` })
+    .where(and(eq(otpCodes.id, otp.id), lt(otpCodes.attempts, OTP_MAX_ATTEMPTS), isNull(otpCodes.consumedAt)))
+    .returning({ attempts: otpCodes.attempts });
+  if (!reserved) {
+    throw new ApiError("OTP_INVALID", "Terlalu banyak percobaan salah. Minta kode baru.", { locked: true });
+  }
+
   if (!sameHash(otp.codeHash, hashOtp(id.value, input.code))) {
-    const [row] = await db
-      .update(otpCodes)
-      .set({ attempts: sql`${otpCodes.attempts} + 1` })
-      .where(eq(otpCodes.id, otp.id))
-      .returning({ attempts: otpCodes.attempts });
-    const remaining = Math.max(0, OTP_MAX_ATTEMPTS - (row?.attempts ?? OTP_MAX_ATTEMPTS));
+    const remaining = Math.max(0, OTP_MAX_ATTEMPTS - reserved.attempts);
     throw new ApiError(
       "OTP_INVALID",
       remaining > 0 ? `Kode OTP salah. Sisa ${remaining} percobaan.` : "Kode OTP salah. Minta kode baru.",
       { remaining_attempts: remaining },
     );
   }
+  // The right code gives its reserved attempt back (the new-account flow retries it with a name).
+  await db
+    .update(otpCodes)
+    .set({ attempts: sql`GREATEST(${otpCodes.attempts} - 1, 0)` })
+    .where(eq(otpCodes.id, otp.id));
 
   const identityWhere = id.kind === "phone" ? eq(users.phoneNumber, id.value) : eq(users.email, id.value);
 

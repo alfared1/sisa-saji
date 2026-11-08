@@ -142,7 +142,8 @@ export function MerchantShell({
   const pathname = previewPathname ?? routerPathname ?? "";
   const active = activeMerchantHref(pathname);
   // While the session loads we already ask for the warung (it is the common case).
-  const me = useMerchantMe(user === null || Boolean(user.merchant_id));
+  // Only once /auth/me confirms a warung (no 401/403 while the guard decides).
+  const me = useMerchantMe(Boolean(user?.merchant_id));
   const merchant = me.data?.merchant;
   const storeName = merchant?.merchant_name ?? (me.isLoading ? "Memuat warung…" : "Warung kamu");
   const initials = (user?.full_name ?? "")

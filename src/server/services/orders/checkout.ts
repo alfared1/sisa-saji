@@ -7,10 +7,10 @@
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, like } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, like, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
-import { menus, merchants, orderItems, orders } from "@/db/schema";
+import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
 import { DEMO_VOUCHERS, PAYMENT_TTL_SECONDS } from "@/lib/constants";
 import type { CheckoutBody, OrderDetail } from "@/lib/contracts";
 import { createPickupToken, generatePickupCode } from "@/lib/pickup-token";
@@ -20,7 +20,7 @@ import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { buildDynamicQris, cityFromAddress } from "@/server/services/payment/qris";
 import { newGatewayRef } from "@/server/services/payment/webhook";
-import { reserveItems, type Tx } from "@/server/services/stock";
+import { abandonPendingOrder, reserveItems, type Tx } from "@/server/services/stock";
 
 export type CheckoutInput = z.output<typeof CheckoutBody>;
 
@@ -67,6 +67,125 @@ async function freePickupCode(tx: Tx, merchantId: string): Promise<string> {
   throw new ApiError("CONFLICT", "Warung sedang menerima terlalu banyak pesanan. Coba lagi sebentar.");
 }
 
+/* ---------------------------- fair use ---------------------------- */
+/*  Stock is scarce (often < 10 portions), so one account must not be able to hold
+ *  it all: limits on unpaid checkouts, portions per batch and checkout churn.     */
+
+/** Unpaid (PENDING_PAYMENT) checkouts a customer may hold at once, across warung. */
+export const MAX_PENDING_ORDERS_PER_USER = 2;
+/** Cancelled/expired checkouts within the window before new checkouts are refused. */
+export const MAX_ABANDONED_ORDERS_IN_WINDOW = 3;
+export const ABANDONED_ORDERS_WINDOW_MINUTES = 30;
+/** Portions of one batch a customer may hold across their active orders. */
+export function maxPortionsPerCustomer(initialStock: number): number {
+  return Math.max(3, Math.ceil(initialStock / 2));
+}
+
+const sameItems = (a: Map<string, number>, b: Map<string, number>) =>
+  a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+
+/**
+ * Enforces the fair-use limits inside the checkout transaction (the users row lock
+ * serialises concurrent checkouts of one customer). Returns the id of an existing
+ * identical unpaid order at the same warung (idempotent retry / double tap), or null.
+ */
+async function enforceFairUse(
+  tx: Tx,
+  args: { userId: string; merchantId: string; items: Map<string, number>; now: Date },
+): Promise<string | null> {
+  const { userId, merchantId, items, now } = args;
+  await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("update");
+
+  const pendingRows = await tx
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      merchantId: orders.merchantId,
+      paymentExpiresAt: orders.paymentExpiresAt,
+    })
+    .from(orders)
+    .where(and(eq(orders.customerId, userId), eq(orders.status, "PENDING_PAYMENT")));
+  const pending: typeof pendingRows = [];
+  for (const o of pendingRows) {
+    // Lazily expire stale unpaid checkouts the worker has not reached yet.
+    if (o.paymentExpiresAt && o.paymentExpiresAt <= now) {
+      await abandonPendingOrder(tx, o.id, "EXPIRED", "Pembayaran tidak diselesaikan dalam 10 menit", now);
+    } else pending.push(o);
+  }
+
+  const atSameWarung = pending.find((o) => o.merchantId === merchantId);
+  if (atSameWarung) {
+    const lines = await tx
+      .select({ batchId: orderItems.surplusBatchId, quantity: orderItems.quantity })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, atSameWarung.id));
+    const existing = new Map<string, number>();
+    for (const l of lines) existing.set(l.batchId, (existing.get(l.batchId) ?? 0) + l.quantity);
+    if (sameItems(existing, items)) return atSameWarung.id;
+    throw new ApiError(
+      "CONFLICT",
+      `Kamu masih punya pesanan belum dibayar di warung ini (${atSameWarung.orderNumber}). Bayar atau batalkan dulu.`,
+      { order_id: atSameWarung.id, order_number: atSameWarung.orderNumber },
+    );
+  }
+  if (pending.length >= MAX_PENDING_ORDERS_PER_USER) {
+    throw new ApiError("CONFLICT", "Selesaikan atau batalkan pesanan yang belum dibayar dulu.", {
+      pending_order_ids: pending.map((o) => o.id),
+    });
+  }
+
+  const windowStart = new Date(now.getTime() - ABANDONED_ORDERS_WINDOW_MINUTES * 60_000);
+  const [abandoned] = await tx
+    .select({ n: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.customerId, userId),
+        inArray(orders.status, ["CANCELLED", "EXPIRED"]),
+        gt(orders.updatedAt, windowStart),
+      ),
+    );
+  if ((abandoned?.n ?? 0) >= MAX_ABANDONED_ORDERS_IN_WINDOW) {
+    throw new ApiError("RATE_LIMITED", "Terlalu banyak pesanan dibatalkan atau tidak dibayar. Coba lagi nanti.", {
+      retry_after_minutes: ABANDONED_ORDERS_WINDOW_MINUTES,
+    });
+  }
+
+  const batchIds = [...items.keys()];
+  const held = await tx
+    .select({ batchId: orderItems.surplusBatchId, qty: sql<number>`sum(${orderItems.quantity})::int` })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(
+      and(
+        eq(orders.customerId, userId),
+        inArray(orders.status, [...ACTIVE_ORDER_STATUSES]),
+        inArray(orderItems.surplusBatchId, batchIds),
+      ),
+    )
+    .groupBy(orderItems.surplusBatchId);
+  const heldBy = new Map(held.map((h) => [h.batchId, h.qty]));
+  const batches = await tx
+    .select({ id: surplusBatches.id, initialStock: surplusBatches.initialStock })
+    .from(surplusBatches)
+    .where(inArray(surplusBatches.id, batchIds));
+  for (const b of batches) {
+    const cap = maxPortionsPerCustomer(b.initialStock);
+    const already = heldBy.get(b.id) ?? 0;
+    if (already + (items.get(b.id) ?? 0) > cap) {
+      const left = Math.max(0, cap - already);
+      throw new ApiError(
+        "VALIDATION_ERROR",
+        left > 0
+          ? `Maksimal ${cap} porsi menu ini per pembeli. Kamu masih bisa memesan ${left} porsi lagi.`
+          : `Kamu sudah memesan batas maksimal ${cap} porsi menu ini.`,
+        [{ path: "items", message: `Maksimal ${cap} porsi per pembeli`, batch_id: b.id, max_quantity: cap }],
+      );
+    }
+  }
+  return null;
+}
+
 function isUniqueViolation(err: unknown): boolean {
   for (let e: unknown = err, i = 0; e && i < 4; i++) {
     if (typeof e === "object" && e !== null && "code" in e && (e as { code: unknown }).code === "23505") return true;
@@ -94,6 +213,14 @@ export async function checkout(
     if (!merchant.isOpen) throw new ApiError("BATCH_CLOSED", "Warung sedang tutup");
     if (merchant.ownerUserId === args.userId) {
       throw new ApiError("FORBIDDEN", "Tidak bisa memesan dari warung sendiri");
+    }
+
+    const requested = new Map<string, number>();
+    for (const it of input.items) requested.set(it.batch_id, (requested.get(it.batch_id) ?? 0) + it.quantity);
+    const existingId = await enforceFairUse(tx, { userId: args.userId, merchantId: merchant.id, items: requested, now });
+    if (existingId) {
+      const [existing] = await loadOrderDetails(tx, [existingId], "customer");
+      if (existing) return existing;
     }
 
     const reserved = await reserveItems(

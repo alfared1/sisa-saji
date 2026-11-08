@@ -155,7 +155,7 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill status={batch.status} startIso={batch.pickup_start_time} />
-            {!closed && <CountdownBadge endIso={batch.pickup_end_time} prefix="Tutup" />}
+            {!closed && <CountdownBadge endIso={batch.pickup_end_time} />}
           </div>
           <h3 className="mt-1.5 text-base leading-snug font-bold">{batch.menu_name}</h3>
           <PriceTag

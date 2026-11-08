@@ -1,27 +1,40 @@
 /* Sisa-Saji service worker (hand-written, no build step).
  *
- * Caches (bump SW_VERSION to invalidate all of them):
+ * Caches:
  *   shell   – precached "/", "/offline", "/discover"
  *   pages   – HTML of visited pages (network-first fallback)
- *   static  – /_next/static, fonts, icons (cache-first; content-hashed)
+ *   static  – /_next/static, fonts, icons (cache-first; content-hashed;
+ *             capped at MAX_STATIC_ENTRIES, oldest first out)
  *   tickets – GET /api/v1/orders/<id> (network-first) so an active pickup
  *             ticket opens offline
  * Every other /api request goes straight to the network and is never cached.
+ *
+ * Versioning: the app registers /sw.js?v=<build id>. shell/pages/static are
+ * named after that build, so each deploy installs a new worker and activate()
+ * purges the previous build's caches. Tickets keep a stable name so a pickup
+ * ticket survives a deploy. Bump SW_VERSION to invalidate everything.
+ *
+ * Logout: the page posts {type:"CLEAR_PRIVATE"} (and deletes the caches
+ * itself) so no previous user's ticket or page stays on a shared phone.
  *
  * Update flow: a new worker waits until the page posts {type:"SKIP_WAITING"}
  * (the app shows a "Muat ulang" toast); the very first install activates at once.
  */
 const SW_VERSION = "v1";
+const SW_BUILD = (new URL(self.location.href).searchParams.get("v") || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40);
+const BUILD_TAG = SW_BUILD ? `${SW_VERSION}-${SW_BUILD}` : SW_VERSION;
 const CACHE = {
-  shell: `ss-shell-${SW_VERSION}`,
-  pages: `ss-pages-${SW_VERSION}`,
-  static: `ss-static-${SW_VERSION}`,
+  shell: `ss-shell-${BUILD_TAG}`,
+  pages: `ss-pages-${BUILD_TAG}`,
+  static: `ss-static-${BUILD_TAG}`,
   tickets: `ss-tickets-${SW_VERSION}`,
 };
+const PRIVATE_CACHE_PREFIXES = ["ss-tickets-", "ss-pages-"];
 const PRECACHE_URLS = ["/", "/offline", "/discover"];
 const OFFLINE_URL = "/offline";
 const MAX_PAGE_ENTRIES = 40;
 const MAX_TICKET_ENTRIES = 20;
+const MAX_STATIC_ENTRIES = 150;
 const ORDER_DETAIL_RE = /^\/api\/v1\/orders\/[0-9a-f-]{36}$/i;
 /** /_next/static asset paths referenced in page HTML (script/link tags and the inline RSC payload). */
 const STATIC_ASSET_RE = /\/_next\/static\/[A-Za-z0-9_\-./~%]+\.(?:js|css|woff2?)/g;
@@ -58,6 +71,7 @@ self.addEventListener("install", (event) => {
           }
         }),
       );
+      await trimCache(CACHE.static, MAX_STATIC_ENTRIES);
       // First install: no older worker to replace, activate immediately.
       if (!self.registration.active) await self.skipWaiting();
     })(),
@@ -85,7 +99,19 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   const type = event.data && event.data.type;
   if (type === "SKIP_WAITING") self.skipWaiting();
-  else if (type === "GET_VERSION" && event.ports[0]) event.ports[0].postMessage({ version: SW_VERSION });
+  else if (type === "GET_VERSION" && event.ports[0]) event.ports[0].postMessage({ version: BUILD_TAG });
+  else if (type === "CLEAR_PRIVATE") {
+    // Logout: drop every user-scoped copy (tickets with name/phone/pickup code/QR, page HTML).
+    event.waitUntil(
+      (async () => {
+        const names = await caches.keys();
+        await Promise.all(
+          names.filter((n) => PRIVATE_CACHE_PREFIXES.some((p) => n.startsWith(p))).map((n) => caches.delete(n)),
+        );
+        if (event.ports[0]) event.ports[0].postMessage({ ok: true });
+      })(),
+    );
+  }
 });
 
 /* ------------------------------------------------------------------ */
@@ -154,7 +180,10 @@ async function cacheFirst(req, cacheName) {
   if (hit) return hit;
   try {
     const res = await fetch(req);
-    if (res.ok && (res.type === "basic" || res.type === "default")) await cache.put(req, res.clone());
+    if (res.ok && (res.type === "basic" || res.type === "default")) {
+      // Content-hashed chunks pile up across deploys: keep the cache bounded.
+      await putAndTrim(cacheName, req, res.clone(), MAX_STATIC_ENTRIES);
+    }
     return res;
   } catch {
     return new Response("", { status: 504 });
@@ -189,10 +218,20 @@ async function putAndTrim(cacheName, req, res, maxEntries) {
   try {
     const cache = await caches.open(cacheName);
     await cache.put(req, res);
+    await trimCache(cacheName, maxEntries);
+  } catch {
+    /* quota exceeded etc. */
+  }
+}
+
+/** Deletes the oldest entries (insertion order) beyond `maxEntries`. */
+async function trimCache(cacheName, maxEntries) {
+  try {
+    const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     for (let i = 0; i < keys.length - maxEntries; i++) await cache.delete(keys[i]);
   } catch {
-    /* quota exceeded etc. */
+    /* best effort */
   }
 }
 

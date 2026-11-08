@@ -2,7 +2,12 @@ import { connection } from "next/server";
 import { getDb } from "@/db";
 import { DiscoverQuery } from "@/lib/contracts";
 import { fail } from "@/server/http";
-import { batchChangesSince, currentCursor } from "@/server/services/discovery/discovery";
+import {
+  type BatchStreamState,
+  currentCursor,
+  newBatchStreamState,
+  pollBatchStream,
+} from "@/server/services/discovery/discovery";
 
 const POLL_MS = 5_000;
 const PING_MS = 20_000;
@@ -30,9 +35,9 @@ export async function GET(req: Request) {
   }
   const area = parsed.data;
   const db = getDb();
-  let cursor: string;
+  let state: BatchStreamState;
   try {
-    cursor = validCursor(req.headers.get("last-event-id")) ?? (await currentCursor(db));
+    state = newBatchStreamState(validCursor(req.headers.get("last-event-id")) ?? (await currentCursor(db)));
   } catch (err) {
     console.error("[sse] stream/batches: database unavailable", err);
     return fail("DB_UNAVAILABLE", "Database tidak dapat dihubungi");
@@ -71,10 +76,10 @@ export async function GET(req: Request) {
         if (closed || polling) return;
         polling = true;
         try {
-          const changes = await batchChangesSince(db, area, cursor);
-          cursor = changes.cursor;
+          // Overlap window + dedupe: rows that commit late or share a stamp are not lost.
+          const changes = await pollBatchStream(db, area, state);
           for (const ev of changes.events) {
-            write(`event: batch\nid: ${cursor}\ndata: ${JSON.stringify(ev)}\n\n`);
+            write(`event: batch\nid: ${changes.cursor}\ndata: ${JSON.stringify(ev)}\n\n`);
           }
         } catch (err) {
           console.warn("[sse] stream/batches poll failed", err instanceof Error ? err.message : err);

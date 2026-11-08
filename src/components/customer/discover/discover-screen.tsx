@@ -17,9 +17,12 @@ import {
   SearchIcon,
   SearchXIcon,
   StoreIcon,
+  TicketIcon,
   WalletIcon,
+  WifiOffIcon,
   XIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { CategoryChips } from "@/components/common/category-chips";
 import { useAddToCart } from "@/components/common/diff-merchant-dialog";
 import { EmptyState } from "@/components/common/empty-state";
@@ -38,11 +41,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useNow } from "@/hooks/use-now";
+import { useOnline } from "@/hooks/use-online";
 import { useSession } from "@/hooks/use-session";
-import { api } from "@/lib/api/client";
+import { ApiClientError, api } from "@/lib/api/client";
 import { DISCOVER_SORTS, type MenuCategory, type NearbyResponse } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { useStoresHydrated } from "@/stores/hydration";
+import { useTicketsStore } from "@/stores/tickets";
 import { RADIUS_OPTIONS, formatRadius, useLocationStore } from "@/stores/location";
 import { SectionHeader } from "../bits";
 import { DealTile } from "../deal-tile";
@@ -51,7 +56,8 @@ import { useDebounced } from "../hooks/use-debounced";
 import { GuestImpactBanner, ImpactCard } from "../impact-card";
 import { MerchantCard } from "../merchant-card";
 import { deriveDiscoverSections, nextRadius } from "../lib/discover-sections";
-import { customerKeys } from "../lib/queries";
+import { cartMerchantFromBatch, customerKeys } from "../lib/queries";
+import { DynamicPriceMenuCard } from "../menu-card";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 type Sort = (typeof DISCOVER_SORTS)[number];
@@ -200,6 +206,34 @@ function DiscoverSkeleton() {
   );
 }
 
+/**
+ * Offline (e.g. at the warung with no signal, PWA opened from the home
+ * screen): the saved pickup ticket is what matters, not an empty feed.
+ */
+function OfflineTicketBanner({ offline }: { offline: boolean }) {
+  const hydrated = useStoresHydrated();
+  const ticketCount = useTicketsStore((s) => Object.keys(s.tickets).length);
+  if (!offline || !hydrated || ticketCount === 0) return null;
+  return (
+    <Link
+      href="/offline"
+      className="flex items-center gap-3 rounded-3xl bg-deal-soft p-4 text-left shadow-soft ring-1 ring-deal/30 transition-colors hover:bg-deal-soft/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+    >
+      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-card text-deal">
+        <TicketIcon className="size-6" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-extrabold">Kamu sedang offline</span>
+        <span className="block text-xs text-muted-foreground">
+          {ticketCount === 1 ? "1 tiket pengambilan tersimpan" : `${ticketCount} tiket pengambilan tersimpan`} — tetap
+          bisa ditunjukkan ke warung.
+        </span>
+      </span>
+      <span className="shrink-0 rounded-full bg-deal px-3 py-1.5 text-xs font-bold text-deal-foreground">Lihat tiket</span>
+    </Link>
+  );
+}
+
 export function DiscoverScreen() {
   const session = useSession();
   const [category, setCategory] = useState<MenuCategory | null>(null);
@@ -221,10 +255,14 @@ export function DiscoverScreen() {
   const filtered = Boolean(category || q);
   const bigger = nextRadius(params.radius_m, RADIUS_OPTIONS);
   const isEmpty = !loading && !query.isError && sections.merchants.length === 0;
+  const online = useOnline();
+  const offline =
+    !online || (query.isError && query.error instanceof ApiClientError && query.error.code === "NETWORK_ERROR");
 
   return (
     <>
       <ShellHeader className="pb-0">
+        <h1 className="sr-only">Cari makanan surplus</h1>
         <LocationPill />
         <div className="mt-3 flex items-center gap-2">
           <label className="relative flex h-11 min-w-0 flex-1 items-center">
@@ -256,6 +294,7 @@ export function DiscoverScreen() {
       </ShellHeader>
 
       <div className="flex flex-col gap-6 px-4 pt-4 pb-6">
+        <OfflineTicketBanner offline={offline} />
         <GeoPrompt />
 
         {!filtered &&
@@ -270,14 +309,20 @@ export function DiscoverScreen() {
         {/* Live status + manual refresh */}
         <div className="-mb-2 flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <span className="relative flex size-2.5 shrink-0" aria-hidden>
-              <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
-              <span className="relative size-2.5 rounded-full bg-primary" />
-            </span>
+            {offline ? (
+              <WifiOffIcon className="size-3.5 shrink-0 text-urgent" aria-hidden />
+            ) : (
+              <span className="relative flex size-2.5 shrink-0" aria-hidden>
+                <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
+                <span className="relative size-2.5 rounded-full bg-primary" />
+              </span>
+            )}
             <span className="truncate">
-              {loading
-                ? "Mencari surplus di sekitarmu…"
-                : `Live · ${sections.totalBatches} menu, ${sections.totalPortions} porsi dalam ${formatRadius(params.radius_m)}`}
+              {offline
+                ? "Offline · daftar belum bisa diperbarui"
+                : loading
+                  ? "Mencari surplus di sekitarmu…"
+                  : `Live · ${sections.totalBatches} menu, ${sections.totalPortions} porsi dalam ${formatRadius(params.radius_m)}`}
             </span>
           </p>
           <Button
@@ -334,7 +379,32 @@ export function DiscoverScreen() {
               <ErrorState compact error={query.error} onRetry={() => void query.refetch()} retrying={query.isFetching} />
             )}
 
-            {sections.urgent.length > 0 && (
+            {/* Search / category: show the matching menus themselves (tap → quick order),
+                not only the warung cards they belong to. */}
+            {filtered && allBatches.length > 0 && (
+              <section aria-labelledby="sec-match" className="space-y-3">
+                <SectionHeader
+                  id="sec-match"
+                  title="Menu yang Cocok"
+                  subtitle={`${allBatches.length} menu ${q ? `untuk “${q}”` : "di kategori ini"}`}
+                  icon={SearchIcon}
+                  iconClassName="text-primary"
+                />
+                <div className={cn("space-y-3 transition-opacity", query.isPlaceholderData && "opacity-60")}>
+                  {allBatches.map((b) => (
+                    <DynamicPriceMenuCard
+                      key={b.batch_id}
+                      batch={b}
+                      merchant={cartMerchantFromBatch(b)}
+                      onAdd={addToCart}
+                      onOpenDetail={() => openQuickOrder(b)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!filtered && sections.urgent.length > 0 && (
               <section aria-labelledby="sec-urgent" className="space-y-3">
                 <SectionHeader
                   id="sec-urgent"
@@ -357,7 +427,7 @@ export function DiscoverScreen() {
               </section>
             )}
 
-            {sections.under10k.length > 0 && (
+            {!filtered && sections.under10k.length > 0 && (
               <section aria-labelledby="sec-10k" className="space-y-3">
                 <SectionHeader
                   id="sec-10k"

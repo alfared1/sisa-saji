@@ -40,7 +40,18 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
-      <DialogContent showCloseButton={false} className="max-w-[calc(100%-2rem)] rounded-3xl p-6 sm:max-w-sm">
+      {/*
+        A confirmation that interrupts an action (logout, emptying the cart):
+        WAI-ARIA alertdialog semantics — announced as such, focus starts on
+        "Batal" (first button), and a stray tap outside does not dismiss it.
+      */}
+      <DialogContent
+        role="alertdialog"
+        showCloseButton={false}
+        className="max-w-[calc(100%-2rem)] rounded-3xl p-6 sm:max-w-sm"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="items-center text-center sm:text-center">
           {icon && (
             <span

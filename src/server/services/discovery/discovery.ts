@@ -447,3 +447,53 @@ export async function currentCursor(db: Db): Promise<string> {
   const { rows } = await db.execute<{ now: string }>(sql`SELECT now()::text AS now`);
   return rows[0].now;
 }
+
+/**
+ * Re-read this much before the cursor on every poll. Writers stamp updated_at with
+ * an app/tick clock before their transaction commits, so a row can become visible
+ * after the cursor has passed its stamp (late commit, equal stamps of one tick).
+ */
+export const BATCH_STREAM_OVERLAP_MS = 15_000;
+
+export interface BatchStreamState {
+  /** Epoch ms; everything up to (cursor − overlap) has been delivered. */
+  cursorMs: number;
+  /** Event key → updated_at ms of events already sent (pruned past 2 × overlap). */
+  seen: Map<string, number>;
+}
+
+export function newBatchStreamState(cursor: string | Date): BatchStreamState {
+  const ms = typeof cursor === "string" ? Date.parse(cursor.replace(" ", "T")) : cursor.getTime();
+  return { cursorMs: Number.isNaN(ms) ? Date.now() : ms, seen: new Map() };
+}
+
+/**
+ * One SSE poll: overlap window + per-connection dedupe (same pattern as the merchant
+ * stream). The cursor advances to the poll's DB start time, not the last row's stamp,
+ * so rows sharing a stamp or committing late are still delivered — exactly once.
+ */
+export async function pollBatchStream(
+  db: Db,
+  area: { lat: number; lng: number; radius_m: number },
+  state: BatchStreamState,
+  limit = 200,
+): Promise<{ events: BatchStreamEvent[]; cursor: string }> {
+  const startedMs = Date.parse((await currentCursor(db)).replace(" ", "T"));
+  const since = new Date(state.cursorMs - BATCH_STREAM_OVERLAP_MS).toISOString();
+  const changes = await batchChangesSince(db, area, since, limit);
+  const events: BatchStreamEvent[] = [];
+  let lastMs = state.cursorMs;
+  for (const ev of changes.events) {
+    const at = Date.parse(ev.updated_at);
+    lastMs = Math.max(lastMs, at);
+    const key = `${ev.batch_id}|${ev.updated_at}|${ev.available_stock}|${ev.selling_price_idr}|${ev.status}`;
+    if (state.seen.has(key)) continue;
+    state.seen.set(key, at);
+    events.push(ev);
+  }
+  // A full page may hide more rows: continue from the last row instead of jumping ahead.
+  const next = changes.events.length >= limit ? lastMs : Math.max(state.cursorMs, Number.isNaN(startedMs) ? lastMs : startedMs);
+  state.cursorMs = next;
+  for (const [k, at] of state.seen) if (at < next - 2 * BATCH_STREAM_OVERLAP_MS) state.seen.delete(k);
+  return { events, cursor: new Date(next).toISOString() };
+}

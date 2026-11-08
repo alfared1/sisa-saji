@@ -142,5 +142,13 @@ export function useBatchStream({
     [],
   );
 
-  return useEventSource<BatchStreamEvent>(url, "batch", onEvent);
+  // Events sent while the stream was down are not replayed to a fresh
+  // EventSource unless the server honours last_event_id: refetch to be safe.
+  const onReconnect = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: customerKeys.nearbyAll });
+    void qc.invalidateQueries({ queryKey: customerKeys.warungAll });
+    void qc.invalidateQueries({ queryKey: customerKeys.pinsAll });
+  }, [qc]);
+
+  return useEventSource<BatchStreamEvent>(url, "batch", onEvent, { onReconnect });
 }

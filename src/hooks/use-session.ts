@@ -1,13 +1,31 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
+import { ApiClientError, api } from "@/lib/api/client";
+import { shouldRetry } from "@/components/providers/query-client";
+import { clearPrivateCaches } from "@/lib/pwa/sw";
+import { useTicketsStore } from "@/stores/tickets";
 import type { AuthMeResponse, SessionUser } from "@/lib/contracts";
 
 export const SESSION_QUERY_KEY = ["auth", "me"] as const;
 
 export function fetchSession(): Promise<AuthMeResponse> {
   return api.get<AuthMeResponse>("/auth/me");
+}
+
+/** Offline: fail at once (no backoff retries) so "/" can route to the saved ticket. */
+export function retrySession(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiClientError && error.code === "NETWORK_ERROR") return false;
+  return shouldRetry(failureCount, error);
+}
+
+/**
+ * Removes everything the previous user left on this device: offline pickup
+ * tickets (zustand + localStorage) and the service worker's ticket/page caches.
+ */
+export async function clearUserDeviceData(): Promise<void> {
+  useTicketsStore.getState().clear();
+  await clearPrivateCaches();
 }
 
 export type SessionState = {
@@ -30,11 +48,14 @@ export function useSession(): SessionState {
     queryKey: SESSION_QUERY_KEY,
     queryFn: fetchSession,
     staleTime: 60_000,
+    retry: retrySession,
   });
 
   const logoutMutation = useMutation({
     mutationFn: () => api.post<{ ok: true }>("/auth/logout"),
     onSettled: async () => {
+      // Every logout path (customer profile, merchant sidebar, merchant settings).
+      await clearUserDeviceData();
       qc.setQueryData<AuthMeResponse>(SESSION_QUERY_KEY, { user: null });
       // Everything user-scoped is stale after logout.
       await qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== SESSION_QUERY_KEY[0] });

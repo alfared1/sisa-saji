@@ -14,6 +14,9 @@ import { setSubscription } from "@/server/services/discovery/discovery";
 import { checkout } from "@/server/services/orders/checkout";
 import { simulatePayment } from "@/server/services/orders/orders";
 import { verifyPickup } from "@/server/services/orders/pickup";
+import { prunePresence } from "@/server/services/presence";
+import { isValidPushSubscription, unlinkPushSubscription } from "@/server/services/push";
+import { ApiError } from "@/server/http";
 import {
   getGlobalStats,
   getImpactSummary,
@@ -27,6 +30,11 @@ import { reseed, testDb } from "../helpers/db";
 import { TEST_PAYMENT_WEBHOOK_SECRET, TEST_PICKUP_QR_SECRET } from "../setup/constants";
 
 let db: Db;
+/** A real-shaped subscription key pair: 65-byte P-256 point and 16-byte auth secret (base64url). */
+const KEYS = {
+  p256dh: Buffer.concat([Buffer.from([4]), Buffer.alloc(64, 7)]).toString("base64url"),
+  auth: Buffer.alloc(16, 9).toString("base64url"),
+};
 let close: () => Promise<void>;
 const UGM = CAMPUSES.find((c) => c.id === "ugm")!;
 
@@ -106,13 +114,13 @@ describe("PUT /profile/location-push", () => {
     });
     const u = await newCustomer();
     const clientId = `client-${randomUUID()}`;
-    const endpoint = `https://push.example.test/${randomUUID()}`;
+    const endpoint = `https://fcm.googleapis.com/fcm/send/${randomUUID()}`;
     const res = await recordLocationPush(db, {
       ...LocationPushBody.parse({
         client_id: clientId,
         lat: String(UGM.lat + 0.001),
         lng: String(UGM.lng),
-        webpush_subscription: { endpoint, keys: { p256dh: "p256dh-key", auth: "auth-key" } },
+        webpush_subscription: { endpoint, keys: KEYS },
       }),
       userId: u.id,
     });
@@ -122,7 +130,7 @@ describe("PUT /profile/location-push", () => {
     const [p] = await db.select().from(customerPresence).where(eq(customerPresence.clientId, clientId));
     expect(p).toMatchObject({ userId: u.id, latitude: UGM.lat + 0.001, longitude: UGM.lng });
     const [s] = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
-    expect(s).toMatchObject({ userId: u.id, clientId, p256dh: "p256dh-key", auth: "auth-key" });
+    expect(s).toMatchObject({ userId: u.id, clientId, p256dh: KEYS.p256dh, auth: KEYS.auth });
 
     // A later anonymous ping from the same device keeps the user and does not double count.
     const again = await recordLocationPush(db, {
@@ -132,6 +140,48 @@ describe("PUT /profile/location-push", () => {
     expect(again.active_users_in_radius).toBe(res.active_users_in_radius);
     const [p2] = await db.select().from(customerPresence).where(eq(customerPresence.clientId, clientId));
     expect(p2.userId).toBe(u.id);
+
+    // Logout with this device's endpoint unlinks it from the account (only the owner's row).
+    const stranger = await newCustomer();
+    expect(await unlinkPushSubscription(db, { userId: stranger.id, endpoint })).toBe(0);
+    expect(await unlinkPushSubscription(db, { userId: u.id, endpoint })).toBe(1);
+    const [s2] = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    expect(s2.userId).toBeNull();
+  });
+
+  it("rejects push endpoints outside the known push services (no SSRF) and malformed keys", async () => {
+    const bad = [
+      "https://10.0.0.5:8443/admin",
+      "http://fcm.googleapis.com/fcm/send/x",
+      "https://fcm.googleapis.com:8443/fcm/send/x",
+      "https://fcm.googleapis.com.evil.test/x",
+      "https://localhost/x",
+    ];
+    for (const endpoint of bad) {
+      expect(isValidPushSubscription({ endpoint, keys: KEYS })).toBe(false);
+      const err = await recordLocationPush(db, {
+        ...LocationPushBody.parse({ client_id: `ssrf-${randomUUID()}`, lat: UGM.lat, lng: UGM.lng, webpush_subscription: { endpoint, keys: KEYS } }),
+        userId: null,
+      }).then(() => null, (e: unknown) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).code).toBe("VALIDATION_ERROR");
+    }
+    expect(isValidPushSubscription({ endpoint: "https://fcm.googleapis.com/fcm/send/x", keys: { p256dh: "x", auth: "y" } })).toBe(false);
+    for (const ok of [
+      "https://fcm.googleapis.com/fcm/send/abc",
+      "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      "https://wns2-par02p.notify.windows.com/w/?token=abc",
+      "https://web.push.apple.com/abc",
+    ]) {
+      expect(isValidPushSubscription({ endpoint: ok, keys: KEYS })).toBe(true);
+    }
+  });
+
+  it("prunes presence rows older than 24 h", async () => {
+    const clientId = `old-${randomUUID()}`;
+    await db.insert(customerPresence).values({ clientId, latitude: UGM.lat, longitude: UGM.lng, lastSeenAt: new Date(Date.now() - 25 * 3_600_000) });
+    expect(await prunePresence(db)).toBeGreaterThanOrEqual(1);
+    expect(await db.select().from(customerPresence).where(eq(customerPresence.clientId, clientId))).toEqual([]);
   });
 });
 

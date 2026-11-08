@@ -1,8 +1,9 @@
 /**
  * Background jobs (blueprint §2.2.D / §2.3), run by scripts/worker.ts.
  *
- *   every 1 min   runMinuteJobs        expire unpaid checkouts, activate due SCHEDULED
- *                                       batches, close ended batches, end lapsed premium,
+ *   every 1 min   runMinuteJobs        expire unpaid checkouts, close unclaimed paid orders
+ *                                       (no-show), activate due SCHEDULED batches, close
+ *                                       ended batches, end lapsed premium, prune presence,
  *                                       merchant "publish tonight?" reminders
  *   every 5 min   runEscalationJobs    time-decay discount escalation (+ Flash Rescue)
  *   daily 00:15   runPredictionRefresh heuristic-v0 predictions for today..+6
@@ -26,6 +27,8 @@ import { expireSubscriptions } from "@/server/services/merchant/profile";
 import { activateScheduledBatches } from "@/server/services/merchant/surplus";
 import { LGBM_MODEL_VERSION, refreshHeuristicPredictions, type RefreshSummary } from "@/server/services/prediction";
 import { sendPushToUsers } from "@/server/services/push";
+import { closeUnclaimedOrders } from "@/server/services/orders/pickup";
+import { prunePresence } from "@/server/services/presence";
 import { closeEndedBatches, expirePendingOrders } from "@/server/services/stock";
 
 export const PROACTIVE_MIN_PORTIONS = 5;
@@ -42,27 +45,35 @@ const toMinutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.
 
 export interface MinuteSummary {
   expiredOrders: number;
+  /** Paid orders not collected by deadline + grace (no-show → EXPIRED, warung credited). */
+  unclaimedOrders: number;
   activatedBatches: number;
   expiredScheduledBatches: number;
   closedBatches: number;
   expiredSubscriptions: number;
   liveNotifiedDevices: number;
+  /** customer_presence rows older than PRESENCE_RETENTION_HOURS deleted. */
+  prunedPresence: number;
 }
 
 export async function runMinuteJobs(db: Db, now: Date = new Date()): Promise<MinuteSummary> {
   // Order matters: expiring unpaid checkouts first returns their stock, so a batch
   // closed in the same tick is classified SOLD_OUT vs EXPIRED correctly.
   const expiredOrders = await expirePendingOrders(db, now);
+  const unclaimedOrders = await closeUnclaimedOrders(db, now);
   const activation = await activateScheduledBatches(db, now);
   const closedBatches = await closeEndedBatches(db, now);
   const expiredSubscriptions = await expireSubscriptions(db, now);
+  const prunedPresence = await prunePresence(db, now);
   return {
     expiredOrders,
+    unclaimedOrders,
     activatedBatches: activation.activated,
     expiredScheduledBatches: activation.expired,
     closedBatches,
     expiredSubscriptions,
     liveNotifiedDevices: activation.notifiedDevices,
+    prunedPresence,
   };
 }
 
@@ -248,8 +259,11 @@ export function isCalendarJobDue(job: Pick<CalendarJob, "at" | "until" | "weekda
 export interface SchedulerOptions {
   db: Db;
   log?: (msg: string) => void;
-  /** Weekly ML training; omitted = disabled (e.g. no .venv). Resolves to the exit code. */
-  runMl?: () => Promise<number>;
+  /**
+   * Weekly ML training; omitted = disabled (e.g. no .venv). Resolves to the exit code;
+   * must stop (kill Python) when `signal` aborts. Runs in the background, never inside a tick.
+   */
+  runMl?: (signal: AbortSignal) => Promise<number>;
 }
 
 export function createScheduler(opts: SchedulerOptions) {
@@ -262,6 +276,11 @@ export function createScheduler(opts: SchedulerOptions) {
     remindedMerchants: new Set<string>(),
     running: false,
   };
+  /** The tick being executed; returned to overlapping callers so shutdown awaits real work. */
+  let inflight: Promise<void> | null = null;
+  /** Background ML training (fire-and-track: minute jobs keep running meanwhile). */
+  let mlRun: Promise<void> | null = null;
+  const mlAbort = new AbortController();
 
   async function guarded<T>(name: string, fn: () => Promise<T>): Promise<T | undefined> {
     const t0 = Date.now();
@@ -287,17 +306,35 @@ export function createScheduler(opts: SchedulerOptions) {
       at: "02:00",
       weekday: 0,
       run: async (now) => {
+        if (mlRun) return { skipped: "training masih berjalan" };
+        if (mlAbort.signal.aborted) return { skipped: "worker berhenti" };
         if (await hasFreshLgbmPredictions(db, now)) return { skipped: "lgbm-v1 sudah diperbarui < 24 jam" };
-        const exitCode = await runMl();
-        if (exitCode !== 0) throw new Error(`ml/train_predict.py exit code ${exitCode}`);
-        return { exitCode };
+        mlRun = guarded("ml-training (background)", async () => {
+          const exitCode = await runMl(mlAbort.signal);
+          if (exitCode !== 0) throw new Error(`ml/train_predict.py exit code ${exitCode}`);
+          return { exitCode };
+        }).then(
+          () => undefined,
+          () => undefined,
+        );
+        void mlRun.finally(() => {
+          mlRun = null;
+        });
+        return { started: "background" };
       },
     });
   }
 
-  /** One scheduler pass; call every ~30 s. Overlapping calls are skipped. */
-  async function tick(now: Date = new Date()) {
-    if (state.running) return;
+  /** One scheduler pass; call every ~30 s. An overlapping call returns the running pass. */
+  function tick(now: Date = new Date()): Promise<void> {
+    if (inflight) return inflight;
+    inflight = runTick(now).finally(() => {
+      inflight = null;
+    });
+    return inflight;
+  }
+
+  async function runTick(now: Date) {
     state.running = true;
     try {
       const ms = now.getTime();
@@ -323,5 +360,11 @@ export function createScheduler(opts: SchedulerOptions) {
     }
   }
 
-  return { tick, state, calendar };
+  /** Shutdown: abort ML training (kills Python) and wait for the running pass and training. */
+  async function stop() {
+    mlAbort.abort();
+    await Promise.allSettled([inflight, mlRun]);
+  }
+
+  return { tick, stop, state, calendar, isMlRunning: () => mlRun !== null };
 }

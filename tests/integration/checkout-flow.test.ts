@@ -11,7 +11,13 @@ import { PAYMENT_TTL_SECONDS, PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/cons
 import { CheckoutBody } from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
-import { checkout } from "@/server/services/orders/checkout";
+import {
+  ABANDONED_ORDERS_WINDOW_MINUTES,
+  checkout,
+  MAX_ABANDONED_ORDERS_IN_WINDOW,
+  MAX_PENDING_ORDERS_PER_USER,
+  maxPortionsPerCustomer,
+} from "@/server/services/orders/checkout";
 import { hasValidQrisCrc, parseTlv } from "@/server/services/payment/qris";
 import { reseed, testDb } from "../helpers/db";
 import { TEST_PICKUP_QR_SECRET } from "../setup/constants";
@@ -173,7 +179,7 @@ describe("POST /orders/checkout — happy path", () => {
     const o1 = await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
     expect(o1.payment_expires_at).toBe(batch.pickupEndTime.toISOString());
 
-    const o2 = await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
+    const o2 = await run((await newCustomer()).id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
     const seq = (n: string) => Number(n.slice(-4));
     expect(seq(o2.order_number)).toBeGreaterThan(seq(o1.order_number));
   });
@@ -351,5 +357,91 @@ describe("POST /orders/checkout — rules", () => {
       money_saved_idr: 2 * batch.originalPriceIdr - recovery + 2000,
     });
     expect(parseTlv(order.qris_string!).get("54")).toBe(String(order.total_customer_paid_idr));
+  });
+});
+
+describe("POST /orders/checkout — fair use (no stock hoarding)", () => {
+  let third: typeof merchants.$inferSelect;
+  beforeAll(async () => {
+    [third] = await db.select().from(merchants).where(eq(merchants.slug, "angkringan-lik-jarwo"));
+  });
+
+  it("a double tap with the same items returns the same unpaid order; different items at the same warung → CONFLICT", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(buSri.id, { stock: 6 });
+    const items = [{ batch_id: batch.id, quantity: 1 }];
+    const first = await run(customer.id, { merchant_id: buSri.id, items });
+    const again = await run(customer.id, { merchant_id: buSri.id, items });
+    expect(again.id).toBe(first.id);
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 5, reservedStock: 1 });
+
+    const err = await expectCode(
+      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
+      "CONFLICT",
+    );
+    expect(err.details).toMatchObject({ order_id: first.id });
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 5, reservedStock: 1 });
+  });
+
+  it(`at most ${MAX_PENDING_ORDERS_PER_USER} unpaid orders across warung; an expired one no longer counts`, async () => {
+    const customer = await newCustomer();
+    const a = (await newBatch(buSri.id, { stock: 6 })).batch;
+    const b = (await newBatch(other.id, { stock: 6 })).batch;
+    const c = (await newBatch(third.id, { stock: 6 })).batch;
+    const stale = await run(
+      customer.id,
+      { merchant_id: buSri.id, items: [{ batch_id: a.id, quantity: 1 }] },
+      new Date(Date.now() - (PAYMENT_TTL_SECONDS + 60) * 1000),
+    );
+    await run(customer.id, { merchant_id: other.id, items: [{ batch_id: b.id, quantity: 1 }] });
+    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: a.id, quantity: 2 }] });
+    const [s] = await db.select().from(orders).where(eq(orders.id, stale.id));
+    expect(s.status).toBe("EXPIRED");
+
+    await expectCode(run(customer.id, { merchant_id: third.id, items: [{ batch_id: c.id, quantity: 1 }] }), "CONFLICT");
+    expect(await batchRow(c.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
+  });
+
+  it("caps the portions of one batch a customer can hold (paid orders included)", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(buSri.id, { stock: 10 });
+    const cap = maxPortionsPerCustomer(10);
+    expect(cap).toBe(5);
+    await expectCode(
+      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: cap + 1 }] }),
+      "VALIDATION_ERROR",
+    );
+    const o = await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: cap - 1 }] });
+    await db.update(orders).set({ status: "READY_FOR_PICKUP" }).where(eq(orders.id, o.id));
+    await expectCode(
+      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
+      "VALIDATION_ERROR",
+    );
+    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] });
+  });
+
+  it(`refuses new checkouts after ${MAX_ABANDONED_ORDERS_IN_WINDOW} cancelled/expired ones in ${ABANDONED_ORDERS_WINDOW_MINUTES} min`, async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(buSri.id, { stock: 6 });
+    const items = [{ batch_id: batch.id, quantity: 1 }];
+    for (let i = 0; i < MAX_ABANDONED_ORDERS_IN_WINDOW; i++) {
+      const o = await run(customer.id, { merchant_id: buSri.id, items });
+      await db.update(orders).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(orders.id, o.id));
+    }
+    await expectCode(run(customer.id, { merchant_id: buSri.id, items }), "RATE_LIMITED");
+    const later = new Date(Date.now() + (ABANDONED_ORDERS_WINDOW_MINUTES + 1) * 60_000);
+    const { batch: fresh } = await newBatch(buSri.id, { stock: 6, endInMin: 240 });
+    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: fresh.id, quantity: 1 }] }, later);
+  });
+
+  it("parallel checkouts of one customer are serialised: only one unpaid order is created", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(other.id, { stock: 6 });
+    const results = await Promise.allSettled(
+      [1, 2, 3].map((q) => run(customer.id, { merchant_id: other.id, items: [{ batch_id: batch.id, quantity: q }] })),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const pending = await db.select().from(orders).where(eq(orders.customerId, customer.id));
+    expect(pending).toHaveLength(1);
   });
 });

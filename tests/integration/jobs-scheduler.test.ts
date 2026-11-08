@@ -208,4 +208,46 @@ describe("createScheduler", () => {
     expect(lines.some((l) => l.startsWith("[job] prediction-refresh"))).toBe(false);
     expect(scheduler.calendar.map((c) => c.name)).not.toContain("ml-training"); // no runMl given
   });
+
+  it("an overlapping tick returns the in-flight pass (so shutdown awaits the real work)", async () => {
+    const scheduler = createScheduler({ db, log: () => {} });
+    const t = atWib(shiftDate(wibDate(T0), 2), "21:00");
+    const first = scheduler.tick(t);
+    const second = scheduler.tick(new Date(t.getTime() + 30_000));
+    expect(second).toBe(first);
+    await second;
+    expect(scheduler.state.running).toBe(false);
+  });
+
+  it("weekly ML training runs in the background (ticks keep going) and stop() aborts it", async () => {
+    const lines: string[] = [];
+    let aborted = false;
+    const scheduler = createScheduler({
+      db,
+      log: (m) => lines.push(m),
+      runMl: (signal) =>
+        new Promise<number>((resolve) => {
+          signal.addEventListener("abort", () => {
+            aborted = true;
+            resolve(1);
+          });
+        }),
+    });
+    // A Sunday, 02:05 WIB.
+    let day = shiftDate(wibDate(T0), 3);
+    while (new Date(`${day}T12:00:00+07:00`).getUTCDay() !== 0) day = shiftDate(day, 1);
+    await db.delete(merchantSurplusPredictions).where(eq(merchantSurplusPredictions.modelVersion, "lgbm-v1"));
+    const t = atWib(day, "02:05");
+    await scheduler.tick(t); // returns although training never finishes on its own
+    expect(lines.some((l) => l.startsWith("[job] ml-training ok") && l.includes("background"))).toBe(true);
+    expect(scheduler.isMlRunning()).toBe(true);
+
+    lines.length = 0;
+    await scheduler.tick(new Date(t.getTime() + 61_000)); // minute jobs are not blocked
+    expect(lines.some((l) => l.startsWith("[job] minute ok"))).toBe(true);
+
+    await scheduler.stop();
+    expect(aborted).toBe(true);
+    expect(scheduler.isMlRunning()).toBe(false);
+  });
 });
