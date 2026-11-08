@@ -17,3 +17,7 @@ export function createDb(databaseUrl: string, options: { max?: number } = {}) {
 }
 
 export type Db = ReturnType<typeof createDb>["db"];
+/** A transaction handle from db.transaction(). */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+/** Anything that can run queries: the pool-backed db or an open transaction. */
+export type DbOrTx = Db | Tx;

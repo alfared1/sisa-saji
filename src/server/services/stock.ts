@@ -11,12 +11,11 @@
  */
 import "server-only";
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
-import type { Db } from "@/db/client";
+import type { Db, DbOrTx, Tx } from "@/db/client";
 import { orderItems, orders, surplusBatches } from "@/db/schema";
 import { ApiError } from "@/server/http";
 
-export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
-export type DbOrTx = Db | Tx;
+export type { DbOrTx, Tx };
 
 export interface ReserveItem {
   batchId: string;

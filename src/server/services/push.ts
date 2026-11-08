@@ -4,7 +4,8 @@
  */
 import "server-only";
 import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
-import webpush from "web-push";
+// web-push 4 is ESM-only with named exports (no default export).
+import * as webpush from "web-push";
 import type { Db } from "@/db/client";
 import { customerPresence, pushSubscriptions } from "@/db/schema";
 import { getVapidKeys } from "@/lib/env";

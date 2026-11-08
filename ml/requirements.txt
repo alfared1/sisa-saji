@@ -1,0 +1,9 @@
+# Surplus Prediction Engine (ml/train_predict.py) — Python 3.12
+# Install: python -m venv .venv && .venv/Scripts/pip install -r ml/requirements.txt   (Windows)
+#          python -m venv .venv && .venv/bin/pip install -r ml/requirements.txt       (macOS/Linux)
+lightgbm>=4.7,<5
+pandas>=2.2
+numpy>=2.0
+scikit-learn>=1.5
+psycopg[binary]>=3.2,<4
+python-dotenv>=1.0

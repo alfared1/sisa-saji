@@ -6,7 +6,7 @@
  */
 import "server-only";
 import { inArray, eq } from "drizzle-orm";
-import type { Db } from "@/db/client";
+import type { DbOrTx } from "@/db/client";
 import { merchants, orderItems, orders, reviews, users } from "@/db/schema";
 import type { OrderDetail } from "@/lib/contracts";
 
@@ -16,7 +16,7 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null);
 const PAID_STATES = new Set(["PAID", "READY_FOR_PICKUP", "COMPLETED"]);
 
 /** Returns OrderDetail views in the same order as `orderIds` (missing ids are skipped). */
-export async function loadOrderDetails(db: Db, orderIds: string[], viewer: OrderViewer): Promise<OrderDetail[]> {
+export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: OrderViewer): Promise<OrderDetail[]> {
   if (orderIds.length === 0) return [];
 
   const rows = await db

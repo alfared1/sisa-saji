@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Project-local artefacts
+    ".next-*/**",
+    ".pglite*/**",
+    ".venv/**",
+    "ml/artifacts/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
 ]);
 

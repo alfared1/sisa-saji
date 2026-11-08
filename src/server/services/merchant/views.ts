@@ -1,0 +1,97 @@
+/** DB rows → contract views for the merchant API. */
+import "server-only";
+import type { Menu, Merchant, SurplusBatch } from "@/db/schema";
+import type { MenuView, MerchantBatchView, MerchantProfile } from "@/lib/contracts";
+import { buildEscalationSchedule, nextEscalation } from "@/server/services/escalation/schedule";
+
+const hhmm = (t: string) => t.slice(0, 5);
+
+export function toMerchantProfile(m: Merchant): MerchantProfile {
+  return {
+    id: m.id,
+    slug: m.slug,
+    merchant_name: m.merchantName,
+    merchant_category: m.merchantCategory,
+    description: m.description,
+    address: m.address,
+    lat: m.latitude,
+    lng: m.longitude,
+    whatsapp_number: m.whatsappNumber,
+    operational_open_time: hhmm(m.operationalOpenTime),
+    operational_close_time: hhmm(m.operationalCloseTime),
+    default_surplus_start_time: hhmm(m.defaultSurplusStartTime),
+    is_open: m.isOpen,
+    merchant_verified: m.merchantVerified,
+    subscription_tier: m.subscriptionTier,
+    subscription_expires_at: m.subscriptionExpiresAt ? m.subscriptionExpiresAt.toISOString() : null,
+    wallet_balance_idr: Number(m.walletBalanceIdr),
+    rating_avg: Number(m.ratingAvg),
+    total_reviews: m.totalReviews,
+    historical_conversion_rate: Number(m.historicalConversionRate),
+    logo_url: m.logoUrl,
+    banner_url: m.bannerUrl,
+  };
+}
+
+export function toMenuView(m: Menu): MenuView {
+  return {
+    id: m.id,
+    menu_name: m.menuName,
+    category: m.category,
+    description: m.description,
+    image_url: m.imageUrl,
+    original_price_idr: m.originalPriceIdr,
+    min_recovery_price_idr: m.minRecoveryPriceIdr,
+    portion_weight_grams: m.portionWeightGrams,
+    is_mystery_bag: m.isMysteryBag,
+    is_active: m.isActive,
+  };
+}
+
+export interface BatchViewContext {
+  now: Date;
+  activeUsersInRadius: number;
+  historicalConversionRate: number;
+}
+
+export function toMerchantBatchView(
+  b: SurplusBatch,
+  menu: Pick<Menu, "menuName" | "isMysteryBag" | "minRecoveryPriceIdr">,
+  ctx: BatchViewContext,
+): MerchantBatchView {
+  let next: MerchantBatchView["next_escalation"] = null;
+  if (b.autoDiscountEnabled && b.status === "ACTIVE" && b.availableStock > 0 && b.pickupEndTime > ctx.now) {
+    const current = { discountPct: b.currentDiscountPct, sellingPriceIdr: b.currentSellingPriceIdr };
+    const steps = buildEscalationSchedule({
+      originalPriceIdr: b.originalPriceIdr,
+      minRecoveryPriceIdr: Math.min(menu.minRecoveryPriceIdr, b.originalPriceIdr),
+      availableStock: b.availableStock,
+      pickupEndTime: b.pickupEndTime,
+      now: ctx.now,
+      activeUsersInRadius: ctx.activeUsersInRadius,
+      historicalConversionRate: ctx.historicalConversionRate,
+      current,
+    });
+    next = nextEscalation(steps, current, ctx.now);
+  }
+  return {
+    id: b.id,
+    menu_id: b.menuId,
+    menu_name: menu.menuName,
+    is_mystery_bag: menu.isMysteryBag,
+    initial_stock: b.initialStock,
+    available_stock: b.availableStock,
+    reserved_stock: b.reservedStock,
+    sold: b.initialStock - b.availableStock - b.reservedStock,
+    original_price_idr: b.originalPriceIdr,
+    current_discount_pct: b.currentDiscountPct,
+    current_selling_price_idr: b.currentSellingPriceIdr,
+    auto_discount_enabled: b.autoDiscountEnabled,
+    predicted_sellout_prob: b.predictedSelloutProb === null ? null : Number(b.predictedSelloutProb),
+    pickup_start_time: b.pickupStartTime.toISOString(),
+    pickup_end_time: b.pickupEndTime.toISOString(),
+    status: b.status,
+    last_price_updated_at: b.lastPriceUpdatedAt.toISOString(),
+    next_escalation: next,
+  };
+}
