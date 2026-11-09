@@ -24,6 +24,12 @@ function resumeCursor(v: string | null, now: number): number | null {
  * batch.updated); `: ping` every 20 s. The `id:` of each event is an ISO cursor,
  * so EventSource resumes via Last-Event-ID after a reconnect.
  */
+/**
+ * Serverless hosts cap function duration; the stream ends after ~5 min and the
+ * browser's EventSource reconnects (resuming via last_event_id).
+ */
+export const maxDuration = 300;
+
 export const GET = handle(async (req) => {
   await connection();
   const { merchantId } = await requireMerchant();

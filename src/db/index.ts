@@ -8,7 +8,8 @@ import { createDb, type Db } from "./client";
 const globalForDb = globalThis as unknown as { sisaSajiDb?: Db };
 
 export function getDb(): Db {
-  globalForDb.sisaSajiDb ??= createDb(getDatabaseUrl()).db;
+  // Serverless (Vercel): keep the per-instance pool small and use a pooled DATABASE_URL.
+  globalForDb.sisaSajiDb ??= createDb(getDatabaseUrl(), { max: Number(process.env.DB_POOL_MAX) || 10 }).db;
   return globalForDb.sisaSajiDb;
 }
 

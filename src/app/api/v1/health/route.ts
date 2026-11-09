@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { scheduleInlineJobs } from "@/server/jobs/inline";
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 
@@ -22,6 +23,7 @@ const WORKER_GRACE_MINUTES = 3;
  */
 export async function GET() {
   await connection(); // always evaluate at request time (never prerender)
+  scheduleInlineJobs(); // serverless: run due jobs after this response (INLINE_JOBS)
   try {
     const {
       rows: [row],

@@ -545,6 +545,22 @@ export const pickupCodeFailures = pgTable(
   (t) => [index("idx_pickup_failures_merchant").on(t.merchantId, t.createdAt.desc())],
 );
 
+/* ------------------------------------------------------------------ */
+/* 16. job_runs (serverless job leases)                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row per scheduled job (or per idempotency key, e.g. "reminder:<merchant>:<date>").
+ * On serverless hosts (Vercel) jobs are triggered by cron and by traffic; a conditional
+ * UPSERT on last_run_at acts as a lease so concurrent instances never run a job twice.
+ */
+export const jobRuns = pgTable("job_runs", {
+  name: varchar({ length: 120 }).primaryKey(),
+  lastRunAt: timestamp({ withTimezone: true }).notNull(),
+  lastStatus: varchar({ length: 20 }),
+  lastSummary: jsonb(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Merchant = typeof merchants.$inferSelect;
 export type Menu = typeof menus.$inferSelect;

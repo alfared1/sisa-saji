@@ -110,3 +110,9 @@ export async function GET(req: Request) {
     },
   });
 }
+/**
+ * Serverless hosts cap function duration; the stream ends after ~5 min and the
+ * browser's EventSource reconnects (resuming via last_event_id).
+ */
+export const maxDuration = 300;
+

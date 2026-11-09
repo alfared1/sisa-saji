@@ -80,3 +80,28 @@ export function getVapidKeys(): { publicKey: string; privateKey: string; subject
 export function getAppUrl(): string {
   return read("APP_URL", z.string().url().default("http://localhost:3000"));
 }
+
+/**
+ * Shared secret for scheduled triggers (GET /api/cron/tick). Vercel Cron sends it as
+ * `Authorization: Bearer <CRON_SECRET>`. Unset = the endpoint refuses every call.
+ */
+export function getCronSecret(): string | undefined {
+  return read("CRON_SECRET", z.string().min(16).optional());
+}
+
+/**
+ * Serverless hosts have no long-running worker: when true, hot endpoints run due jobs
+ * after their response (next/server `after`), guarded by DB leases (job_runs).
+ * Leave false when `npm run worker` is running.
+ */
+export function isInlineJobsEnabled(): boolean {
+  return raw("INLINE_JOBS") === "true";
+}
+
+/**
+ * Public demo deployments: keep "tonight" populated by auto-publishing fresh surplus
+ * batches for seeded warung whenever live batches run low (see jobs/serverless.ts).
+ */
+export function isDemoMode(): boolean {
+  return raw("DEMO_MODE") === "true";
+}
