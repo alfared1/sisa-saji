@@ -33,17 +33,17 @@ import type { MenuCategory } from "@/lib/contracts";
 import { type CartItem, useCartStore } from "@/stores/cart";
 import { useLocationStore } from "@/stores/location";
 
-const UGM = CAMPUSES[0];
+const HOME = CAMPUSES[0];
 
-/** Demo markers around UGM, closing times relative to `now`. */
+/** Demo markers around IPB Dramaga (the default point), closing times relative to `now`. */
 function demoMarkers(nowMs: number): SurplusMapMarker[] {
   const at = (min: number) => new Date(nowMs + min * 60_000).toISOString();
   return [
-    { id: "m1", name: "Warung Bu Sri", lat: UGM.lat + 0.004, lng: UGM.lng - 0.003, discount_pct: 60, stock: 3, closes_at: at(30), is_verified: true },
-    { id: "m2", name: "Geprek Pogung", lat: UGM.lat - 0.005, lng: UGM.lng + 0.004, discount_pct: 50, stock: 8, closes_at: at(110) },
-    { id: "m3", name: "Roti Sendowo", lat: UGM.lat + 0.008, lng: UGM.lng + 0.006, discount_pct: 35, stock: 12, closes_at: at(140) },
-    { id: "m4", name: "Soto Gejayan", lat: UGM.lat - 0.009, lng: UGM.lng - 0.006, discount_pct: 70, stock: 2, closes_at: at(15) },
-    { id: "m5", name: "Bakmi Karangmalang", lat: UGM.lat + 0.001, lng: UGM.lng + 0.011, discount_pct: 55, stock: 0, closes_at: at(80) },
+    { id: "m1", name: "Warung Nasi Teh Euis", lat: HOME.lat + 0.004, lng: HOME.lng - 0.003, discount_pct: 60, stock: 3, closes_at: at(30), is_verified: true },
+    { id: "m2", name: "Geprek Bateng", lat: HOME.lat - 0.005, lng: HOME.lng + 0.004, discount_pct: 50, stock: 8, closes_at: at(110) },
+    { id: "m3", name: "Roti Babakan Raya", lat: HOME.lat + 0.008, lng: HOME.lng + 0.006, discount_pct: 35, stock: 12, closes_at: at(140) },
+    { id: "m4", name: "Soto Kuning Dramaga", lat: HOME.lat - 0.009, lng: HOME.lng - 0.006, discount_pct: 70, stock: 2, closes_at: at(15) },
+    { id: "m5", name: "Bandrek Balebak", lat: HOME.lat + 0.001, lng: HOME.lng + 0.011, discount_pct: 55, stock: 0, closes_at: at(80) },
   ];
 }
 
@@ -172,7 +172,7 @@ export function DevGallery() {
           <div className="flex flex-wrap items-center gap-2">
             <VerifiedBadge />
             <span className="inline-flex items-center gap-1 text-sm font-semibold">
-              Warung Bu Sri <VerifiedBadge compact />
+              Warung Nasi Teh Euis <VerifiedBadge compact />
             </span>
             <Money value={123500} className="font-bold" />
             <Money value={2000} prefix="-" className="text-primary" />
@@ -203,7 +203,7 @@ export function DevGallery() {
               className="rounded-full"
               disabled={!now}
               onClick={() =>
-                now && addToCart({ id: "mA", slug: "warung-a", name: "Warung Bu Sri" }, demoItem(now, "b1", "Nasi Rendang", 9000, 20000))
+                now && addToCart({ id: "mA", slug: "warung-a", name: "Warung Nasi Teh Euis" }, demoItem(now, "b1", "Nasi Rendang", 9000, 20000))
               }
             >
               + Warung A
@@ -214,7 +214,7 @@ export function DevGallery() {
               className="rounded-full"
               disabled={!now}
               onClick={() =>
-                now && addToCart({ id: "mB", slug: "warung-b", name: "Geprek Pogung" }, demoItem(now, "b2", "Ayam Geprek", 7000, 16000))
+                now && addToCart({ id: "mB", slug: "warung-b", name: "Geprek Bateng" }, demoItem(now, "b2", "Ayam Geprek", 7000, 16000))
               }
             >
               + Warung B (beda mitra)
@@ -260,12 +260,12 @@ export function DevGallery() {
         <Section id="peta" title="Peta surplus">
           <div className="h-80 overflow-hidden rounded-2xl ring-1 ring-border">
             <SurplusMap
-              center={{ lat: UGM.lat, lng: UGM.lng }}
+              center={{ lat: HOME.lat, lng: HOME.lng }}
               radiusM={2000}
               markers={markers}
               selectedId={selected}
               onMarkerClick={setSelected}
-              userLocation={{ lat: UGM.lat - 0.001, lng: UGM.lng + 0.001 }}
+              userLocation={{ lat: HOME.lat - 0.001, lng: HOME.lng + 0.001 }}
             />
           </div>
           <p className="text-xs text-muted-foreground">Dipilih: {markers.find((m) => m.id === selected)?.name ?? "—"}</p>

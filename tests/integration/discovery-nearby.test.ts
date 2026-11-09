@@ -1,12 +1,14 @@
 /**
- * Discovery against the seeded campus data: PostGIS radius, filters, sorts,
- * map pins, merchant detail, favourites and the SSE change feed query.
+ * Discovery against the seeded campus data around the default point (IPB
+ * Dramaga, Bogor): PostGIS radius, filters, sorts, map pins, merchant detail,
+ * favourites and the SSE change feed query.
  */
 import { randomInt } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
 import { merchants, surplusBatches, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { CAMPUSES } from "@/lib/constants";
 import { DiscoverQuery, SubscribeBody, type MerchantSummary } from "@/lib/contracts";
 import { ApiError } from "@/server/http";
@@ -24,8 +26,10 @@ import { reseed, testDb } from "../helpers/db";
 
 let db: Db;
 let close: () => Promise<void>;
-const UGM = CAMPUSES.find((c) => c.id === "ugm")!;
-const FAR = ["pecel-lele-mas-bejo-seturan", "dapur-mama-kost-condongcatur"];
+/** The app's default search point. */
+const IPB = CAMPUSES[0];
+/** IPB-area warung ~3.7 / ~4.7 km from campus: outside 2 km, inside 5 km. */
+const FAR = ["nasi-timbel-ceu-iyah-sindang-barang", "laksa-asinan-bu-nining-loji"];
 
 beforeAll(async () => {
   ({ db, close } = testDb());
@@ -34,7 +38,7 @@ beforeAll(async () => {
 afterAll(async () => close());
 
 const nearby = (q: Partial<Parameters<typeof DiscoverQuery.parse>[0]> = {}) =>
-  findNearby(db, DiscoverQuery.parse({ lat: UGM.lat, lng: UGM.lng, ...q }));
+  findNearby(db, DiscoverQuery.parse({ lat: IPB.lat, lng: IPB.lng, ...q }));
 
 const slugs = (list: MerchantSummary[]) => list.map((m) => m.slug);
 
@@ -43,7 +47,7 @@ function expectSorted<T>(values: T[], cmp: (a: T, b: T) => number) {
 }
 
 describe("GET /discover/nearby", () => {
-  it("2 km around UGM excludes Seturan & Condongcatur; 5 km includes them", async () => {
+  it("2 km around IPB Dramaga excludes Sindang Barang & Loji; 5 km includes them", async () => {
     const r2 = await nearby({ radius_m: 2000 });
     expect(r2.radius_m).toBe(2000);
     expect(r2.merchants.length).toBeGreaterThanOrEqual(8);
@@ -114,11 +118,11 @@ describe("GET /discover/nearby", () => {
     expect(cheap.total_batches).toBeLessThan(all.total_batches);
     for (const m of cheap.merchants) for (const b of m.batches) expect(b.selling_price_idr).toBeLessThanOrEqual(max);
 
-    const byName = await nearby({ radius_m: 5000, q: "GUDEG" });
-    expect(slugs(byName.merchants)).toContain("gudeg-bu-tini-sagan");
+    const byName = await nearby({ radius_m: 5000, q: "DOCLANG" });
+    expect(slugs(byName.merchants)).toContain("doclang-toge-goreng-ma-icih-babakan-doneng");
     for (const m of byName.merchants) {
       for (const b of m.batches) {
-        expect(`${m.name} ${b.menu_name}`.toLowerCase()).toContain("gudeg");
+        expect(`${m.name} ${b.menu_name}`.toLowerCase()).toContain("doclang");
       }
     }
     // LIKE wildcards are escaped.
@@ -152,7 +156,7 @@ describe("GET /discover/nearby", () => {
 
 describe("GET /discover/map-pins", () => {
   it("one pin per merchant with the soonest closing time", async () => {
-    const q = DiscoverQuery.parse({ lat: UGM.lat, lng: UGM.lng });
+    const q = DiscoverQuery.parse({ lat: IPB.lat, lng: IPB.lng });
     const [pins, r] = await Promise.all([findMapPins(db, q), findNearby(db, q)]);
     expect(pins.map((p) => p.merchant_id)).toEqual(r.merchants.map((m) => m.id));
     for (const p of pins) {
@@ -175,8 +179,8 @@ describe("GET /merchants/:slugOrId and subscribe", () => {
   });
 
   it("by slug with distance, live batches and abbreviated reviews; null subscription when logged out", async () => {
-    const d = await getMerchantDetail(db, "warung-bu-sri-pogung", { lat: UGM.lat, lng: UGM.lng, userId: null });
-    expect(d.slug).toBe("warung-bu-sri-pogung");
+    const d = await getMerchantDetail(db, DEMO_MERCHANT_SLUG, { lat: IPB.lat, lng: IPB.lng, userId: null });
+    expect(d.slug).toBe(DEMO_MERCHANT_SLUG);
     expect(d.distance_m).toBeGreaterThan(0);
     expect(d.distance_m).toBeLessThan(2000);
     expect(d.batches.length).toBeGreaterThan(0);
@@ -190,7 +194,7 @@ describe("GET /merchants/:slugOrId and subscribe", () => {
   });
 
   it("by uuid, without coordinates → distance null; unknown → NOT_FOUND", async () => {
-    const [m] = await db.select().from(merchants).where(eq(merchants.slug, "gudeg-bu-tini-sagan"));
+    const [m] = await db.select().from(merchants).where(eq(merchants.slug, "soto-kuning-mang-oyo-dramaga"));
     const d = await getMerchantDetail(db, m.id, { userId: null });
     expect(d.id).toBe(m.id);
     expect(d.distance_m).toBeNull();
@@ -206,11 +210,11 @@ describe("GET /merchants/:slugOrId and subscribe", () => {
     const on = await setSubscription(
       db,
       customerId,
-      "warung-bu-sri-pogung",
+      DEMO_MERCHANT_SLUG,
       SubscribeBody.parse({ subscribed: true, notify_on_ai_prediction: false }),
     );
     expect(on).toEqual({ subscribed: true });
-    let d = await getMerchantDetail(db, "warung-bu-sri-pogung", { userId: customerId });
+    let d = await getMerchantDetail(db, DEMO_MERCHANT_SLUG, { userId: customerId });
     expect(d.subscription).toEqual({ notify_on_surplus_live: true, notify_on_ai_prediction: false });
 
     // Idempotent upsert
@@ -228,7 +232,7 @@ describe("GET /merchants/:slugOrId and subscribe", () => {
 describe("SSE change feed query", () => {
   it("emits batches updated after the cursor inside the radius only", async () => {
     const cursor = await currentCursor(db);
-    expect((await batchChangesSince(db, { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 }, cursor)).events).toHaveLength(0);
+    expect((await batchChangesSince(db, { lat: IPB.lat, lng: IPB.lng, radius_m: 2000 }, cursor)).events).toHaveLength(0);
 
     const near = (await nearby({ radius_m: 2000 })).merchants[0].batches[0];
     const far = (await nearby({ radius_m: 5000 })).merchants.find((m) => FAR.includes(m.slug))!.batches[0];
@@ -237,7 +241,7 @@ describe("SSE change feed query", () => {
       .set({ availableStock: sql`${surplusBatches.availableStock} - 1`, updatedAt: sql`now()` })
       .where(sql`${surplusBatches.id} IN (${near.batch_id}, ${far.batch_id})`);
 
-    const changes = await batchChangesSince(db, { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 }, cursor);
+    const changes = await batchChangesSince(db, { lat: IPB.lat, lng: IPB.lng, radius_m: 2000 }, cursor);
     expect(changes.events.map((e) => e.batch_id)).toEqual([near.batch_id]);
     expect(changes.events[0]).toMatchObject({
       merchant_id: near.merchant_id,
@@ -246,13 +250,13 @@ describe("SSE change feed query", () => {
     });
     expect(changes.cursor).not.toBe(cursor);
     // Advancing the cursor drains the feed.
-    expect((await batchChangesSince(db, { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 }, changes.cursor)).events).toHaveLength(0);
+    expect((await batchChangesSince(db, { lat: IPB.lat, lng: IPB.lng, radius_m: 2000 }, changes.cursor)).events).toHaveLength(0);
   });
 });
 
 describe("SSE stream poll (overlap + dedupe)", () => {
   it("delivers two batches stamped with the same time across two polls, each exactly once", async () => {
-    const area = { lat: UGM.lat, lng: UGM.lng, radius_m: 2000 };
+    const area = { lat: IPB.lat, lng: IPB.lng, radius_m: 2000 };
     const state = newBatchStreamState(await currentCursor(db));
     const [a, b] = (await nearby({ radius_m: 2000 })).merchants.flatMap((m) => m.batches).slice(0, 2);
     await pollBatchStream(db, area, state); // drain the replayed overlap of earlier changes

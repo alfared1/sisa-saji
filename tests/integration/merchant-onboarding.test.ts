@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { menus, merchants, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { MenuCreateBody, MenuUpdateBody, MerchantOnboardingBody, MerchantUpdateBody } from "@/lib/contracts";
 import { ApiError } from "@/server/http";
 import { createMenu, updateMenu } from "@/server/services/merchant/menus";
@@ -107,7 +108,7 @@ describe("merchant onboarding", () => {
   it("GET /merchant/me returns the demo warung with its menus", async () => {
     const m = await demoMerchant();
     const me = await getMerchantMe(db, m.id);
-    expect(me.merchant.slug).toBe("warung-bu-sri-pogung");
+    expect(me.merchant.slug).toBe(DEMO_MERCHANT_SLUG);
     expect(me.menus.length).toBeGreaterThan(0);
     for (const menu of me.menus) {
       expect(menu.min_recovery_price_idr).toBeLessThanOrEqual(menu.original_price_idr);

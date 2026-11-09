@@ -19,26 +19,27 @@ test.describe("discovery", () => {
     await expect(page.getByRole("heading", { name: "Hampir Habis & Diskon Tertinggi" })).toBeVisible();
     const at2km = await liveMenuCount(page);
     expect(at2km).toBeGreaterThan(0);
-    await expect(page.getByText("Pecel Lele Mas Bejo")).toHaveCount(0);
+    // Default point is IPB Dramaga; Sindang Barang / Loji are ~3.7 / ~4.7 km away.
+    await expect(page.getByText("Nasi Timbel Ceu Iyah")).toHaveCount(0);
 
     // Category filter: Vegan only.
     const chips = page.getByRole("radiogroup", { name: "Kategori" });
     await chips.getByRole("radio", { name: "Vegan" }).click();
     await expect(chips.getByRole("radio", { name: "Vegan" })).toHaveAttribute("aria-checked", "true");
-    await expect(page.getByText("Hijau Daun").first()).toBeVisible();
-    await expect(page.getByText(/Bakmi Jawa/)).toHaveCount(0);
+    await expect(page.getByText("Saung Hejo").first()).toBeVisible();
+    await expect(page.getByText(/Kang Dadan/)).toHaveCount(0);
     await chips.getByRole("radio", { name: "Semua" }).click();
-    await expect(page.getByText(/Bakmi Jawa/).first()).toBeVisible();
+    await expect(page.getByText(/Kang Dadan/).first()).toBeVisible();
 
-    // Radius 2 → 5 km: more results, Seturan / Condongcatur warung appear.
+    // Radius 2 → 5 km: more results, Sindang Barang / Loji warung appear.
     const wider = page.waitForResponse((r) => r.url().includes("radius_m=5000") && r.ok());
     await page.getByRole("button", { name: /^Radius 2 km/ }).click();
     await page.getByRole("menuitemradio", { name: "5 km" }).click();
     await wider;
     await expect(liveLine(page)).toContainText("5 km");
     await expect.poll(() => liveMenuCount(page)).toBeGreaterThan(at2km);
-    await expect(page.getByText("Pecel Lele Mas Bejo").first()).toBeVisible();
-    await expect(page.getByText("Dapur Mama Kost").first()).toBeVisible();
+    await expect(page.getByText("Nasi Timbel Ceu Iyah").first()).toBeVisible();
+    await expect(page.getByText("Laksa & Asinan Bu Nining").first()).toBeVisible();
   });
 
   test("map shows pins and opens the warung bottom sheet", async ({ page }) => {

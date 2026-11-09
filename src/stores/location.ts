@@ -1,6 +1,6 @@
 /**
- * Discovery location + radius. Defaults to UGM (first campus) so the app works
- * before / without geolocation permission.
+ * Discovery location + radius. Defaults to IPB Dramaga, Bogor (CAMPUSES[0], the
+ * platform's home base) so the app works before / without geolocation permission.
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -79,7 +79,17 @@ export const useLocationStore = create<LocationState>()(
     }),
     {
       name: "ss-location",
-      version: 1,
+      // v2: the default point moved from UGM to IPB Dramaga. A location the user never
+      // chose (updated_at null) follows the new default; a chosen one is kept, with a
+      // chosen campus's label refreshed to its current name ("IPB Bogor" was renamed).
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Partial<LocationState>;
+        if (version < 2 && !state.updated_at) return { ...state, ...DEFAULT_LOCATION } as LocationState;
+        const campus = state.source === "campus" ? CAMPUSES.find((c) => c.id === state.campus_id) : undefined;
+        if (version < 2 && campus) return { ...state, label: campus.name } as LocationState;
+        return state as LocationState;
+      },
       storage: persistStorage(),
       skipHydration: true,
       partialize: (s) => ({

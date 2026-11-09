@@ -16,7 +16,7 @@ import type {
   SessionUser,
 } from "../src/lib/contracts";
 import { mintSessionToken } from "../tests/helpers/session";
-import { E2E_BASE_URL, E2E_DATABASE_URL, UGM } from "./env";
+import { DEFAULT_POINT, E2E_BASE_URL, E2E_DATABASE_URL } from "./env";
 
 type Envelope<T> = { success: true; data: T } | { success: false; error: { code: string; message: string } };
 
@@ -76,7 +76,7 @@ export async function loginContextAs(context: BrowserContext, email: string) {
 
 export async function nearby(request: APIRequestContext, radius = 2000): Promise<NearbyResponse> {
   return ok<NearbyResponse>(
-    await request.get(`/api/v1/discover/nearby?lat=${UGM.lat}&lng=${UGM.lng}&radius_m=${radius}`),
+    await request.get(`/api/v1/discover/nearby?lat=${DEFAULT_POINT.lat}&lng=${DEFAULT_POINT.lng}&radius_m=${radius}`),
   );
 }
 

@@ -7,6 +7,7 @@ import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { PAYMENT_TTL_SECONDS, PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/constants";
 import { CheckoutBody } from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
@@ -24,14 +25,14 @@ import { TEST_PICKUP_QR_SECRET } from "../setup/constants";
 
 let db: Db;
 let close: () => Promise<void>;
-let buSri: typeof merchants.$inferSelect;
+let demoMerchant: typeof merchants.$inferSelect;
 let other: typeof merchants.$inferSelect;
 
 beforeAll(async () => {
   ({ db, close } = testDb());
   await reseed(db);
-  [buSri] = await db.select().from(merchants).where(eq(merchants.slug, "warung-bu-sri-pogung"));
-  [other] = await db.select().from(merchants).where(eq(merchants.slug, "gudeg-bu-tini-sagan"));
+  [demoMerchant] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
+  [other] = await db.select().from(merchants).where(eq(merchants.slug, "soto-kuning-mang-oyo-dramaga"));
 });
 afterAll(async () => close());
 
@@ -50,7 +51,7 @@ async function newBatch(
   merchantId: string,
   opts: { stock?: number; endInMin?: number; status?: "ACTIVE" | "EXPIRED"; menuIndex?: number } = {},
 ) {
-  // Cheapest first (Bu Sri: Rp 14.000, Rp 18.000, Rp 20.000) so the voucher math is deterministic.
+  // Cheapest first (Teh Euis: Rp 17.000, Rp 18.000, Rp 20.000) so the voucher math is deterministic.
   const menuList = await db
     .select()
     .from(menus)
@@ -99,14 +100,14 @@ async function expectCode(p: Promise<unknown>, code: string) {
 describe("POST /orders/checkout — happy path", () => {
   it("reserves stock, snapshots prices and computes the money flow", async () => {
     const customer = await newCustomer();
-    const a = await newBatch(buSri.id, { stock: 5, menuIndex: 0 });
-    const b = await newBatch(buSri.id, { stock: 4, menuIndex: 1, endInMin: 45 });
+    const a = await newBatch(demoMerchant.id, { stock: 5, menuIndex: 0 });
+    const b = await newBatch(demoMerchant.id, { stock: 4, menuIndex: 1, endInMin: 45 });
     const now = new Date();
 
     const order = await run(
       customer.id,
       {
-        merchant_id: buSri.id,
+        merchant_id: demoMerchant.id,
         items: [
           { batch_id: a.batch.id, quantity: 2 },
           { batch_id: b.batch.id, quantity: 1 },
@@ -137,7 +138,7 @@ describe("POST /orders/checkout — happy path", () => {
       food_saved_grams: 2 * a.menu.portionWeightGrams + b.menu.portionWeightGrams,
     });
     expect(order.order_number).toMatch(new RegExp(`^SS-${wibDate(now).replaceAll("-", "")}-\\d{4}$`));
-    expect(order.merchant.id).toBe(buSri.id);
+    expect(order.merchant.id).toBe(demoMerchant.id);
     expect(order.items).toHaveLength(2);
     expect(order.items.find((i) => i.batch_id === a.batch.id)).toMatchObject({
       quantity: 2,
@@ -169,26 +170,26 @@ describe("POST /orders/checkout — happy path", () => {
     expect(tags.get("54")).toBe(String(order.total_customer_paid_idr));
     expect(tags.get("53")).toBe("360");
     expect(parseTlv(tags.get("62")!).get("01")).toBe(order.order_number);
-    expect(tags.get("59")).toBe(buSri.merchantName.slice(0, 25));
+    expect(tags.get("59")).toBe(demoMerchant.merchantName.slice(0, 25));
   });
 
   it("payment window never extends past the pickup deadline; order numbers are sequential", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { endInMin: 4 });
+    const { batch } = await newBatch(demoMerchant.id, { endInMin: 4 });
     const now = new Date();
-    const o1 = await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
+    const o1 = await run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
     expect(o1.payment_expires_at).toBe(batch.pickupEndTime.toISOString());
 
-    const o2 = await run((await newCustomer()).id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
+    const o2 = await run((await newCustomer()).id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1 }] }, now);
     const seq = (n: string) => Number(n.slice(-4));
     expect(seq(o2.order_number)).toBeGreaterThan(seq(o1.order_number));
   });
 
   it("duplicate batch lines are merged", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 4 });
+    const { batch } = await newBatch(demoMerchant.id, { stock: 4 });
     const order = await run(customer.id, {
-      merchant_id: buSri.id,
+      merchant_id: demoMerchant.id,
       items: [
         { batch_id: batch.id, quantity: 1 },
         { batch_id: batch.id, quantity: 2 },
@@ -200,24 +201,24 @@ describe("POST /orders/checkout — happy path", () => {
 
   it("validates scheduled_pickup_time against [now, deadline]", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { endInMin: 60 });
+    const { batch } = await newBatch(demoMerchant.id, { endInMin: 60 });
     const items = [{ batch_id: batch.id, quantity: 1 }];
     const now = new Date();
 
     const err = await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items, scheduled_pickup_time: new Date(now.getTime() + 2 * 3600_000).toISOString() }, now),
+      run(customer.id, { merchant_id: demoMerchant.id, items, scheduled_pickup_time: new Date(now.getTime() + 2 * 3600_000).toISOString() }, now),
       "VALIDATION_ERROR",
     );
     expect(err.details).toEqual([expect.objectContaining({ path: "scheduled_pickup_time" })]);
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items, scheduled_pickup_time: new Date(now.getTime() - 3600_000).toISOString() }, now),
+      run(customer.id, { merchant_id: demoMerchant.id, items, scheduled_pickup_time: new Date(now.getTime() - 3600_000).toISOString() }, now),
       "VALIDATION_ERROR",
     );
     // Rolled back: nothing reserved.
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 5, reservedStock: 0 });
 
     const at = new Date(now.getTime() + 30 * 60_000).toISOString();
-    const ok = await run(customer.id, { merchant_id: buSri.id, items, scheduled_pickup_time: at }, now);
+    const ok = await run(customer.id, { merchant_id: demoMerchant.id, items, scheduled_pickup_time: at }, now);
     expect(ok.scheduled_pickup_time).toBe(at);
   });
 });
@@ -265,11 +266,11 @@ describe("POST /orders/checkout — concurrency", () => {
 describe("POST /orders/checkout — rules", () => {
   it("DIFFERENT_MERCHANT when a batch belongs to another warung (nothing reserved)", async () => {
     const customer = await newCustomer();
-    const mine = await newBatch(buSri.id);
+    const mine = await newBatch(demoMerchant.id);
     const theirs = await newBatch(other.id);
     await expectCode(
       run(customer.id, {
-        merchant_id: buSri.id,
+        merchant_id: demoMerchant.id,
         items: [
           { batch_id: mine.batch.id, quantity: 1 },
           { batch_id: theirs.batch.id, quantity: 1 },
@@ -282,36 +283,36 @@ describe("POST /orders/checkout — rules", () => {
 
   it("BATCH_CLOSED for an ended pickup window, a non-ACTIVE batch or a closed warung", async () => {
     const customer = await newCustomer();
-    const ended = await newBatch(buSri.id, { endInMin: 30 });
+    const ended = await newBatch(demoMerchant.id, { endInMin: 30 });
     const later = new Date(Date.now() + 31 * 60_000);
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: ended.batch.id, quantity: 1 }] }, later),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: ended.batch.id, quantity: 1 }] }, later),
       "BATCH_CLOSED",
     );
 
-    const expired = await newBatch(buSri.id, { status: "EXPIRED" });
+    const expired = await newBatch(demoMerchant.id, { status: "EXPIRED" });
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: expired.batch.id, quantity: 1 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: expired.batch.id, quantity: 1 }] }),
       "BATCH_CLOSED",
     );
 
-    const open = await newBatch(buSri.id);
-    await db.update(merchants).set({ isOpen: false }).where(eq(merchants.id, buSri.id));
+    const open = await newBatch(demoMerchant.id);
+    await db.update(merchants).set({ isOpen: false }).where(eq(merchants.id, demoMerchant.id));
     try {
       await expectCode(
-        run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: open.batch.id, quantity: 1 }] }),
+        run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: open.batch.id, quantity: 1 }] }),
         "BATCH_CLOSED",
       );
     } finally {
-      await db.update(merchants).set({ isOpen: true }).where(eq(merchants.id, buSri.id));
+      await db.update(merchants).set({ isOpen: true }).where(eq(merchants.id, demoMerchant.id));
     }
   });
 
   it("OUT_OF_STOCK when asking for more than available; NOT_FOUND for unknown merchant/batch", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 2 });
+    const { batch } = await newBatch(demoMerchant.id, { stock: 2 });
     const err = await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 3 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 3 }] }),
       "OUT_OF_STOCK",
     );
     expect(err.details).toMatchObject({ batch_id: batch.id, available_stock: 2 });
@@ -320,34 +321,34 @@ describe("POST /orders/checkout — rules", () => {
       "NOT_FOUND",
     );
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: "00000000-0000-4000-8000-000000000000", quantity: 1 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: "00000000-0000-4000-8000-000000000000", quantity: 1 }] }),
       "NOT_FOUND",
     );
   });
 
   it("a merchant cannot order from their own warung", async () => {
-    const { batch } = await newBatch(buSri.id);
+    const { batch } = await newBatch(demoMerchant.id);
     await expectCode(
-      run(buSri.ownerUserId, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] }),
+      run(demoMerchant.ownerUserId, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1 }] }),
       "FORBIDDEN",
     );
   });
 
   it("vouchers: unknown code and minimum subtotal → VOUCHER_INVALID; valid voucher lowers the total", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 6 }); // Rp 7.000 per portion
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6 }); // Rp 8.500 per portion
     const one = [{ batch_id: batch.id, quantity: 1 }];
 
-    await expectCode(run(customer.id, { merchant_id: buSri.id, items: one, voucher_code: "GRATIS100" }), "VOUCHER_INVALID");
+    await expectCode(run(customer.id, { merchant_id: demoMerchant.id, items: one, voucher_code: "GRATIS100" }), "VOUCHER_INVALID");
     const minErr = await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: one, voucher_code: "hemat2k" }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: one, voucher_code: "hemat2k" }),
       "VOUCHER_INVALID",
     );
     expect(minErr.details).toEqual({ min_subtotal_idr: 10000 });
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
 
     const two = [{ batch_id: batch.id, quantity: 2 }];
-    const order = await run(customer.id, { merchant_id: buSri.id, items: two, voucher_code: "HEMAT2K" });
+    const order = await run(customer.id, { merchant_id: demoMerchant.id, items: two, voucher_code: "HEMAT2K" });
     const recovery = 2 * batch.currentSellingPriceIdr;
     expect(order).toMatchObject({
       voucher_discount_idr: 2000,
@@ -363,20 +364,20 @@ describe("POST /orders/checkout — rules", () => {
 describe("POST /orders/checkout — fair use (no stock hoarding)", () => {
   let third: typeof merchants.$inferSelect;
   beforeAll(async () => {
-    [third] = await db.select().from(merchants).where(eq(merchants.slug, "angkringan-lik-jarwo"));
+    [third] = await db.select().from(merchants).where(eq(merchants.slug, "geprek-kang-dadan-babakan-tengah"));
   });
 
   it("a double tap with the same items returns the same unpaid order; different items at the same warung → CONFLICT", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 6 });
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6 });
     const items = [{ batch_id: batch.id, quantity: 1 }];
-    const first = await run(customer.id, { merchant_id: buSri.id, items });
-    const again = await run(customer.id, { merchant_id: buSri.id, items });
+    const first = await run(customer.id, { merchant_id: demoMerchant.id, items });
+    const again = await run(customer.id, { merchant_id: demoMerchant.id, items });
     expect(again.id).toBe(first.id);
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 5, reservedStock: 1 });
 
     const err = await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
       "CONFLICT",
     );
     expect(err.details).toMatchObject({ order_id: first.id });
@@ -385,16 +386,16 @@ describe("POST /orders/checkout — fair use (no stock hoarding)", () => {
 
   it(`at most ${MAX_PENDING_ORDERS_PER_USER} unpaid orders across warung; an expired one no longer counts`, async () => {
     const customer = await newCustomer();
-    const a = (await newBatch(buSri.id, { stock: 6 })).batch;
+    const a = (await newBatch(demoMerchant.id, { stock: 6 })).batch;
     const b = (await newBatch(other.id, { stock: 6 })).batch;
     const c = (await newBatch(third.id, { stock: 6 })).batch;
     const stale = await run(
       customer.id,
-      { merchant_id: buSri.id, items: [{ batch_id: a.id, quantity: 1 }] },
+      { merchant_id: demoMerchant.id, items: [{ batch_id: a.id, quantity: 1 }] },
       new Date(Date.now() - (PAYMENT_TTL_SECONDS + 60) * 1000),
     );
     await run(customer.id, { merchant_id: other.id, items: [{ batch_id: b.id, quantity: 1 }] });
-    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: a.id, quantity: 2 }] });
+    await run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: a.id, quantity: 2 }] });
     const [s] = await db.select().from(orders).where(eq(orders.id, stale.id));
     expect(s.status).toBe("EXPIRED");
 
@@ -404,34 +405,34 @@ describe("POST /orders/checkout — fair use (no stock hoarding)", () => {
 
   it("caps the portions of one batch a customer can hold (paid orders included)", async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 10 });
+    const { batch } = await newBatch(demoMerchant.id, { stock: 10 });
     const cap = maxPortionsPerCustomer(10);
     expect(cap).toBe(5);
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: cap + 1 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: cap + 1 }] }),
       "VALIDATION_ERROR",
     );
-    const o = await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: cap - 1 }] });
+    const o = await run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: cap - 1 }] });
     await db.update(orders).set({ status: "READY_FOR_PICKUP" }).where(eq(orders.id, o.id));
     await expectCode(
-      run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 2 }] }),
       "VALIDATION_ERROR",
     );
-    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: batch.id, quantity: 1 }] });
+    await run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1 }] });
   });
 
   it(`refuses new checkouts after ${MAX_ABANDONED_ORDERS_IN_WINDOW} cancelled/expired ones in ${ABANDONED_ORDERS_WINDOW_MINUTES} min`, async () => {
     const customer = await newCustomer();
-    const { batch } = await newBatch(buSri.id, { stock: 6 });
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6 });
     const items = [{ batch_id: batch.id, quantity: 1 }];
     for (let i = 0; i < MAX_ABANDONED_ORDERS_IN_WINDOW; i++) {
-      const o = await run(customer.id, { merchant_id: buSri.id, items });
+      const o = await run(customer.id, { merchant_id: demoMerchant.id, items });
       await db.update(orders).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(orders.id, o.id));
     }
-    await expectCode(run(customer.id, { merchant_id: buSri.id, items }), "RATE_LIMITED");
+    await expectCode(run(customer.id, { merchant_id: demoMerchant.id, items }), "RATE_LIMITED");
     const later = new Date(Date.now() + (ABANDONED_ORDERS_WINDOW_MINUTES + 1) * 60_000);
-    const { batch: fresh } = await newBatch(buSri.id, { stock: 6, endInMin: 240 });
-    await run(customer.id, { merchant_id: buSri.id, items: [{ batch_id: fresh.id, quantity: 1 }] }, later);
+    const { batch: fresh } = await newBatch(demoMerchant.id, { stock: 6, endInMin: 240 });
+    await run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: fresh.id, quantity: 1 }] }, later);
   });
 
   it("parallel checkouts of one customer are serialised: only one unpaid order is created", async () => {

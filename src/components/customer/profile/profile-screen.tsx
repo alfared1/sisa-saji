@@ -27,6 +27,7 @@ import {
   StoreIcon,
   UserRoundIcon,
 } from "lucide-react";
+import { CampusPicker } from "@/components/common/campus-picker";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ShellHeader } from "@/components/shell/customer-shell";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { useSession, useSetSessionUser } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import { CAMPUSES } from "@/lib/constants";
+import { campusIdByName } from "@/lib/campuses";
+import { CAMPUSES, type CampusId } from "@/lib/constants";
 import type { ProfileUpdateBody, SessionUser } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { useLocationStore } from "@/stores/location";
@@ -140,8 +142,8 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
   const setSessionUser = useSetSessionUser();
   const setCampus = useLocationStore((s) => s.setCampus);
   const [name, setName] = useState(user.full_name);
-  const initialCampus = CAMPUSES.find((c) => c.name === user.campus_or_area)?.id ?? null;
-  const [campus, setCampusId] = useState<string | null>(initialCampus);
+  const initialCampus = campusIdByName(user.campus_or_area);
+  const [campus, setCampusId] = useState<CampusId | null>(initialCampus);
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({
@@ -192,28 +194,11 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
         />
       </div>
       <fieldset>
-        <legend className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Kampus</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {CAMPUSES.map((c) => {
-            const active = campus === c.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setCampusId(c.id)}
-                className={cn(
-                  "flex min-h-11 items-center gap-2 rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                  active ? "bg-brand-soft ring-primary/50" : "bg-card ring-border hover:bg-muted",
-                )}
-              >
-                <GraduationCapIcon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
-                <span className="truncate">{c.name}</span>
-              </button>
-            );
-          })}
+        <legend className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Kampus / kota</legend>
+        <div className="max-h-80 overflow-y-auto overscroll-contain rounded-2xl bg-muted/40 p-2 ring-1 ring-border">
+          <CampusPicker value={campus} onSelect={setCampusId} />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Kampus juga dipakai sebagai titik pencarian default.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Pilihan ini juga dipakai sebagai titik pencarian default.</p>
       </fieldset>
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">

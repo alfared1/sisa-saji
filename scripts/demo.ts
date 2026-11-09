@@ -446,7 +446,7 @@ async function start() {
     "",
     "  Akun demo (kode OTP tampil di layar /auth/verify):",
     "    Pembeli   demo.pembeli@sisasaji.test  /  +6281200000001",
-    "    Mitra     demo.mitra@sisasaji.test    /  +6281300000001",
+    "    Mitra     demo.mitra@sisasaji.test    /  +6281300000001  (Warung Nasi Teh Euis, Bogor)",
     "",
     `  Database    ${redactedDbUrl()}${EXTERNAL_DB ? "" : ` (PGlite, data: ${DB_DIR})`}`,
     "  Data malam ini kedaluwarsa ±2,5 jam setelah seed → npm run demo:reseed",

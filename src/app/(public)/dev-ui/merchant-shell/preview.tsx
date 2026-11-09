@@ -7,7 +7,7 @@ import type { SessionUser } from "@/lib/contracts";
 const DEMO_USER: SessionUser = {
   id: "00000000-0000-0000-0000-000000000000",
   role: "MERCHANT",
-  full_name: "Sri Wahyuni",
+  full_name: "Euis Kurniasih",
   email: "demo.mitra@sisasaji.test",
   phone_number: "+6281300000001",
   campus_or_area: null,

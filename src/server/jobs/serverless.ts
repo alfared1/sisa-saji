@@ -12,7 +12,8 @@ import "server-only";
 import { and, eq, gt, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { jobRuns, menus, merchants, surplusBatches } from "@/db/schema";
-import { ESCALATION_INTERVAL_MINUTES } from "@/lib/constants";
+import { nearestCampus, isHomeRegion } from "@/lib/campuses";
+import { CAMPUSES, ESCALATION_INTERVAL_MINUTES } from "@/lib/constants";
 import { isDemoMode } from "@/lib/env";
 import { wibDate } from "@/lib/time";
 import { publishSurplus } from "@/server/services/merchant/surplus";
@@ -98,63 +99,127 @@ async function runMerchantRemindersPersisted(db: Db, now: Date) {
 /* Demo mode: keep "tonight" populated                                 */
 /* ------------------------------------------------------------------ */
 
+export interface TopUpOptions {
+  /** Live batches every campus hub should keep (default 4). */
+  minPerHub?: number;
+  /** Live batches every home-region (Bogor) hub should keep (default 10). */
+  minPerHomeHub?: number;
+  /** Optional overall floor, filled after the per-hub targets (default 0). */
+  minLive?: number;
+  /** Menus published per warung per call (default 2). */
+  perMerchant?: number;
+  /** Publish at most this many batches per call: it runs inside a request (default 24). */
+  maxPublish?: number;
+}
+
 export interface TopUpSummary {
   liveBefore: number;
   published: number;
+  /** Batches published per hub id in this call. */
+  byHub: Record<string, number>;
 }
 
-/** Live = ACTIVE, has stock, and stays open at least another 20 minutes. */
-async function countLiveBatches(db: Db, now: Date): Promise<number> {
-  const soon = new Date(now.getTime() + 20 * MINUTE_MS);
-  const [row] = await db
-    .select({ n: sql<number>`COUNT(*)::int` })
-    .from(surplusBatches)
-    .where(
-      and(eq(surplusBatches.status, "ACTIVE"), gt(surplusBatches.availableStock, 0), gt(surplusBatches.pickupEndTime, soon)),
-    );
-  return row?.n ?? 0;
-}
+/** A warung counts for a hub when it is this close to it (the nearest hub wins). */
+export const TOP_UP_HUB_RADIUS_M = 15_000;
 
 const randInt = (min: number, max: number) => min + Math.floor(Math.random() * (max - min + 1));
+const shuffle = <T>(xs: T[]): T[] => {
+  for (let i = xs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [xs[i], xs[j]] = [xs[j], xs[i]];
+  }
+  return xs;
+};
+
+interface HubState {
+  id: string;
+  home: boolean;
+  target: number;
+  live: number;
+  /** Open warung with nothing live, shuffled so different warung light up on different visits. */
+  candidates: string[];
+}
+
+/** Hub that needs food most: lowest live/target ratio, then home region, then biggest gap. */
+function neediest(hubs: HubState[], floorReached: boolean): HubState | undefined {
+  const open = hubs.filter((h) => h.candidates.length > 0 && (h.live < h.target || !floorReached));
+  return open.sort(
+    (a, b) =>
+      a.live / Math.max(1, a.target) - b.live / Math.max(1, b.target) ||
+      Number(b.home) - Number(a.home) ||
+      b.target - b.live - (a.target - a.live),
+  )[0];
+}
 
 /**
- * When fewer than `minLive` batches are live, publishes fresh batches (through the
- * normal publish path: optimizer price, INITIAL_PUBLISH log) for open warung that have
- * nothing live, until the target is reached. Closing times are spread 50–170 minutes
- * ahead so every discount tier (Hemat → Flash Rescue) shows up over time.
+ * DEMO_MODE: keeps every campus hub stocked with live food. Each hub (warung grouped by
+ * their nearest hub) should have `minPerHub` live batches, Bogor hubs `minPerHomeHub`.
+ * Hubs with the lowest live/target ratio are served first, so an empty hub anywhere
+ * gets food before a half-full one gets more. Batches go through the normal publish
+ * path (optimizer price, INITIAL_PUBLISH log) for open warung with nothing live, with
+ * closing times spread 50–170 minutes ahead so every discount tier shows up over time.
+ * At most `maxPublish` batches per call; once the targets are met a call publishes
+ * nothing (idempotent).
  */
-export async function topUpDemoBatches(
-  db: Db,
-  now: Date = new Date(),
-  opts: { minLive?: number; perMerchant?: number } = {},
-): Promise<TopUpSummary> {
-  const minLive = opts.minLive ?? 18;
+export async function topUpDemoBatches(db: Db, now: Date = new Date(), opts: TopUpOptions = {}): Promise<TopUpSummary> {
+  const minPerHub = opts.minPerHub ?? 4;
+  const minPerHomeHub = opts.minPerHomeHub ?? 10;
+  const minLive = opts.minLive ?? 0;
   const perMerchant = opts.perMerchant ?? 2;
-  const liveBefore = await countLiveBatches(db, now);
-  if (liveBefore >= minLive) return { liveBefore, published: 0 };
+  const maxPublish = opts.maxPublish ?? 24;
 
+  // Live = ACTIVE, has stock, and stays open at least another 20 minutes. A warung
+  // with any ACTIVE batch that is not about to close is "busy" and is left alone.
   const soon = new Date(now.getTime() + 20 * MINUTE_MS);
-  const liveMerchantRows = await db
-    .selectDistinct({ id: surplusBatches.merchantId })
+  const perMerchantLive = await db
+    .select({
+      merchantId: surplusBatches.merchantId,
+      live: sql<number>`(COUNT(*) FILTER (WHERE ${surplusBatches.availableStock} > 0))::int`,
+    })
     .from(surplusBatches)
-    .where(and(eq(surplusBatches.status, "ACTIVE"), gt(surplusBatches.pickupEndTime, soon)));
-  const busy = new Set(liveMerchantRows.map((r) => r.id));
+    .where(and(eq(surplusBatches.status, "ACTIVE"), gt(surplusBatches.pickupEndTime, soon)))
+    .groupBy(surplusBatches.merchantId);
+  const liveByMerchant = new Map(perMerchantLive.map((r) => [r.merchantId, r.live]));
+  const liveBefore = perMerchantLive.reduce((n, r) => n + r.live, 0);
 
-  const open = await db.select({ id: merchants.id }).from(merchants).where(eq(merchants.isOpen, true));
-  const candidates = open.map((m) => m.id).filter((id) => !busy.has(id));
-  if (!candidates.length) return { liveBefore, published: 0 };
+  const open = await db
+    .select({ id: merchants.id, lat: merchants.latitude, lng: merchants.longitude })
+    .from(merchants)
+    .where(eq(merchants.isOpen, true));
 
+  const hubs = new Map<string, HubState>(
+    CAMPUSES.map((c) => {
+      const home = isHomeRegion(c.region);
+      return [c.id, { id: c.id, home, target: home ? minPerHomeHub : minPerHub, live: 0, candidates: [] }];
+    }),
+  );
+  let openLive = 0;
+  for (const m of shuffle(open)) {
+    const live = liveByMerchant.get(m.id) ?? 0;
+    openLive += live;
+    const hub = nearestCampus({ lat: m.lat, lng: m.lng }, TOP_UP_HUB_RADIUS_M);
+    if (!hub) continue;
+    const state = hubs.get(hub.campus.id)!;
+    state.live += live;
+    if (!liveByMerchant.has(m.id)) state.candidates.push(m.id);
+  }
+  const hubList = [...hubs.values()];
+  const byHub: Record<string, number> = {};
+  if (!neediest(hubList, openLive >= minLive)) return { liveBefore, published: 0, byHub };
+
+  const candidateIds = hubList.flatMap((h) => h.candidates);
   const menuRows = await db
     .select({ id: menus.id, merchantId: menus.merchantId })
     .from(menus)
-    .where(and(inArray(menus.merchantId, candidates), eq(menus.isActive, true)));
+    .where(and(inArray(menus.merchantId, candidateIds), eq(menus.isActive, true)))
+    .orderBy(menus.merchantId, menus.id);
 
-  let live = liveBefore;
   let published = 0;
-  // Shuffle so different warung light up on different visits.
-  for (const merchantId of candidates.sort(() => Math.random() - 0.5)) {
-    if (live >= minLive) break;
-    const own = menuRows.filter((m) => m.merchantId === merchantId).slice(0, perMerchant);
+  while (published < maxPublish) {
+    const hub = neediest(hubList, openLive >= minLive);
+    if (!hub) break;
+    const merchantId = hub.candidates.shift()!;
+    const own = menuRows.filter((m) => m.merchantId === merchantId).slice(0, Math.min(perMerchant, maxPublish - published));
     for (const menu of own) {
       try {
         await publishSurplus(
@@ -169,13 +234,15 @@ export async function topUpDemoBatches(
           now,
         );
         published++;
-        live++;
+        hub.live++;
+        openLive++;
+        byHub[hub.id] = (byHub[hub.id] ?? 0) + 1;
       } catch (err) {
         console.warn("[jobs] demo top-up publish failed", err instanceof Error ? err.message : err);
       }
     }
   }
-  return { liveBefore, published };
+  return { liveBefore, published, byHub };
 }
 
 /* ------------------------------------------------------------------ */

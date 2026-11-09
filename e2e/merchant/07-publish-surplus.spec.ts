@@ -1,9 +1,9 @@
 import { devices } from "@playwright/test";
 import { expect, test } from "../fixtures";
-import { DEMO_MERCHANT_EMAIL, DEMO_MERCHANT_SLUG, E2E_BASE_URL } from "../env";
+import { DEMO_MERCHANT_EMAIL, DEMO_MERCHANT_NAME, DEMO_MERCHANT_SLUG, E2E_BASE_URL } from "../env";
 import { loginContextAs } from "../helpers";
 
-const MENU = "Paket Kejutan Bu Sri";
+const MENU = "Paket Kejutan Teh Euis";
 
 test("merchant publishes surplus with the AI quote; it appears on dashboard and for customers", async ({ page, context, browser }) => {
   await loginContextAs(context, DEMO_MERCHANT_EMAIL);
@@ -43,10 +43,10 @@ test("merchant publishes surplus with the AI quote; it appears on dashboard and 
   const phoneCtx = await browser.newContext({ ...devices["Pixel 7"], baseURL: E2E_BASE_URL });
   const phone = await phoneCtx.newPage();
   await phone.goto("/discover");
-  await phone.getByPlaceholder("Cari nasi, gudeg, roti…").fill("Paket Kejutan Bu Sri");
+  await phone.getByPlaceholder("Cari nasi, soto, roti…").fill(MENU);
   // Search matches the menu; the result is grouped under its warung card.
   await expect(phone.getByText(/^Live · [1-9]\d* menu/)).toBeVisible();
-  await expect(phone.getByText("Warung Makan Bu Sri").first()).toBeVisible();
+  await expect(phone.getByText(DEMO_MERCHANT_NAME).first()).toBeVisible();
   await phone.goto(`/warung/${DEMO_MERCHANT_SLUG}`);
   await expect(phone.getByRole("article", { name: MENU }).first()).toBeVisible();
   await phoneCtx.close();

@@ -7,6 +7,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
 import { menus, merchants, orders, surplusBatches, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { CheckoutBody } from "@/lib/contracts";
 import { badgeTierForFoodSaved } from "@/lib/impact";
 import { createPickupToken } from "@/lib/pickup-token";
@@ -38,11 +39,11 @@ const SECRET = TEST_PICKUP_QR_SECRET;
 beforeAll(async () => {
   ({ db, close } = testDb());
   await reseed(db);
-  [merchant] = await db.select().from(merchants).where(eq(merchants.slug, "warung-bu-sri-pogung"));
+  [merchant] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
   [{ id: otherMerchantId }] = await db
     .select({ id: merchants.id })
     .from(merchants)
-    .where(eq(merchants.slug, "bakmi-jawa-pak-harjo"));
+    .where(eq(merchants.slug, "seblak-cireng-teh-yuyun-babakan-tengah"));
 });
 afterAll(async () => close());
 
@@ -245,7 +246,7 @@ describe("POST /orders/:id/verify-pickup", () => {
 
 describe("pickup code guessing lockout", () => {
   it(`locks typed code entry after ${PICKUP_CODE_MAX_FAILURES} wrong codes in ${PICKUP_CODE_LOCK_WINDOW_MINUTES} min; QR still works`, async () => {
-    const [m] = await db.select().from(merchants).where(eq(merchants.slug, "warung-bu-sri-pogung"));
+    const [m] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
     const { order, row } = await paidOrder(1);
     const t = new Date(Date.now() + 60 * 60_000); // own time slice, independent of other tests' failures
     const wrong = row.pickupCode === "0000" ? "0001" : "0000";

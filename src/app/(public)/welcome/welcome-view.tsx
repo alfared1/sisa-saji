@@ -147,8 +147,8 @@ function DealPreview() {
             <DiscountBadge pct={60} size="sm" className="absolute top-1.5 left-1.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold">Nasi Ayam Geprek</p>
-            <p className="truncate text-xs text-muted-foreground">Warung Bu Sri · 450 m</p>
+            <p className="truncate text-sm font-bold">Nasi Timbel Ayam Goreng</p>
+            <p className="truncate text-xs text-muted-foreground">Warung Nasi Teh Euis · 240 m</p>
             <PriceTag original={18000} selling={7000} showBadge={false} className="mt-1.5" />
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <StockBadge available={3} />

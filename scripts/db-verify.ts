@@ -6,13 +6,17 @@
 import "dotenv/config";
 import { sql } from "drizzle-orm";
 import { createDb } from "../src/db/client";
+import { DEMO_MERCHANT_SLUG } from "../src/db/seed/data";
 import { CAMPUSES, DEFAULT_SEARCH_RADIUS_M } from "../src/lib/constants";
 import { getDatabaseUrl } from "../src/lib/env";
 import { calculateOptimalRecoveryPrice } from "../src/lib/pricing/dynamic-discount";
 
 async function main() {
   const { db, pool } = createDb(getDatabaseUrl(), { max: 1 });
-  const ugm = CAMPUSES.find((c) => c.id === "ugm")!;
+  // The app's default search point: IPB Dramaga, Bogor (the platform's home base).
+  const home = CAMPUSES[0];
+  /** IPB-area warung ~3.7 / ~4.7 km from campus: outside 2 km, inside 5 km. */
+  const FAR = ["nasi-timbel-ceu-iyah-sindang-barang", "laksa-asinan-bu-nining-loji"];
   let failures = 0;
   const check = (label: string, ok: boolean, detail = "") => {
     console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
@@ -33,23 +37,44 @@ async function main() {
 
   // 1. Radius discovery (core geo-query shape from blueprint §2.2.B). Independent of
   //    wall-clock time: the seeded "tonight" batches expire ~2.5 h after seeding.
-  const nearby = await db.execute<{ merchant_name: string; distance_m: number; tier: string; active: number; live: number }>(sql`
-    SELECT m.merchant_name, ROUND(ST_Distance(m.geom, ST_MakePoint(${ugm.lng}, ${ugm.lat})::geography))::int AS distance_m,
+  const nearby = await db.execute<{ merchant_name: string; slug: string; distance_m: number; tier: string; active: number; live: number }>(sql`
+    SELECT m.merchant_name, m.slug, ROUND(ST_Distance(m.geom, ST_MakePoint(${home.lng}, ${home.lat})::geography))::int AS distance_m,
            m.subscription_tier AS tier, COUNT(b.id)::int AS active,
            COUNT(b.id) FILTER (WHERE b.pickup_end_time > NOW())::int AS live
     FROM merchants m
     JOIN surplus_batches b ON b.merchant_id = m.id AND b.status = 'ACTIVE'
-    WHERE ST_DWithin(m.geom, ST_MakePoint(${ugm.lng}, ${ugm.lat})::geography, ${DEFAULT_SEARCH_RADIUS_M})
+    WHERE ST_DWithin(m.geom, ST_MakePoint(${home.lng}, ${home.lat})::geography, ${DEFAULT_SEARCH_RADIUS_M})
     GROUP BY m.id
     ORDER BY (m.subscription_tier = 'PREMIUM') DESC, distance_m ASC`);
   console.table(nearby.rows);
-  check("radius 2 km from UGM returns merchants with active batches", nearby.rows.length >= 10, `${nearby.rows.length} merchants`);
+  check(
+    `radius 2 km from ${home.name} returns merchants with active batches`,
+    nearby.rows.length >= 10,
+    `${nearby.rows.length} merchants`,
+  );
   check("all results within 2 km", nearby.rows.every((r) => r.distance_m <= DEFAULT_SEARCH_RADIUS_M));
-  const all = await one<{ n: number }>(sql`SELECT COUNT(*)::int AS n FROM merchants`);
-  check("far merchants (Seturan, Condongcatur) excluded", nearby.rows.length < all.n);
+  check("far merchants (Sindang Barang, Loji) excluded", FAR.every((slug) => !nearby.rows.some((r) => r.slug === slug)));
+  const far = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM merchants
+    WHERE slug IN (${sql.join(FAR.map((f) => sql`${f}`), sql`, `)})
+      AND ST_DWithin(geom, ST_MakePoint(${home.lng}, ${home.lat})::geography, 5000)`);
+  check("…but inside the 5 km expanded radius", far.n === FAR.length);
   const live = nearby.rows.filter((r) => r.live > 0).length;
   if (live === 0) console.log("WARN  tonight's demo batches have expired — run `npm run db:seed` to refresh them");
   else console.log(`INFO  ${live} merchants still have a live pickup window`);
+
+  // 1b. Every campus hub has warung with active batches tonight.
+  const hubs = await db.execute<{ id: string; merchants: number; active: number }>(sql`
+    SELECT h.id, COUNT(DISTINCT m.id)::int AS merchants, COUNT(b.id)::int AS active
+    FROM (VALUES ${sql.join(
+      CAMPUSES.map((c) => sql`(${c.id}, ${c.lng}::float8, ${c.lat}::float8)`),
+      sql`, `,
+    )}) AS h(id, lng, lat)
+    LEFT JOIN merchants m ON ST_DWithin(m.geom, ST_MakePoint(h.lng, h.lat)::geography, 6000)
+    LEFT JOIN surplus_batches b ON b.merchant_id = m.id AND b.status = 'ACTIVE'
+    GROUP BY h.id`);
+  const empty = hubs.rows.filter((h) => h.merchants === 0 || h.active === 0).map((h) => h.id);
+  check(`all ${CAMPUSES.length} campus hubs have warung with active batches`, empty.length === 0, empty.join(", "));
 
   // 2. geom is generated from lat/lng.
   const drift = await one<{ n: number }>(sql`
@@ -125,9 +150,12 @@ async function main() {
 
   // 5. Demo ticket & tonight's discount spread.
   const demo = await one<{ n: number }>(sql`
-    SELECT COUNT(*)::int AS n FROM orders o JOIN users u ON u.id = o.customer_id
-    WHERE u.email = 'demo.pembeli@sisasaji.test' AND o.status = 'READY_FOR_PICKUP'`);
-  check("demo customer has a pickup ticket tonight", demo.n >= 1);
+    SELECT COUNT(*)::int AS n FROM orders o
+    JOIN users u ON u.id = o.customer_id
+    JOIN merchants m ON m.id = o.merchant_id
+    WHERE u.email = 'demo.pembeli@sisasaji.test' AND o.status = 'READY_FOR_PICKUP'
+      AND m.slug = ${DEMO_MERCHANT_SLUG}`);
+  check("demo customer has a pickup ticket tonight at the demo warung", demo.n >= 1);
 
   const tiers = await db.execute<{ current_discount_pct: number; n: number }>(sql`
     SELECT current_discount_pct, COUNT(*)::int AS n FROM surplus_batches

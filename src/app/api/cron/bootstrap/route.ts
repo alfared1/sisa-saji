@@ -18,7 +18,7 @@ function authorized(req: Request): boolean {
 
 /**
  * POST /api/cron/bootstrap — fills an empty production database with the demo dataset
- * (15 warung, 4 weeks of history, tonight's batches, demo accounts). Requires
+ * (95 warung around 21 campus hubs, 4 weeks of history, tonight's batches, demo accounts). Requires
  * Authorization: Bearer $CRON_SECRET. Refuses when users already exist, unless
  * `?force=1` is passed (which WIPES all data and reseeds).
  * Schema migrations run at build time (see package.json "vercel-build").

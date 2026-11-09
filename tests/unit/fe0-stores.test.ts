@@ -91,12 +91,32 @@ describe("cart store (single-merchant guardrail)", () => {
 describe("location store", () => {
   beforeEach(() => useLocationStore.getState().reset());
 
-  it("defaults to UGM with a 2 km radius", () => {
+  it("defaults to IPB Dramaga, Bogor with a 2 km radius", () => {
     const s = useLocationStore.getState();
-    expect(s.lat).toBe(CAMPUSES[0].lat);
-    expect(s.source).toBe("campus");
+    expect(CAMPUSES[0].id).toBe("ipb");
+    expect(s).toMatchObject({ lat: CAMPUSES[0].lat, lng: CAMPUSES[0].lng, campus_id: "ipb", source: "campus" });
+    expect(s.label).toBe("IPB Dramaga, Bogor");
     expect(s.label).toBe(DEFAULT_LOCATION.label);
     expect(s.radius_m).toBe(2000);
+  });
+
+  it("moves a never-chosen v1 default (UGM) to the new default, keeps a chosen location", () => {
+    const migrate = useLocationStore.persist.getOptions().migrate!;
+    const ugm = CAMPUSES.find((c) => c.id === "ugm")!;
+    const oldDefault = { lat: ugm.lat, lng: ugm.lng, label: ugm.name, source: "campus", campus_id: "ugm", updated_at: null, radius_m: 5000 };
+    expect(migrate(oldDefault, 1)).toMatchObject({ ...DEFAULT_LOCATION, radius_m: 5000 });
+    const chosen = { ...oldDefault, updated_at: "2026-11-01T10:00:00.000Z" };
+    expect(migrate(chosen, 1)).toEqual(chosen);
+  });
+
+  it("refreshes a chosen v1 campus label renamed since (IPB Bogor → IPB Dramaga, Bogor)", () => {
+    const migrate = useLocationStore.persist.getOptions().migrate!;
+    const ipb = CAMPUSES.find((c) => c.id === "ipb")!;
+    const chosenIpb = { lat: ipb.lat, lng: ipb.lng, label: "IPB Bogor", source: "campus", campus_id: "ipb", updated_at: "2026-11-01T10:00:00.000Z", radius_m: 2000 };
+    expect(migrate(chosenIpb, 1)).toEqual({ ...chosenIpb, label: "IPB Dramaga, Bogor" });
+    // A manually picked point keeps its own label.
+    const manual = { ...chosenIpb, source: "manual", campus_id: null, label: "Titik pilihan" };
+    expect(migrate(manual, 1)).toEqual(manual);
   });
 
   it("only accepts the allowed radius options", () => {

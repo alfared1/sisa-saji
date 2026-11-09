@@ -23,7 +23,7 @@ test("fresh merchant: OTP login → 5-step onboarding wizard → dashboard", asy
   const stepLine = (n: number) => page.getByRole("heading", { name: TITLES[n - 1], exact: true });
 
   await expect(stepLine(1)).toBeVisible();
-  await page.getByPlaceholder("Warung Makan Bu Sri").fill(`Warung Uji ${phone.slice(-4)}`);
+  await page.getByPlaceholder("Warung Nasi Teh Euis").fill(`Warung Uji ${phone.slice(-4)}`);
   await page.getByRole("textbox", { name: "Nomor WhatsApp warung" }).fill(phone);
   await next();
 
@@ -35,7 +35,7 @@ test("fresh merchant: OTP login → 5-step onboarding wizard → dashboard", asy
   if (!box) throw new Error("map has no box");
   await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.6);
   await expect(page.getByText("Taruh pin lokasi warung di peta")).toBeHidden();
-  await page.getByPlaceholder(/Jl\. Pogung Kidul/).fill("Jl. Kaliurang Km 5 No. 9, Sleman");
+  await page.getByPlaceholder(/Jl\. Babakan Raya/).fill("Jl. Raya Dramaga No. 9, Babakan, Dramaga, Kab. Bogor");
   await next();
 
   await expect(stepLine(3)).toBeVisible();

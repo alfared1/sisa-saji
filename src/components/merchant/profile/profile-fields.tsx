@@ -73,7 +73,7 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
         </Label>
         <Input
           id={id("name")}
-          placeholder="Warung Makan Bu Sri"
+          placeholder="Warung Nasi Teh Euis"
           autoComplete="organization"
           className="h-12 rounded-2xl bg-card text-base"
           aria-invalid={e.merchant_name ? true : undefined}
@@ -194,7 +194,7 @@ export function LocationSection({ form, idPrefix = "loc" }: { form: ProfileForm;
         <Textarea
           id={id("addr")}
           rows={2}
-          placeholder="Jl. Pogung Kidul No. 12, Sinduadi, Mlati, Sleman"
+          placeholder="Jl. Babakan Raya No. 12, Babakan, Dramaga, Kab. Bogor"
           autoComplete="street-address"
           className="rounded-2xl bg-card text-base"
           aria-invalid={e.address ? true : undefined}
@@ -306,7 +306,7 @@ export function BankSection({
           <Label htmlFor={id("holder")} className="text-sm font-semibold">
             Nama pemilik
           </Label>
-          <Input id={id("holder")} autoComplete="name" placeholder="Sri Wahyuni" className="h-12 rounded-2xl bg-card text-base" {...register("bank_account_holder")} />
+          <Input id={id("holder")} autoComplete="name" placeholder="Euis Kurniasih" className="h-12 rounded-2xl bg-card text-base" {...register("bank_account_holder")} />
           <FieldError>{e.bank_account_holder?.message}</FieldError>
         </div>
       </div>

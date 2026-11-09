@@ -328,7 +328,7 @@ export function DiscoverScreen() {
               value={search}
               maxLength={60}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nasi, gudeg, roti…"
+              placeholder="Cari nasi, soto, roti…"
               className="h-11 w-full rounded-2xl bg-muted/80 pr-10 pl-10 text-sm font-medium ring-1 ring-transparent transition outline-none placeholder:text-muted-foreground focus:bg-card focus:ring-ring/60 [&::-webkit-search-cancel-button]:hidden"
             />
             {search && (

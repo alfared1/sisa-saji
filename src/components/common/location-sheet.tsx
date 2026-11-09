@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, GraduationCapIcon, LocateFixedIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, LocateFixedIcon, Loader2Icon } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -9,11 +9,11 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useGeolocation } from "@/hooks/use-geolocation";
-import { CAMPUSES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { RADIUS_OPTIONS, formatRadius, useLocationStore } from "@/stores/location";
+import { CampusPicker } from "./campus-picker";
 
-/** Bottom sheet: use GPS, pick a campus quick-location, and choose the radius. */
+/** Bottom sheet: use GPS, choose the radius, or pick a campus / city quick-location. */
 export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { request, isLocating } = useGeolocation();
   const source = useLocationStore((s) => s.source);
@@ -29,7 +29,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
           <DrawerTitle className="text-lg font-bold">Lokasi pencarian</DrawerTitle>
           <DrawerDescription>Kami tampilkan surplus makanan di sekitar titik ini.</DrawerDescription>
         </DrawerHeader>
-        <div className="space-y-5 overflow-y-auto px-4 pb-6">
+        <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 pb-6">
           <button
             type="button"
             onClick={async () => {
@@ -54,34 +54,6 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
           </button>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Pilih kampus
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {CAMPUSES.map((c) => {
-                const active = source === "campus" && campusId === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setCampus(c.id);
-                      onOpenChange(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-2 rounded-2xl p-3 text-left text-sm font-medium ring-1 transition-colors",
-                      active ? "bg-brand-soft text-secondary-foreground ring-primary/40" : "bg-card ring-border hover:bg-muted",
-                    )}
-                  >
-                    <GraduationCapIcon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
-                    <span className="truncate">{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section>
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Radius</h3>
             <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Radius pencarian">
               {RADIUS_OPTIONS.map((r) => (
@@ -103,6 +75,19 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
             <p className="mt-2 text-xs text-muted-foreground">
               Default 2 km supaya makanan masih hangat saat kamu ambil sendiri.
             </p>
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Pilih kampus / kota
+            </h3>
+            <CampusPicker
+              value={source === "campus" ? campusId : null}
+              onSelect={(id) => {
+                setCampus(id);
+                onOpenChange(false);
+              }}
+            />
           </section>
         </div>
       </DrawerContent>

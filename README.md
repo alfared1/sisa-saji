@@ -56,9 +56,30 @@ Login memakai OTP. Di mode demo kodenya **ditampilkan di layar** (belum ada prov
 
 | Peran | Email | Nomor HP | Catatan |
 | :--- | :--- | :--- | :--- |
-| Pembeli | `demo.pembeli@sisasaji.test` | `+6281200000001` | Selalu punya satu tiket `READY_FOR_PICKUP` di Warung Makan Bu Sri |
-| Mitra (warung) | `demo.mitra@sisasaji.test` | `+6281300000001` | Pemilik Warung Makan Bu Sri (Pogung) |
+| Pembeli | `demo.pembeli@sisasaji.test` | `+6281200000001` | Raka Pratama, tinggal di sekitar IPB Dramaga. Selalu punya satu tiket `READY_FOR_PICKUP` di Warung Nasi Teh Euis |
+| Mitra (warung) | `demo.mitra@sisasaji.test` | `+6281300000001` | Euis Kurniasih, pemilik Warung Nasi Teh Euis (Jl. Babakan Raya, Dramaga, Bogor) |
 | Admin | `admin@sisasaji.test` | – | |
+
+### Data demo
+
+Bogor adalah pusat platform. Titik pencarian default aplikasi adalah **IPB Dramaga, Bogor**, dan pemilih lokasi menampilkan 21 kampus/kota yang dikelompokkan per wilayah (Bogor paling atas).
+
+| Wilayah | Kampus / kota | Warung |
+| :--- | :--- | ---: |
+| Bogor (pusat) | IPB Dramaga, Kota Bogor (Baranangsiang), Cibinong | 28 |
+| Jabodetabek | UI Depok, UNJ Rawamangun | 8 |
+| Jawa Barat | ITB Bandung, UNPAD Jatinangor | 7 |
+| DI Yogyakarta | UGM, UNY | 15 |
+| Jawa Tengah | UNDIP Tembalang, UNS Surakarta | 8 |
+| Jawa Timur | ITS Surabaya, UB Malang | 8 |
+| Sumatera | USU Medan, UNAND Padang, UNSRI Palembang | 9 |
+| Kalimantan Barat | UNTAN Pontianak | 2 |
+| Bali | Universitas Udayana, Denpasar | 3 |
+| Sulawesi | UNHAS Makassar, UNSRAT Manado | 5 |
+| Papua | UNCEN Abepura, Jayapura | 2 |
+| **Total** | **21 kampus / kota** | **95** |
+
+Semua warung dan pemiliknya fiktif, tetapi koordinatnya berada di lingkungan nyata (Babakan Raya, Bateng, Balebak, Suryakencana, Pogung, Kukusan Teknik, Tembalang, …). Seed juga membuat 120 pembeli (±45% di Bogor), histori 28 hari, dan batch "malam ini" di setiap warung. Di Vercel (`DEMO_MODE=true`) job top-up menjaga setiap kampus/kota tetap punya makanan live: minimal 4 batch per titik dan 10 batch untuk tiap titik di Bogor.
 
 ---
 
@@ -93,7 +114,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 
 **Fase 1 — Fondasi data**
 - Skema PostgreSQL + PostGIS (Drizzle), migrasi SQL, dan constraint integritas (stok, harga lantai, kode pickup unik).
-- Seeder 15 warung fiktif di sekitar UGM/UNY Yogyakarta, histori 28 hari (±2.400 pesanan), prediksi 7 hari; `db:verify` dengan 17 pemeriksaan.
+- Seeder 95 warung fiktif di 21 kampus/kota di seluruh Indonesia dengan Bogor sebagai pusat, histori 28 hari (±14.800 pesanan), prediksi 7 hari; `db:verify` dengan 19 pemeriksaan.
 
 **Fase 2 — Mesin AI & API**
 - *Dynamic Discount Optimizer*: baseline 50%, mid-window 55–60%, critical window 70% + push "Flash Rescue" sekali per batch; pembulatan ke atas kelipatan Rp 500 dengan aritmetika integer; harga lantai dijaga; setiap perubahan tercatat di `discount_adjustment_logs`.
@@ -189,6 +210,14 @@ npm run dev:all             # http://localhost:3000
 Database alternatif: `docker compose up -d` (PostGIS 16, lalu `DATABASE_URL=postgres://sisasaji:sisasaji@127.0.0.1:5432/sisasaji`) atau Postgres cloud (mis. Neon) dengan PostGIS aktif. Migrasi pertama menjalankan `CREATE EXTENSION postgis`.
 
 ML opsional: buat `.venv` lalu `pip install -r ml/requirements.txt`, kemudian `npm run ml:train`. Tanpa `.venv`, worker memakai prediksi heuristik.
+
+### Deploy ke Vercel setelah data demo berubah
+
+Build Vercel (`vercel-build`) hanya menjalankan migrasi, tidak seed. Setelah perubahan `src/db/seed/` di-deploy, database produksi masih berisi data lama: titik default IPB Dramaga tampil kosong dan login mitra demo masih memakai pemilik warung lama sampai seed ulang dijalankan.
+
+1. Tunggu deploy selesai, lalu seed ulang: `POST /api/cron/bootstrap?force=1` dengan header `Authorization: Bearer $CRON_SECRET`. Ini **menghapus semua data**, termasuk akun dan sesi, dan tabel terkunci selama seed berjalan (puluhan detik). Jalankan sebelum presentasi, jangan saat presentasi.
+2. Cek `/api/v1/discover/nearby?lat=-6.5568&lng=106.7313&radius_m=2000` (harus ada warung) dan login mitra demo.
+3. Jalankan `npm run ml:train` dengan `DATABASE_URL` diarahkan ke database produksi, supaya dasbor mitra kembali menampilkan prediksi LightGBM (seed menulis prediksi heuristik).
 
 ---
 

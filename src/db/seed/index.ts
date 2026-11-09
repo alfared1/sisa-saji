@@ -5,13 +5,16 @@
  *   seedDatabase(db, { … })    (tests)
  *
  * Wipes all app tables, then creates:
- *  - 1 admin, 15 merchant owners, 40 customers (mahasiswa) incl. demo accounts
- *  - 15 fictional warung around UGM/UNY with 1–3 menus each
- *  - 28 days of history: closed surplus batches, completed/expired orders,
- *    reviews and discount logs (training data for the Surplus Prediction Engine)
- *  - "Tonight": ACTIVE batches whose pickup window is relative to the time the
- *    seed runs (closing in 18–150 min), so the demo is always live and every
- *    discount tier (50% → 70%) is visible
+ *  - 1 admin, one owner per warung, 120 customers (mahasiswa) incl. demo accounts,
+ *    spread over the 21 campus hubs with ~45% in the three Bogor hubs
+ *  - 95 fictional warung around those hubs (Bogor first) with 1–3 menus each
+ *  - 28 days of history: closed surplus batches, completed/expired orders
+ *    (bought by customers of the same hub), reviews and discount logs
+ *    (training data for the Surplus Prediction Engine)
+ *  - "Tonight": ACTIVE batches at every warung whose pickup window is relative to
+ *    the time the seed runs (closing in 18–150 min), so the demo is always live
+ *    and every discount tier (50% → 70%) is visible
+ *  - presence pings (the "active users nearby" demand signal), mostly in Bogor
  *  - 7 days of heuristic predictions (model_version "heuristic-v0")
  *  - derived aggregates (impact totals, wallet balance, ratings, conversion rate)
  *
@@ -19,13 +22,16 @@
  * timestamps are relative to "now".
  */
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
-import type { Db } from "../client";
+import { getTableColumns, getTableName, sql, type Column } from "drizzle-orm";
+import { toSnakeCase } from "drizzle-orm/casing";
+import type { PgTable } from "drizzle-orm/pg-core";
+import type { Db, DbOrTx } from "../client";
 import * as s from "../schema";
 import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
 import { computeOrderTotals } from "@/lib/pricing/order-totals";
 import { createPickupToken } from "@/lib/pickup-token";
-import { BADGE_TIERS, CAMPUSES, PAYMENT_TTL_SECONDS } from "@/lib/constants";
+import { campusById } from "@/lib/campuses";
+import { BADGE_TIERS, CAMPUSES, HOME_REGION, PAYMENT_TTL_SECONDS, type CampusId } from "@/lib/constants";
 import {
   FIRST_NAMES,
   LAST_NAMES,
@@ -346,10 +352,56 @@ function buildOrder(spec: OrderSpec, secret: string, now: Date) {
 /* Seed                                                                */
 /* ------------------------------------------------------------------ */
 
+/** Customers in the dataset; ~45% live around the Bogor hubs (the home region). */
+export const SEED_CUSTOMER_COUNT = 120;
+const HOME_CUSTOMER_SHARE = 0.45;
+/** Presence pings (devices browsing right now); half of them in Bogor. */
+const SEED_PRESENCE_COUNT = 80;
+const HOME_PRESENCE_SHARE = 0.5;
+/** The demo customer's second favourite: the bakery next to the demo warung. */
+const DEMO_SUBSCRIPTION_SLUG = "toko-roti-wangi-gandum-babakan-raya";
+
+/**
+ * Splits `total` over hubs proportionally to `weight` (largest remainder), with
+ * at least `min` per hub. Deterministic.
+ */
+function allocate(total: number, hubs: { id: CampusId; weight: number }[], min: number): Map<CampusId, number> {
+  const out = new Map<CampusId, number>(hubs.map((h) => [h.id, min]));
+  const left = Math.max(0, total - min * hubs.length);
+  const weightSum = hubs.reduce((s, h) => s + h.weight, 0) || 1;
+  const shares = hubs.map((h) => ({ id: h.id, exact: (left * h.weight) / weightSum }));
+  let given = 0;
+  for (const sh of shares) {
+    const n = Math.floor(sh.exact);
+    out.set(sh.id, out.get(sh.id)! + n);
+    given += n;
+  }
+  const frac = (x: number) => x - Math.floor(x);
+  [...shares]
+    .sort((a, b) => frac(b.exact) - frac(a.exact))
+    .slice(0, left - given)
+    .forEach((sh) => out.set(sh.id, out.get(sh.id)! + 1));
+  return out;
+}
+
+/** People per hub (in CAMPUSES order): `homeShare` of them in the home region, weighted by warung count. */
+function hubQuotas(total: number, homeShare: number, minPerHub: number): [CampusId, number][] {
+  const weight = (id: CampusId) => SEED_MERCHANTS.filter((m) => m.hub === id).length;
+  const hubs = (home: boolean) =>
+    CAMPUSES.filter((c) => (c.region === HOME_REGION) === home).map((c) => ({ id: c.id as CampusId, weight: weight(c.id) }));
+  const homeTotal = Math.round(total * homeShare);
+  const quotas = new Map([...allocate(homeTotal, hubs(true), minPerHub), ...allocate(total - homeTotal, hubs(false), minPerHub)]);
+  return CAMPUSES.map((c) => [c.id, quotas.get(c.id) ?? 0]);
+}
+
+/** A point jittered around a hub so people are not stacked on one spot (±0.006° ≈ ±650 m). */
+const near = (c: { lat: number; lng: number }, spread = 0.006) => ({
+  lat: c.lat + between(-spread, spread),
+  lng: c.lng + between(-spread, spread),
+});
+
 function buildAll(now: Date, secret: string) {
   const today = wibDate(now);
-  const ugm = CAMPUSES.find((c) => c.id === "ugm")!;
-  const uny = CAMPUSES.find((c) => c.id === "uny")!;
 
   // --- Users ---------------------------------------------------------
   rows.users.push({
@@ -360,13 +412,20 @@ function buildAll(now: Date, secret: string) {
     phoneNumber: "+6281100000001",
   });
 
+  // Customer 0 is the demo account; CAMPUSES[0] (IPB Dramaga) comes first, so it lives there.
+  const customerHubs: CampusId[] = hubQuotas(SEED_CUSTOMER_COUNT, HOME_CUSTOMER_SHARE, 3).flatMap(([hub, n]) =>
+    Array.from({ length: n }, () => hub),
+  );
   const customers: string[] = [];
-  for (let i = 0; i < 40; i++) {
+  const customersByHub = new Map<CampusId, string[]>();
+  customerHubs.forEach((hub, i) => {
     const first = i === 0 ? "Raka" : FIRST_NAMES[i % FIRST_NAMES.length];
     const last = i === 0 ? "Pratama" : LAST_NAMES[(i * 7) % LAST_NAMES.length];
-    const campus = i === 0 || chance(0.7) ? ugm : uny;
+    const campus = campusById(hub);
     const id = randomUUID();
     customers.push(id);
+    customersByHub.set(hub, [...(customersByHub.get(hub) ?? []), id]);
+    const home = near(campus);
     rows.users.push({
       id,
       role: "CUSTOMER",
@@ -379,13 +438,19 @@ function buildAll(now: Date, secret: string) {
             : null,
       phoneNumber: `+628120000${String(i + 1).padStart(4, "0")}`,
       campusOrArea: campus.name,
-      defaultLat: campus.lat + between(-0.006, 0.006),
-      defaultLng: campus.lng + between(-0.006, 0.006),
+      defaultLat: home.lat,
+      defaultLng: home.lng,
     });
-  }
+  });
   const demoCustomer = customers[0];
+  /** A customer living near the hub (anyone when the hub has nobody else). */
+  const hubCustomer = (hub: CampusId, exclude?: string) => {
+    const local = (customersByHub.get(hub) ?? []).filter((c) => c !== exclude);
+    return pick(local.length ? local : customers.filter((c) => c !== exclude));
+  };
 
   // --- Merchants & menus ----------------------------------------------
+  const menusByMerchant = new Map<string, MenuRow[]>();
   SEED_MERCHANTS.forEach((m, idx) => {
     const ownerId = randomUUID();
     rows.users.push({
@@ -394,7 +459,7 @@ function buildAll(now: Date, secret: string) {
       fullName: m.owner,
       email: idx === 0 ? "demo.mitra@sisasaji.test" : null,
       phoneNumber: `+628130000${String(idx + 1).padStart(4, "0")}`,
-      campusOrArea: "Yogyakarta",
+      campusOrArea: m.city,
     });
     const merchantId = randomUUID();
     rows.merchants.push({
@@ -421,23 +486,23 @@ function buildAll(now: Date, secret: string) {
       bankAccountHolder: m.owner,
       historicalConversionRate: m.sellRate,
     });
-    for (const menu of m.menus) {
-      rows.menus.push({
-        id: randomUUID(),
-        merchantId,
-        menuName: menu.name,
-        category: menu.category,
-        description: menu.description,
-        originalPriceIdr: menu.priceIdr,
-        minRecoveryPriceIdr: floorPrice(menu.priceIdr),
-        portionWeightGrams: menu.portionWeightGrams ?? 200,
-        isMysteryBag: menu.isMysteryBag ?? false,
-        isActive: true,
-      });
-    }
+    const own: MenuRow[] = m.menus.map((menu) => ({
+      id: randomUUID(),
+      merchantId,
+      menuName: menu.name,
+      category: menu.category,
+      description: menu.description,
+      originalPriceIdr: menu.priceIdr,
+      minRecoveryPriceIdr: floorPrice(menu.priceIdr),
+      portionWeightGrams: menu.portionWeightGrams ?? 200,
+      isMysteryBag: menu.isMysteryBag ?? false,
+      isActive: true,
+    }));
+    rows.menus.push(...own);
+    menusByMerchant.set(merchantId, own);
   });
 
-  const menusOf = (merchantId: string) => rows.menus.filter((x) => x.merchantId === merchantId);
+  const menusOf = (merchantId: string) => menusByMerchant.get(merchantId) ?? [];
   const seedMenuOf = (m: SeedMerchant, menu: MenuRow): SeedMenu =>
     m.menus.find((x) => x.name === menu.menuName)!;
 
@@ -485,7 +550,8 @@ function buildAll(now: Date, secret: string) {
         rows.batches.push(batch);
         const priceLog = new PriceLog(batch, opening, initial, windowMin, openUsers, addMin(start, -5));
 
-        // Orders: spread through the window, priced by the optimizer at that moment.
+        // Orders: spread through the window, priced by the optimizer at that moment,
+        // bought by students living near the same campus hub.
         const quantities = splitIntoOrders(sold);
         const times = quantities
           .map(() => addMin(start, between(0, Math.max(1, windowMin - 10))))
@@ -501,7 +567,7 @@ function buildAll(now: Date, secret: string) {
               merchant,
               menu,
               batch,
-              customerId: pick(customers),
+              customerId: hubCustomer(m.hub),
               quantity: q,
               createdAt: t,
               unitPrice: qt.recommendedSellingPriceIdr,
@@ -535,7 +601,7 @@ function buildAll(now: Date, secret: string) {
               merchant,
               menu,
               batch,
-              customerId: pick(customers),
+              customerId: hubCustomer(m.hub),
               quantity: 1,
               createdAt: t,
               unitPrice: lastPrice,
@@ -553,6 +619,8 @@ function buildAll(now: Date, secret: string) {
   }
 
   // --- Tonight: live batches relative to now ---------------------------
+  // Every warung is live. Closing times cycle through 18–150 minutes, so every
+  // hub with a few warung shows the whole ladder (Hemat 50% → Flash Rescue 70%).
   const closeInMinutes = [150, 120, 95, 75, 55, 40, 28, 18, 140, 110, 85, 65, 45, 130, 100];
   const fToday = surplusFactors(today);
   SEED_MERCHANTS.forEach((m, idx) => {
@@ -608,7 +676,7 @@ function buildAll(now: Date, secret: string) {
       priceLog.update(q, available, minutesToClose, activeUsers, addMin(now, -intBetween(1, 4)));
 
       // Orders already placed tonight. The demo customer always has one ticket
-      // waiting for pickup at the demo merchant (Warung Makan Bu Sri).
+      // waiting for pickup at the demo merchant (SEED_MERCHANTS[0]).
       const quantities = splitIntoOrders(sold);
       quantities.forEach((qty, i) => {
         const demoTicket = isDemoBatch && i === 0;
@@ -618,7 +686,7 @@ function buildAll(now: Date, secret: string) {
             merchant,
             menu,
             batch,
-            customerId: demoTicket ? demoCustomer : pick(customers.slice(1)),
+            customerId: demoTicket ? demoCustomer : hubCustomer(m.hub, demoCustomer),
             quantity: qty,
             createdAt: addMin(start, between(1, 25)),
             unitPrice: opening.recommendedSellingPriceIdr,
@@ -647,25 +715,46 @@ function buildAll(now: Date, secret: string) {
       notifyOnAiPrediction: chance(0.8),
     });
   };
+  const merchantIdsByHub = new Map<CampusId, string[]>();
+  SEED_MERCHANTS.forEach((m, idx) =>
+    merchantIdsByHub.set(m.hub, [...(merchantIdsByHub.get(m.hub) ?? []), rows.merchants[idx].id]),
+  );
   addSub(demoCustomer, rows.merchants[0].id);
-  addSub(demoCustomer, rows.merchants[2].id);
-  for (const c of customers.slice(1)) {
-    for (let i = intBetween(0, 3); i > 0; i--) addSub(c, pick(rows.merchants).id);
-  }
+  addSub(demoCustomer, rows.merchants[SEED_MERCHANTS.findIndex((m) => m.slug === DEMO_SUBSCRIPTION_SLUG)].id);
+  customerHubs.forEach((hub, i) => {
+    if (i === 0) return;
+    const local = merchantIdsByHub.get(hub) ?? [];
+    for (let n = intBetween(0, 3); n > 0; n--) {
+      addSub(customers[i], local.length && chance(0.85) ? pick(local) : pick(rows.merchants).id);
+    }
+  });
 
   // --- Presence: students currently browsing near campus (demand signal) --
-  for (let i = 0; i < 24; i++) {
-    const campus = i < 18 ? ugm : uny;
-    rows.presence.push({
-      clientId: `seed-device-${String(i).padStart(3, "0")}`,
-      userId: i < customers.length ? customers[i] : null,
-      latitude: campus.lat + between(-0.008, 0.008),
-      longitude: campus.lng + between(-0.008, 0.008),
-      lastSeenAt: addMin(now, -intBetween(0, 25)),
-    });
+  let device = 0;
+  for (const [hub, n] of hubQuotas(SEED_PRESENCE_COUNT, HOME_PRESENCE_SHARE, 2)) {
+    const campus = campusById(hub);
+    const locals = customersByHub.get(hub) ?? [];
+    for (let i = 0; i < n; i++) {
+      const point = near(campus, 0.008);
+      rows.presence.push({
+        clientId: `seed-device-${String(device++).padStart(3, "0")}`,
+        userId: i < locals.length ? locals[i] : null,
+        latitude: point.lat,
+        longitude: point.lng,
+        lastSeenAt: addMin(now, -intBetween(0, 25)),
+      });
+    }
   }
 
   // --- Predictions: next 7 days, from same-weekday history --------------
+  const historyByMenuDow = new Map<string, BatchRow[]>();
+  for (const b of rows.batches) {
+    if (b.status === "ACTIVE") continue;
+    const key = `${b.menuId}:${dowOf(b.batchDate as string)}`;
+    const list = historyByMenuDow.get(key);
+    if (list) list.push(b);
+    else historyByMenuDow.set(key, [b]);
+  }
   for (let k = 0; k < 7; k++) {
     const date = wibDate(new Date(now.getTime() + k * DAY));
     const dow = dowOf(date);
@@ -676,9 +765,7 @@ function buildAll(now: Date, secret: string) {
       let sumConf = 0;
       const menus = menusOf(merchant.id);
       for (const menu of menus) {
-        const hist = rows.batches.filter(
-          (b) => b.menuId === menu.id && b.status !== "ACTIVE" && dowOf(b.batchDate as string) === dow,
-        );
+        const hist = historyByMenuDow.get(`${menu.id}:${dow}`) ?? [];
         const n = hist.length;
         const avg = n ? hist.reduce((acc, b) => acc + b.initialStock, 0) / n : seedMenuOf(m, menu).baseSurplus;
         const soldOut = hist.filter((b) => b.status === "SOLD_OUT").length;
@@ -714,19 +801,50 @@ function buildAll(now: Date, secret: string) {
   }
 }
 
-async function insertChunked<T extends Record<string, unknown>>(
-  db: Db,
-  table: Parameters<Db["insert"]>[0],
-  values: T[],
-  size = 500,
+/**
+ * Bulk insert: each chunk is one statement with a single JSON parameter
+ * (`json_populate_recordset`), instead of one bind parameter per cell. Far
+ * fewer round trips and much less parse/bind work, which matters on PGlite and
+ * over the network to Neon. Rows are grouped by the keys they set, so omitted
+ * keys still get the column DEFAULT, as with a regular Drizzle insert.
+ */
+async function insertChunked(
+  db: DbOrTx,
+  table: PgTable,
+  values: Record<string, unknown>[],
+  size = 2000,
 ) {
-  for (let i = 0; i < values.length; i += size) {
-    await db.insert(table).values(values.slice(i, i + size) as never);
+  const columns = getTableColumns(table) as Record<string, Column>;
+  const colName = (key: string) => (columns[key].keyAsName ? toSnakeCase(key) : columns[key].name);
+  const groups = new Map<string, { keys: string[]; rows: Record<string, unknown>[] }>();
+  for (const row of values) {
+    const keys = Object.keys(row).filter((k) => row[k] !== undefined && k in columns);
+    const sig = keys.join(",");
+    const g = groups.get(sig) ?? { keys, rows: [] };
+    g.rows.push(row);
+    groups.set(sig, g);
+  }
+  const tableName = getTableName(table);
+  for (const { keys, rows: groupRows } of groups.values()) {
+    const cols = sql.join(keys.map((k) => sql.identifier(colName(k))), sql`, `);
+    for (let i = 0; i < groupRows.length; i += size) {
+      const payload = groupRows.slice(i, i + size).map((row) => {
+        const out: Record<string, unknown> = {};
+        for (const k of keys) {
+          const v = row[k];
+          out[colName(k)] = v === null ? null : columns[k].mapToDriverValue(v);
+        }
+        return out;
+      });
+      await db.execute(sql`
+        INSERT INTO ${sql.identifier(tableName)} (${cols})
+        SELECT ${cols} FROM json_populate_recordset(NULL::${sql.identifier(tableName)}, ${JSON.stringify(payload)}::json)`);
+    }
   }
 }
 
 /** Derived columns, computed in SQL so they always match the inserted facts. */
-async function recomputeAggregates(db: Db) {
+async function recomputeAggregates(db: DbOrTx) {
   const rookie = BADGE_TIERS[0].tier;
   const saver = BADGE_TIERS[1];
   const hero = BADGE_TIERS[2];
@@ -803,29 +921,33 @@ export async function seedDatabase(db: Db, opts: SeedOptions): Promise<SeedSumma
   log("[seed] building rows …");
   buildAll(now, opts.pickupQrSecret);
 
-  log("[seed] wiping tables …");
-  await db.execute(sql`
-    TRUNCATE reviews, order_items, orders, discount_adjustment_logs,
-             merchant_surplus_predictions, customer_merchant_subscriptions,
-             surplus_batches, menus, merchants, otp_codes, customer_presence,
-             push_subscriptions, users
-    RESTART IDENTITY CASCADE`);
+  // One transaction: readers never see half-seeded tables, and a failed seed
+  // leaves the previous data in place.
+  await db.transaction(async (tx) => {
+    log("[seed] wiping tables …");
+    await tx.execute(sql`
+      TRUNCATE reviews, order_items, orders, discount_adjustment_logs,
+               merchant_surplus_predictions, customer_merchant_subscriptions,
+               surplus_batches, menus, merchants, otp_codes, customer_presence,
+               push_subscriptions, users
+      RESTART IDENTITY CASCADE`);
 
-  log("[seed] inserting …");
-  await insertChunked(db, s.users, rows.users);
-  await insertChunked(db, s.merchants, rows.merchants);
-  await insertChunked(db, s.menus, rows.menus);
-  await insertChunked(db, s.surplusBatches, rows.batches);
-  await insertChunked(db, s.orders, rows.orders, 300);
-  await insertChunked(db, s.orderItems, rows.items);
-  await insertChunked(db, s.discountAdjustmentLogs, rows.logs);
-  await insertChunked(db, s.reviews, rows.reviews);
-  await insertChunked(db, s.customerMerchantSubscriptions, rows.subscriptions);
-  await insertChunked(db, s.merchantSurplusPredictions, rows.predictions);
-  await insertChunked(db, s.customerPresence, rows.presence);
+    log("[seed] inserting …");
+    await insertChunked(tx, s.users, rows.users);
+    await insertChunked(tx, s.merchants, rows.merchants);
+    await insertChunked(tx, s.menus, rows.menus);
+    await insertChunked(tx, s.surplusBatches, rows.batches);
+    await insertChunked(tx, s.orders, rows.orders);
+    await insertChunked(tx, s.orderItems, rows.items);
+    await insertChunked(tx, s.discountAdjustmentLogs, rows.logs);
+    await insertChunked(tx, s.reviews, rows.reviews);
+    await insertChunked(tx, s.customerMerchantSubscriptions, rows.subscriptions);
+    await insertChunked(tx, s.merchantSurplusPredictions, rows.predictions);
+    await insertChunked(tx, s.customerPresence, rows.presence);
 
-  log("[seed] recomputing aggregates …");
-  await recomputeAggregates(db);
+    log("[seed] recomputing aggregates …");
+    await recomputeAggregates(tx);
+  });
 
   return {
     users: rows.users.length,

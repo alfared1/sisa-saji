@@ -16,7 +16,7 @@ import { ApiError } from "@/server/http";
 export type PushPayload = {
   title: string;
   body: string;
-  /** Path to open on click, e.g. "/warung/warung-bu-sri-pogung". */
+  /** Path to open on click, e.g. "/warung/warung-nasi-teh-euis-babakan-raya". */
   url?: string;
   tag?: string;
 };

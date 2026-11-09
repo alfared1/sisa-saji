@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, asc, eq } from "drizzle-orm";
 import { menus, merchants, orders, users, type Merchant } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { AnalyticsQuery, MerchantOrdersQuery, PublishBody } from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
 import { getMerchantDashboard, listMerchantOrders } from "@/server/services/merchant/dashboard";
@@ -36,7 +37,7 @@ describe("GET /merchant/dashboard", () => {
       expect(b.initial_stock).toBe(b.available_stock + b.reserved_stock + b.sold);
       expect(["ACTIVE", "SCHEDULED", "SOLD_OUT"]).toContain(b.status);
     }
-    // The demo customer always has a READY_FOR_PICKUP ticket at Bu Sri.
+    // The demo customer always has a READY_FOR_PICKUP ticket at the demo warung (Teh Euis).
     expect(d.pending_pickups.some((o) => o.status === "READY_FOR_PICKUP")).toBe(true);
     expect(d.today.orders_pending_pickup).toBe(d.pending_pickups.length);
     expect(d.ai_prediction).not.toBeNull();
@@ -125,7 +126,7 @@ describe("merchant SSE poller", () => {
     expect(ev!.event).toMatchObject({ type: "batch.updated", available_stock: 4, status: "ACTIVE" });
 
     // Another merchant's changes never leak into this stream.
-    const [other] = await db.select().from(merchants).where(eq(merchants.slug, "warung-bu-sri-pogung"));
+    const [other] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
     expect(other.id).toBe(merchant.id);
     const later = await pollMerchantEvents(db, merchant.id, new Date(Date.now() + 60_000));
     expect(later).toEqual([]);

@@ -7,6 +7,7 @@ import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
 import { menus, merchants, orders, reviews, surplusBatches, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { CheckoutBody, OrderListQuery, ReviewBody } from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
@@ -190,7 +191,7 @@ describe("GET /orders and GET /orders/:id", () => {
     expect(warung.pickup_qr_token).toBeNull();
     expect(warung.customer.phone_number).toBe(customer.phoneNumber);
 
-    const [otherMerchant] = await db.select().from(merchants).where(eq(merchants.slug, "warung-bu-sri-pogung"));
+    const [otherMerchant] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
     await expectCode(
       getOrderForViewer(db, o.id, { userId: otherMerchant.ownerUserId, merchantId: otherMerchant.id }),
       "NOT_FOUND",

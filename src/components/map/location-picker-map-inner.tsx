@@ -15,7 +15,7 @@ import { OSM_ATTRIBUTION, OSM_TILE_URL, type LatLng } from "./types";
 export type LocationPickerMapProps = {
   value: LatLng | null;
   onChange: (value: LatLng) => void;
-  /** Used when `value` is null (defaults to UGM). */
+  /** Used when `value` is null (defaults to IPB Dramaga, the first campus). */
   fallbackCenter?: LatLng;
   className?: string;
   /** Map height (default 18rem). */

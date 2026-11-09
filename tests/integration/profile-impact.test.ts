@@ -6,6 +6,7 @@ import { and, asc, eq, gt, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
 import { customerPresence, menus, merchants, orders, pushSubscriptions, surplusBatches, users } from "@/db/schema";
+import { DEMO_MERCHANT_SLUG, SEED_MERCHANTS } from "@/db/seed/data";
 import { BADGE_TIERS, CAMPUSES } from "@/lib/constants";
 import { CheckoutBody, LocationPushBody, ProfileUpdateBody, SubscribeBody } from "@/lib/contracts";
 import { treeYearsFromCo2Grams } from "@/lib/impact";
@@ -272,7 +273,7 @@ describe("GET /stats/global", () => {
     expect(stats.total_orders_completed).toBe(o.n);
     expect(stats.total_food_saved_grams).toBe(Number(o.food));
     expect(stats.total_co2_avoided_grams).toBeGreaterThan(stats.total_food_saved_grams);
-    expect(stats.active_merchants).toBe(15);
+    expect(stats.active_merchants).toBe(SEED_MERCHANTS.length);
     const [b] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(surplusBatches)
@@ -285,11 +286,11 @@ describe("GET /subscriptions", () => {
   it("lists favourites with live state and tonight's prediction", async () => {
     const u = await newCustomer();
     expect(await listSubscriptions(db, u.id)).toEqual([]);
-    await setSubscription(db, u.id, "warung-bu-sri-pogung", SubscribeBody.parse({ subscribed: true }));
-    await setSubscription(db, u.id, "lumbung-gandum-bakery", SubscribeBody.parse({ subscribed: true, notify_on_surplus_live: false }));
+    await setSubscription(db, u.id, DEMO_MERCHANT_SLUG, SubscribeBody.parse({ subscribed: true }));
+    await setSubscription(db, u.id, "toko-roti-wangi-gandum-babakan-raya", SubscribeBody.parse({ subscribed: true, notify_on_surplus_live: false }));
 
     const list = await listSubscriptions(db, u.id);
-    expect(list.map((s) => s.merchant_slug)).toEqual(["warung-bu-sri-pogung", "lumbung-gandum-bakery"]);
+    expect(list.map((s) => s.merchant_slug)).toEqual([DEMO_MERCHANT_SLUG, "toko-roti-wangi-gandum-babakan-raya"]);
     expect(list[0]).toMatchObject({ notify_on_surplus_live: true, notify_on_ai_prediction: true, has_live_batches: true });
     expect(list[1]).toMatchObject({ notify_on_surplus_live: false });
     for (const s of list) {
