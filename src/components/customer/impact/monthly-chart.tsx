@@ -27,6 +27,77 @@ export function lastMonths(monthly: MonthlyImpact[], n = 6): MonthlyImpact[] {
   return [...monthly].sort((a, b) => a.month.localeCompare(b.month)).slice(-n);
 }
 
+type ChartSize = { W: number; H: number; top: number; bottom: number; maxBar: number; radius: number; valueFont: number; labelFont: number };
+const PHONE_SIZE: ChartSize = { W: 320, H: 150, top: 22, bottom: 22, maxBar: 36, radius: 7, valueFont: 10, labelFont: 10.5 };
+const DESKTOP_SIZE: ChartSize = { W: 640, H: 230, top: 28, bottom: 30, maxBar: 64, radius: 10, valueFont: 13, labelFont: 13 };
+
+function BarsSvg({
+  data,
+  values,
+  def,
+  summary,
+  className,
+  size = PHONE_SIZE,
+}: {
+  data: MonthlyImpact[];
+  values: number[];
+  def: (typeof METRICS)[number];
+  summary: string;
+  className: string;
+  size?: ChartSize;
+}) {
+  const { W, H, top, bottom } = size;
+  const max = Math.max(1, ...values);
+  const slot = data.length ? W / data.length : W;
+  const barW = Math.min(size.maxBar, slot * 0.55);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className={className} role="img" aria-label={summary}>
+      <line x1={0} x2={W} y1={H - bottom} y2={H - bottom} stroke="var(--border)" strokeWidth={1} />
+      {data.map((m, i) => {
+        const v = values[i];
+        const h = Math.max(v > 0 ? 3 : 0, ((H - top - bottom) * v) / max);
+        const x = i * slot + (slot - barW) / 2;
+        const y = H - bottom - h;
+        const last = i === data.length - 1;
+        return (
+          <g key={m.month}>
+            <rect
+              x={x}
+              y={y}
+              width={barW}
+              height={h}
+              rx={size.radius}
+              fill={def.color}
+              opacity={last ? 1 : 0.55}
+              className="transition-all duration-500"
+            />
+            <text
+              x={x + barW / 2}
+              y={y - 6}
+              textAnchor="middle"
+              fontSize={size.valueFont}
+              fontWeight={700}
+              fill="var(--foreground)"
+            >
+              {v > 0 ? def.fmt(v) : "–"}
+            </text>
+            <text
+              x={x + barW / 2}
+              y={H - 6}
+              textAnchor="middle"
+              fontSize={size.labelFont}
+              fontWeight={last ? 800 : 600}
+              fill={last ? "var(--foreground)" : "var(--muted-foreground)"}
+            >
+              {monthLabel(m.month)}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export function MonthlyImpactChart({
   monthly,
   metric,
@@ -39,19 +110,12 @@ export function MonthlyImpactChart({
   const def = METRICS.find((m) => m.key === metric) ?? METRICS[0];
   const data = lastMonths(monthly);
   const values = data.map(def.pick);
-  const max = Math.max(1, ...values);
-  const W = 320;
-  const H = 150;
-  const top = 22;
-  const bottom = 22;
-  const slot = data.length ? W / data.length : W;
-  const barW = Math.min(36, slot * 0.55);
   const summary = data.length
     ? `Grafik ${def.label} per bulan: ${data.map((m, i) => `${monthLabel(m.month)} ${def.fmt(values[i])}`).join(", ")}`
     : "Belum ada data bulanan";
 
   return (
-    <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border" aria-labelledby="chart-title">
+    <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border lg:p-6" aria-labelledby="chart-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="chart-title" className="flex items-center gap-1.5 text-sm font-extrabold whitespace-nowrap">
           <BarChart3Icon className="size-4 text-primary" /> Per bulan
@@ -81,50 +145,16 @@ export function MonthlyImpactChart({
         </p>
       ) : (
         <>
-          <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 h-auto w-full" role="img" aria-label={summary}>
-            <line x1={0} x2={W} y1={H - bottom} y2={H - bottom} stroke="var(--border)" strokeWidth={1} />
-            {data.map((m, i) => {
-              const v = values[i];
-              const h = Math.max(v > 0 ? 3 : 0, ((H - top - bottom) * v) / max);
-              const x = i * slot + (slot - barW) / 2;
-              const y = H - bottom - h;
-              const last = i === data.length - 1;
-              return (
-                <g key={m.month}>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={barW}
-                    height={h}
-                    rx={7}
-                    fill={def.color}
-                    opacity={last ? 1 : 0.55}
-                    className="transition-all duration-500"
-                  />
-                  <text
-                    x={x + barW / 2}
-                    y={y - 6}
-                    textAnchor="middle"
-                    fontSize={10}
-                    fontWeight={700}
-                    fill="var(--foreground)"
-                  >
-                    {v > 0 ? def.fmt(v) : "–"}
-                  </text>
-                  <text
-                    x={x + barW / 2}
-                    y={H - 6}
-                    textAnchor="middle"
-                    fontSize={10.5}
-                    fontWeight={last ? 800 : 600}
-                    fill={last ? "var(--foreground)" : "var(--muted-foreground)"}
-                  >
-                    {monthLabel(m.month)}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+          {/* Phones: compact chart (unchanged). lg+: wider viewBox so labels stay at a readable size in the wide card. */}
+          <BarsSvg data={data} values={values} def={def} summary={summary} className="mt-3 h-auto w-full lg:hidden" />
+          <BarsSvg
+            data={data}
+            values={values}
+            def={def}
+            summary={summary}
+            size={DESKTOP_SIZE}
+            className="mt-5 hidden h-auto w-full lg:block"
+          />
           <table className="sr-only">
             <caption>Dampak per bulan</caption>
             <thead>

@@ -274,121 +274,154 @@ export function CheckoutScreen() {
   }
 
   const deadlineLabel = earliestEnd ? formatClockId(earliestEnd) : null;
+  // Rendered twice: phone pay bar (lg:hidden) and the lg+ summary card (hidden lg:block).
+  const payButton = (className: string) => (
+    <Button
+      className={cn("rounded-full px-6 text-base font-extrabold shadow-card", className)}
+      onClick={submit}
+      disabled={checkout.isPending || blocked || !detail.data}
+    >
+      {checkout.isPending ? <Loader2Icon className="size-5 animate-spin" /> : <LockIcon className="size-4" />}
+      Lanjut Bayar
+    </Button>
+  );
+  const voucherRow = (
+    <VoucherRow
+      voucher={voucher}
+      subtotal={preview.subtotal_recovery_idr}
+      onOpen={() => setVoucherOpen(true)}
+      onClear={() => setVoucherCode(null)}
+    />
+  );
 
   return (
     <>
       <PageHeader title="Checkout" subtitle={`Ambil di ${merchant.name}`} backHref={`/warung/${merchant.slug}`} />
 
-      <div className="flex flex-col gap-3 px-4 pt-4 pb-40">
-        {/* ---------- Cart ---------- */}
-        <CheckoutCard
-          title="Pesananmu"
-          icon={StoreIcon}
-          action={
-            <Link href={`/warung/${merchant.slug}`} className="text-xs font-bold text-primary hover:underline">
-              + Tambah menu
-            </Link>
-          }
-        >
-          <p className="-mt-1 mb-3 truncate text-xs text-muted-foreground">{merchant.name}</p>
-          <ul className="divide-y divide-border">
-            {items.map((it) => {
-              const state = lineState.get(it.batch_id) ?? "ok";
-              return (
-                <li key={it.batch_id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0 flex-1">
-                    <p className={cn("line-clamp-2 text-sm font-bold", state !== "ok" && "text-muted-foreground line-through")}>
-                      {it.menu_name}
-                    </p>
-                    <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                      <span className="font-extrabold tabular-nums">{formatIdr(it.unit_price_idr)}</span>
-                      <span className="text-muted-foreground line-through tabular-nums">{formatIdr(it.original_price_idr)}</span>
-                      {state === "ok" && (
-                        <DiscountBadge pct={it.discount_pct} endIso={it.pickup_end_time} size="sm" className="self-center" />
-                      )}
-                    </p>
-                    {state === "ok" && (
-                      <ImpactLine portionWeightGrams={it.portion_weight_grams} quantity={it.quantity} className="mt-1" />
-                    )}
-                    {state !== "ok" && (
-                      <p className="mt-1 text-xs font-semibold text-urgent">
-                        {state === "soldout" ? "Stok habis" : "Sudah tidak tersedia (warung tutup)"}
-                      </p>
-                    )}
-                  </div>
-                  {state === "ok" ? (
-                    <QtyStepper
-                      value={it.quantity}
-                      min={0}
-                      max={it.max_quantity}
-                      size="sm"
-                      label={it.menu_name}
-                      onChange={(v) => changeQty(it, v)}
-                    />
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 rounded-full text-xs font-bold text-urgent"
-                      onClick={() => removeItem(it.batch_id)}
-                    >
-                      <Trash2Icon className="size-3.5" /> Hapus
-                    </Button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </CheckoutCard>
-
-        <SelfPickupInfoCard
-          merchant={detail.data ?? null}
-          userLocation={{ lat: userLat, lng: userLng }}
-        />
-
-        <PickupTimeSlotSelector
-          slots={slots}
-          value={slotValid ? slot : null}
-          onChange={setSlot}
-          deadlineLabel={deadlineLabel}
-          loading={now === null}
-        />
-
-        <BringOwnContainerToggle
-          checked={ownContainer}
-          onCheckedChange={setOwnContainer}
-          voucherAvailable={Boolean(vouchers.data?.vouchers.some((v) => v.code === "BAWABEKAL"))}
-          onUseVoucher={() => {
-            const v = vouchers.data?.vouchers.find((x) => x.code === "BAWABEKAL");
-            if (!v) return;
-            if (preview.subtotal_recovery_idr < v.min_subtotal_idr) {
-              toast.error(`BAWABEKAL butuh minimal belanja ${formatIdr(v.min_subtotal_idr)}`);
-              return;
+      {/* lg+: two columns. Left = order details; right = sticky summary (breakdown, voucher, pay).
+          Below lg both columns are `contents`, so phones keep the single stacked list in the same order. */}
+      <div className="flex flex-col gap-3 px-4 pt-4 pb-40 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8 lg:pt-2 lg:pb-12 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-4">
+          {/* ---------- Cart ---------- */}
+          <CheckoutCard
+            title="Pesananmu"
+            icon={StoreIcon}
+            action={
+              <Link href={`/warung/${merchant.slug}`} className="text-xs font-bold text-primary hover:underline">
+                + Tambah menu
+              </Link>
             }
-            setVoucherCode("BAWABEKAL");
-            toast.success("Voucher BAWABEKAL dipakai");
-          }}
-        />
+          >
+            <p className="-mt-1 mb-3 truncate text-xs text-muted-foreground">{merchant.name}</p>
+            <ul className="divide-y divide-border">
+              {items.map((it) => {
+                const state = lineState.get(it.batch_id) ?? "ok";
+                return (
+                  <li key={it.batch_id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("line-clamp-2 text-sm font-bold", state !== "ok" && "text-muted-foreground line-through")}>
+                        {it.menu_name}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                        <span className="font-extrabold tabular-nums">{formatIdr(it.unit_price_idr)}</span>
+                        <span className="text-muted-foreground line-through tabular-nums">{formatIdr(it.original_price_idr)}</span>
+                        {state === "ok" && (
+                          <DiscountBadge pct={it.discount_pct} endIso={it.pickup_end_time} size="sm" className="self-center" />
+                        )}
+                      </p>
+                      {state === "ok" && (
+                        <ImpactLine portionWeightGrams={it.portion_weight_grams} quantity={it.quantity} className="mt-1" />
+                      )}
+                      {state !== "ok" && (
+                        <p className="mt-1 text-xs font-semibold text-urgent">
+                          {state === "soldout" ? "Stok habis" : "Sudah tidak tersedia (warung tutup)"}
+                        </p>
+                      )}
+                    </div>
+                    {state === "ok" ? (
+                      <QtyStepper
+                        value={it.quantity}
+                        min={0}
+                        max={it.max_quantity}
+                        size="sm"
+                        label={it.menu_name}
+                        onChange={(v) => changeQty(it, v)}
+                      />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 rounded-full text-xs font-bold text-urgent"
+                        onClick={() => removeItem(it.batch_id)}
+                      >
+                        <Trash2Icon className="size-3.5" /> Hapus
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </CheckoutCard>
 
-        <VoucherRow
-          voucher={voucher}
-          subtotal={preview.subtotal_recovery_idr}
-          onOpen={() => setVoucherOpen(true)}
-          onClear={() => setVoucherCode(null)}
-        />
+          <SelfPickupInfoCard
+            merchant={detail.data ?? null}
+            userLocation={{ lat: userLat, lng: userLng }}
+          />
 
-        <CheckoutCard title="Metode Pembayaran" icon={WalletIcon}>
-          <PaymentMethodPicker value={method} onChange={setMethod} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Bayar lewat QRIS dinamis — bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
-          </p>
-        </CheckoutCard>
+          <PickupTimeSlotSelector
+            slots={slots}
+            value={slotValid ? slot : null}
+            onChange={setSlot}
+            deadlineLabel={deadlineLabel}
+            loading={now === null}
+          />
 
-        <PriceAndImpactBreakdown p={preview} voucherCode={voucher?.code ?? null} />
+          <BringOwnContainerToggle
+            checked={ownContainer}
+            onCheckedChange={setOwnContainer}
+            voucherAvailable={Boolean(vouchers.data?.vouchers.some((v) => v.code === "BAWABEKAL"))}
+            onUseVoucher={() => {
+              const v = vouchers.data?.vouchers.find((x) => x.code === "BAWABEKAL");
+              if (!v) return;
+              if (preview.subtotal_recovery_idr < v.min_subtotal_idr) {
+                toast.error(`BAWABEKAL butuh minimal belanja ${formatIdr(v.min_subtotal_idr)}`);
+                return;
+              }
+              setVoucherCode("BAWABEKAL");
+              toast.success("Voucher BAWABEKAL dipakai");
+            }}
+          />
+
+          {/* Phones: voucher sits between the container toggle and payment. lg+: it moves to the summary. */}
+          <div className="lg:hidden">{voucherRow}</div>
+
+          <CheckoutCard title="Metode Pembayaran" icon={WalletIcon}>
+            <PaymentMethodPicker value={method} onChange={setMethod} />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Bayar lewat QRIS dinamis — bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
+            </p>
+          </CheckoutCard>
+        </div>
+
+        <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
+          <div className="hidden lg:block">{voucherRow}</div>
+          <PriceAndImpactBreakdown p={preview} voucherCode={voucher?.code ?? null}>
+            {/* lg+ pay action (the phone pay bar below is lg:hidden). */}
+            <div className="mt-4 hidden lg:block">
+              {payButton("h-12 w-full")}
+              {blocked && (
+                <p className="mt-2 text-center text-xs font-semibold text-urgent">Hapus menu yang tidak tersedia untuk lanjut.</p>
+              )}
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <LockIcon className="size-3" aria-hidden /> Stok dikunci 10 menit setelah kamu lanjut bayar
+              </p>
+            </div>
+          </PriceAndImpactBreakdown>
+        </div>
       </div>
 
       {/* ---------- Sticky pay bar ---------- */}
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md lg:hidden">
         <div className="safe-bottom border-t border-border/70 bg-background/95 px-4 pt-3 pb-3 shadow-float backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
@@ -398,14 +431,7 @@ export function CheckoutScreen() {
               </p>
               <p className="truncate text-[11px] font-semibold text-primary">Hemat {formatIdr(preview.money_saved_idr)}</p>
             </div>
-            <Button
-              className="h-12 shrink-0 rounded-full px-6 text-base font-extrabold shadow-card"
-              onClick={submit}
-              disabled={checkout.isPending || blocked || !detail.data}
-            >
-              {checkout.isPending ? <Loader2Icon className="size-5 animate-spin" /> : <LockIcon className="size-4" />}
-              Lanjut Bayar
-            </Button>
+            {payButton("h-12 shrink-0")}
           </div>
           {blocked && (
             <p className="mt-2 text-center text-xs font-semibold text-urgent">Hapus menu yang tidak tersedia untuk lanjut.</p>

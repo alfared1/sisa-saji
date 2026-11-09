@@ -1,19 +1,49 @@
 "use client";
 
 /**
- * Customer app frame: centered mobile container (max-w-md) on a soft brand
- * backdrop, content, a slot above the tab bar for <FloatingCartBar />, and the
- * bottom tab bar (Beranda · Peta · Pesanan · Dampak · Akun).
+ * Customer app frame.
  *
- * The tab bar shows on the five tab roots only; deeper screens (warung,
- * checkout, order detail) get the full height. The cart bar shows where
- * shopping happens (discover, map, warung).
+ * Phones / tablets (< lg, < 1024px): centered mobile container (max-w-md) on a
+ * soft brand backdrop, content, a slot above the tab bar for
+ * <FloatingCartBar />, and the bottom tab bar (Beranda · Peta · Pesanan ·
+ * Dampak · Akun). The tab bar shows on the five tab roots only; deeper screens
+ * (warung, checkout, order detail) get the full height. The cart bar shows
+ * where shopping happens (discover, map, warung).
+ *
+ * Laptops / desktops (lg+, ≥ 1024px): <DesktopTopNav /> (sticky, full viewport
+ * width: logo, tabs, location, cart, login) on every customer page; the bottom
+ * tab bar and FloatingCartBar are display:none. The phone column becomes a
+ * full-width page on the brand backdrop and <main> is a centred container:
+ *
+ *   max-w-[1280px], mx-auto, lg:px-4  (pages keep their own px-4 → 32px gutter,
+ *   aligned with the logo in the top nav)
+ *
+ * ── Width contract for page agents ────────────────────────────────────────
+ * Children decide. Put `data-shell-width` on ANY element the page renders
+ * (usually the page root) and <main> adapts on lg+ (CSS :has, no JS):
+ *   (none)                     → default 1280px container
+ *   data-shell-width="narrow"  → 896px (max-w-4xl): checkout, order detail,
+ *                                 forms; content is centred
+ *   data-shell-width="full"    → no max width and no padding (edge-to-edge,
+ *                                 e.g. /map). The page owns its gutters.
+ * On phones the attribute does nothing.
+ *
+ * Other lg+ notes for pages:
+ *  - The desktop nav is 4rem tall (`top-16` for sticky in-page elements;
+ *    `lg:h-[calc(100dvh-4rem)]` for full-height pages like /map).
+ *  - The desktop nav already shows <LocationPill />; hide the page's own copy
+ *    with `lg:hidden` (display:none, so no duplicate for screen readers).
+ *  - ShellHeader / PageHeader render as an in-page title row on lg+.
+ *  - The FloatingCartBar is hidden on lg+; the cart lives in the top nav. A
+ *    page may render its own desktop cart panel (wrap it in `hidden lg:block`).
+ *  - Bottom sheets: use <ResponsiveSheet> (src/components/common/responsive-sheet.tsx).
  */
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, LeafIcon, MapIcon, ReceiptTextIcon, UserRoundIcon, type LucideIcon } from "lucide-react";
 import { FloatingCartBar } from "@/components/common/floating-cart-bar";
+import { DesktopTopNav } from "./desktop-top-nav";
 import { cn } from "@/lib/utils";
 import { selectCartCount, useCartStore } from "@/stores/cart";
 import { useStoresHydrated } from "@/stores/hydration";
@@ -46,8 +76,19 @@ export function CustomerShell({
 }) {
   return (
     <div className="app-backdrop min-h-dvh">
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background sm:shadow-float sm:ring-1 sm:ring-border/70">
-        <main id="konten" className="flex min-w-0 flex-1 flex-col">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background sm:shadow-float sm:ring-1 sm:ring-border/70 lg:max-w-none lg:bg-transparent lg:shadow-none lg:ring-0">
+        <Suspense fallback={<div aria-hidden className="hidden h-16 lg:block" />}>
+          <DesktopChrome previewPathname={previewPathname} />
+        </Suspense>
+        <main
+          id="konten"
+          className={cn(
+            "flex min-w-0 flex-1 flex-col",
+            "lg:mx-auto lg:w-full lg:max-w-[1280px] lg:px-4 lg:pt-2",
+            "lg:has-[[data-shell-width=narrow]]:max-w-4xl",
+            "lg:has-[[data-shell-width=full]]:max-w-none lg:has-[[data-shell-width=full]]:px-0 lg:has-[[data-shell-width=full]]:pt-0",
+          )}
+        >
           {children}
         </main>
         {/*
@@ -64,7 +105,14 @@ export function CustomerShell({
   );
 }
 
-/** Bottom spacer + fixed tab bar / floating cart bar, chosen from the current path. */
+/** lg+ only: sticky top navigation (display:none below lg). */
+function DesktopChrome({ previewPathname }: { previewPathname?: string }) {
+  const routerPathname = usePathname();
+  const pathname = previewPathname ?? routerPathname ?? "/";
+  return <DesktopTopNav pathname={pathname} tabs={CUSTOMER_TABS} />;
+}
+
+/** Bottom spacer + fixed tab bar / floating cart bar, chosen from the current path (phones; hidden on lg+). */
 function CustomerChrome({ previewPathname }: { previewPathname?: string }) {
   const routerPathname = usePathname();
   const pathname = previewPathname ?? routerPathname ?? "/";
@@ -76,11 +124,12 @@ function CustomerChrome({ previewPathname }: { previewPathname?: string }) {
   return (
     <>
       {/* Spacer so the last content clears the fixed bars (replaces padding on <main>). */}
-      <div aria-hidden className={cn("shrink-0", showNav ? "pb-nav" : "safe-bottom")}>
+      <div aria-hidden className={cn("shrink-0 lg:hidden", showNav ? "pb-nav" : "safe-bottom")}>
         {showCart && <div className="h-20" />}
       </div>
+      <div aria-hidden className="hidden h-16 shrink-0 lg:block" />
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md lg:hidden">
         {showCart && (
           <div className={cn("pointer-events-auto px-3 pb-2", !showNav && "safe-bottom")}>
             <FloatingCartBar />
@@ -138,16 +187,21 @@ function CustomerBottomNav({ pathname }: { pathname: string }) {
   );
 }
 
-/** Sticky, blurred top bar for customer screens (safe-area aware). */
+/**
+ * Sticky, blurred top bar for customer screens (safe-area aware). On lg+ it is
+ * an in-page title row (static, transparent, more top space) under the
+ * desktop nav instead of a phone app bar.
+ */
 export function ShellHeader({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <header
       className={cn(
         "safe-top sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-xl",
+        "lg:static lg:z-auto lg:border-b-0 lg:bg-transparent lg:backdrop-blur-none",
         className,
       )}
     >
-      <div className="px-4 py-3">{children}</div>
+      <div className="px-4 py-3 lg:pt-6 lg:[&_h1]:text-2xl">{children}</div>
     </header>
   );
 }

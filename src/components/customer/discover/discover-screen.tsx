@@ -4,15 +4,24 @@
  * /discover — DiscoverScreen: sticky location + radius header, search, category
  * chips, ImpactCard, "Hampir Habis & Diskon Tertinggi", "Di Bawah Rp 10.000",
  * "Mitra Terdekat" with sort, live SSE price/stock updates.
+ *
+ * Laptops (lg+): two areas. The ShellHeader becomes a sticky left rail card
+ * (search, wrapped category chips, sort, radius, impact card, map shortcut);
+ * the main column shows the live status row and the sections as grids instead
+ * of carousels (capped to full rows: 9 at 3 columns, 8 at 4). Desktop-only copies (sort/radius radios, rail impact card) are
+ * `hidden lg:*`, their phone counterparts `lg:hidden` (display:none, so no
+ * duplicates for screen readers or Playwright).
  */
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   ArrowDownUpIcon,
   CheckIcon,
+  ChevronRightIcon,
   FlameIcon,
   LocateFixedIcon,
   Loader2Icon,
+  MapIcon,
   RotateCwIcon,
   SearchIcon,
   SearchXIcon,
@@ -31,6 +40,7 @@ import { ListSkeleton } from "@/components/common/list-skeleton";
 import { LocationPill } from "@/components/common/location-pill";
 import { ShellHeader } from "@/components/shell/customer-shell";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +68,7 @@ import { MerchantCard } from "../merchant-card";
 import { deriveDiscoverSections, nextRadius } from "../lib/discover-sections";
 import { cartMerchantFromBatch, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
+import { RadiusSegmented, RailLabel, SegmentedRadio } from "./desktop-filters";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 type Sort = (typeof DISCOVER_SORTS)[number];
@@ -191,16 +202,59 @@ function SortMenu({ value, onChange }: { value: Sort; onChange: (s: Sort) => voi
   );
 }
 
+function ImpactSlot() {
+  const session = useSession();
+  // Same element as ImpactCard's own loading skeleton, so SSR (session loading) and a
+  // client that already has the session (card still loading) hydrate identically.
+  if (session.isLoading) return <Skeleton className="h-[8.5rem] w-full rounded-3xl" />;
+  return session.user ? <ImpactCard name={session.user.full_name} /> : <GuestImpactBanner />;
+}
+
+/** lg+ rail extras: sort, radius, impact card, map shortcut. */
+function DesktopRail({ sort, onSort }: { sort: Sort; onSort: (s: Sort) => void }) {
+  return (
+    <div className="hidden lg:mt-5 lg:block lg:space-y-5 lg:pb-2">
+      <div className="space-y-2">
+        <RailLabel>Urutkan warung</RailLabel>
+        <SegmentedRadio
+          label="Urutkan warung"
+          value={sort}
+          options={DISCOVER_SORTS.map((s) => ({ value: s, label: SORT_LABELS[s] }))}
+          onChange={onSort}
+        />
+      </div>
+      <RadiusSegmented />
+      <ImpactSlot />
+      <Link
+        href="/map"
+        className="group flex items-center gap-3 rounded-2xl bg-brand-soft/70 p-3 ring-1 ring-primary/15 transition-colors outline-none hover:bg-brand-soft focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-soft">
+          <MapIcon className="size-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Lihat di peta</span>
+          <span className="block text-xs text-muted-foreground">Semua warung surplus di sekitarmu</span>
+        </span>
+        <ChevronRightIcon
+          className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+          aria-hidden
+        />
+      </Link>
+    </div>
+  );
+}
+
 function DiscoverSkeleton() {
   return (
     <div className="space-y-6" aria-busy="true" aria-label="Memuat surplus di sekitarmu">
       <div className="space-y-3">
         <div className="h-5 w-56 animate-pulse rounded-md bg-muted" />
-        <ListSkeleton variant="tile" count={3} />
+        <ListSkeleton variant="tile" count={3} className="lg:grid lg:grid-cols-3 lg:gap-4 lg:[&>*]:w-auto" />
       </div>
       <div className="space-y-3">
         <div className="h-5 w-40 animate-pulse rounded-md bg-muted" />
-        <ListSkeleton variant="card" count={3} />
+        <ListSkeleton variant="card" count={4} className="lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0" />
       </div>
     </div>
   );
@@ -235,7 +289,6 @@ function OfflineTicketBanner({ offline }: { offline: boolean }) {
 }
 
 export function DiscoverScreen() {
-  const session = useSession();
   const [category, setCategory] = useState<MenuCategory | null>(null);
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim().slice(0, 60), 350);
@@ -260,11 +313,11 @@ export function DiscoverScreen() {
     !online || (query.isError && query.error instanceof ApiClientError && query.error.code === "NETWORK_ERROR");
 
   return (
-    <>
-      <ShellHeader className="pb-0">
-        <h1 className="sr-only">Cari makanan surplus</h1>
-        <LocationPill />
-        <div className="mt-3 flex items-center gap-2">
+    <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-4 lg:pb-10 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <ShellHeader className="pb-0 lg:sticky lg:top-20 lg:z-10 lg:mt-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-3xl lg:bg-card lg:shadow-soft lg:ring-1 lg:ring-border lg:[&>div]:py-5">
+        <h1 className="sr-only lg:not-sr-only lg:mb-4 lg:text-lg! lg:font-extrabold">Cari makanan surplus</h1>
+        <LocationPill className="lg:hidden" />
+        <div className="mt-3 flex items-center gap-2 lg:mt-0">
           <label className="relative flex h-11 min-w-0 flex-1 items-center">
             <span className="sr-only">Cari menu atau warung</span>
             <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" aria-hidden />
@@ -290,21 +343,26 @@ export function DiscoverScreen() {
             )}
           </label>
         </div>
-        <CategoryChips value={category} onChange={setCategory} className="mt-2 pb-3" />
+        <div className="hidden lg:mt-5 lg:mb-2 lg:block">
+          <RailLabel>Kategori</RailLabel>
+        </div>
+        <CategoryChips
+          value={category}
+          onChange={setCategory}
+          className="mt-2 pb-3 lg:mx-0 lg:mt-0 lg:flex-wrap lg:gap-1.5 lg:overflow-visible lg:px-0 lg:pb-0"
+        />
+        <DesktopRail sort={sort} onSort={setSort} />
       </ShellHeader>
 
-      <div className="flex flex-col gap-6 px-4 pt-4 pb-6">
+      <div className="flex min-w-0 flex-col gap-6 px-4 pt-4 pb-6 lg:gap-8 lg:pt-6">
         <OfflineTicketBanner offline={offline} />
         <GeoPrompt />
 
-        {!filtered &&
-          (session.isLoading ? (
-            <div className="h-[8.5rem] w-full animate-pulse rounded-3xl bg-muted" />
-          ) : session.user ? (
-            <ImpactCard name={session.user.full_name} />
-          ) : (
-            <GuestImpactBanner />
-          ))}
+        {!filtered && (
+          <div className="lg:hidden">
+            <ImpactSlot />
+          </div>
+        )}
 
         {/* Live status + manual refresh */}
         <div className="-mb-2 flex items-center justify-between gap-2">
@@ -390,7 +448,12 @@ export function DiscoverScreen() {
                   icon={SearchIcon}
                   iconClassName="text-primary"
                 />
-                <div className={cn("space-y-3 transition-opacity", query.isPlaceholderData && "opacity-60")}>
+                <div
+                  className={cn(
+                    "space-y-3 transition-opacity lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0",
+                    query.isPlaceholderData && "opacity-60",
+                  )}
+                >
                   {allBatches.map((b) => (
                     <DynamicPriceMenuCard
                       key={b.batch_id}
@@ -413,14 +476,14 @@ export function DiscoverScreen() {
                   icon={FlameIcon}
                   iconClassName="text-urgent"
                 />
-                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
+                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden xl:[&>*:nth-child(n+9)]:hidden">
                   {sections.urgent.map((b) => (
                     <DealTile
                       key={b.batch_id}
                       batch={b}
                       onAdd={addToCart}
                       onOpenDetail={() => openQuickOrder(b)}
-                      width="w-52"
+                      width="w-52 lg:w-auto"
                     />
                   ))}
                 </div>
@@ -436,9 +499,15 @@ export function DiscoverScreen() {
                   icon={WalletIcon}
                   iconClassName="text-primary"
                 />
-                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1">
+                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden xl:[&>*:nth-child(n+9)]:hidden">
                   {sections.under10k.map((b) => (
-                    <DealTile key={b.batch_id} batch={b} onAdd={addToCart} onOpenDetail={() => openQuickOrder(b)} />
+                    <DealTile
+                      key={b.batch_id}
+                      batch={b}
+                      onAdd={addToCart}
+                      onOpenDetail={() => openQuickOrder(b)}
+                      width="w-44 lg:w-auto"
+                    />
                   ))}
                 </div>
               </section>
@@ -451,9 +520,18 @@ export function DiscoverScreen() {
                 subtitle={`${sections.merchants.length} warung dalam ${formatRadius(params.radius_m)}`}
                 icon={StoreIcon}
                 iconClassName="text-primary"
-                action={<SortMenu value={sort} onChange={setSort} />}
+                action={
+                  <div className="shrink-0 lg:hidden">
+                    <SortMenu value={sort} onChange={setSort} />
+                  </div>
+                }
               />
-              <div className={cn("space-y-3 transition-opacity", query.isPlaceholderData && "opacity-60")}>
+              <div
+                className={cn(
+                  "space-y-3 transition-opacity lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0",
+                  query.isPlaceholderData && "opacity-60",
+                )}
+              >
                 {sections.merchants.map((m) => (
                   <MerchantCard key={m.id} merchant={m} />
                 ))}
@@ -473,6 +551,6 @@ export function DiscoverScreen() {
       </div>
       {dialog}
       {sheet}
-    </>
+    </div>
   );
 }

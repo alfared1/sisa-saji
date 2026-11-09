@@ -22,6 +22,13 @@ import {
 } from "lucide-react";
 import { ImpactLine } from "@/components/common/impact-line";
 import { Money } from "@/components/common/money";
+import {
+  ResponsiveSheet,
+  ResponsiveSheetContent,
+  ResponsiveSheetDescription,
+  ResponsiveSheetHeader,
+  ResponsiveSheetTitle,
+} from "@/components/common/responsive-sheet";
 import { SurplusMap } from "@/components/map/surplus-map";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +38,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import type { PaymentMethod, Voucher } from "@/lib/contracts";
@@ -180,7 +186,7 @@ export function PickupTimeSlotSelector({
       {loading ? (
         <Skeleton className="h-14 w-full rounded-2xl" />
       ) : (
-        <div role="radiogroup" aria-label="Waktu pengambilan" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div role="radiogroup" aria-label="Waktu pengambilan" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
           {options.map((o) => {
             const active = value === o.key;
             return (
@@ -365,13 +371,14 @@ export function VoucherSelectorSheet({
   onSelect: (code: string | null) => void;
 }) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="mx-auto max-w-md rounded-t-3xl">
-        <DrawerHeader className="text-left">
-          <DrawerTitle className="text-lg font-bold">Voucher Sisa-Saji</DrawerTitle>
-          <DrawerDescription>Potongan ditanggung platform — warung tetap menerima penuh.</DrawerDescription>
-        </DrawerHeader>
-        <div className="space-y-2.5 overflow-y-auto px-4 pb-6">
+    // Phones: bottom drawer. lg+: centred dialog.
+    <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
+      <ResponsiveSheetContent className="mx-auto max-w-md rounded-t-3xl">
+        <ResponsiveSheetHeader className="text-left">
+          <ResponsiveSheetTitle className="text-lg font-bold">Voucher Sisa-Saji</ResponsiveSheetTitle>
+          <ResponsiveSheetDescription>Potongan ditanggung platform — warung tetap menerima penuh.</ResponsiveSheetDescription>
+        </ResponsiveSheetHeader>
+        <div className="min-h-0 space-y-2.5 overflow-y-auto px-4 pb-6">
           {loading &&
             Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
           {vouchers.map((v) => {
@@ -408,8 +415,8 @@ export function VoucherSelectorSheet({
             );
           })}
         </div>
-      </DrawerContent>
-    </Drawer>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   );
 }
 
@@ -450,7 +457,16 @@ export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod;
 
 /* --------------------------- Price & impact --------------------------- */
 
-export function PriceAndImpactBreakdown({ p, voucherCode }: { p: PricePreview; voucherCode: string | null }) {
+export function PriceAndImpactBreakdown({
+  p,
+  voucherCode,
+  children,
+}: {
+  p: PricePreview;
+  voucherCode: string | null;
+  /** Rendered at the bottom of the card (checkout uses it for the lg+ pay button). */
+  children?: React.ReactNode;
+}) {
   return (
     <CheckoutCard title="Rincian Pembayaran">
       <dl className="space-y-2 text-sm">
@@ -492,6 +508,7 @@ export function PriceAndImpactBreakdown({ p, voucherCode }: { p: PricePreview; v
         <p className="mt-1 text-[11px] font-bold tracking-wide text-secondary-foreground/80 uppercase">Total dampak pesanan</p>
         <ImpactLine foodGrams={p.food_saved_grams} className="mt-0.5 text-xs" />
       </div>
+      {children}
     </CheckoutCard>
   );
 }

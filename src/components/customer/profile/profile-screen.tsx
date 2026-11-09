@@ -245,11 +245,24 @@ export function ProfileScreen() {
         <TabTitle title="Akun" subtitle="Profil, notifikasi & pengaturan" />
       </ShellHeader>
 
-      <div className="flex flex-col gap-4 px-4 pt-4 pb-6">
+      {/*
+        lg+: narrow (896px) two-column settings layout: account (+ inline edit
+        form, logout) on the left, notifications + menu on the right. The right
+        column spans all rows and the last row is 1fr, so the left rows keep
+        their natural height. DOM order is unchanged so phones keep the single
+        column; the "Profil" label is desktop-only (display:none on phones).
+      */}
+      <div
+        data-shell-width="narrow"
+        className="flex flex-col gap-4 px-4 pt-4 pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-x-6 lg:gap-y-2 lg:pt-6"
+      >
+        <h2 className="hidden px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:col-start-1 lg:row-start-1 lg:block">
+          Profil
+        </h2>
         {session.isLoading ? (
-          <Skeleton className="h-36 w-full rounded-3xl" />
+          <Skeleton className="h-36 w-full rounded-3xl lg:col-start-1 lg:row-start-2" />
         ) : !user ? (
-          <div className="rounded-3xl bg-card shadow-soft ring-1 ring-border">
+          <div className="rounded-3xl bg-card shadow-soft ring-1 ring-border lg:col-start-1 lg:row-start-2">
             <LoginCta
               title="Masuk ke Sisa-Saji"
               description="Simpan tiket pengambilan, lacak dampakmu, dan ikuti warung favorit."
@@ -259,7 +272,7 @@ export function ProfileScreen() {
             />
           </div>
         ) : (
-          <section className="overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
+          <section className="overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border lg:col-start-1 lg:row-start-2">
             <div className="flex items-center gap-3 p-4">
               <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-brand-strong text-lg font-extrabold text-primary-foreground">
                 {initials(user.full_name) || "S"}
@@ -297,6 +310,7 @@ export function ProfileScreen() {
           </section>
         )}
 
+        <div className="contents lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
         {user && (
           <section aria-label="Notifikasi" className="space-y-2">
             <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notifikasi</h2>
@@ -324,17 +338,18 @@ export function ProfileScreen() {
             <InstallRow />
           </div>
         </section>
+        </div>
 
         {user && (
           <Button
             variant="ghost"
-            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-3 lg:mt-2 lg:justify-self-start lg:px-6"
             onClick={() => setConfirmLogout(true)}
           >
             <LogOutIcon className="size-4" /> Keluar
           </Button>
         )}
-        <p className="text-center text-[11px] text-muted-foreground">Sisa-Saji · Selamatkan makanan, hemat uang</p>
+        <p className="text-center text-[11px] text-muted-foreground lg:col-span-2 lg:row-start-5 lg:pt-6">Sisa-Saji · Selamatkan makanan, hemat uang</p>
       </div>
 
       <ConfirmDialog

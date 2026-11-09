@@ -157,7 +157,7 @@ export function OrdersScreen() {
           }
         />
         {loggedIn && (
-          <div role="tablist" aria-label="Status pesanan" className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto px-4">
+          <div role="tablist" aria-label="Status pesanan" className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:mt-5 lg:border-b lg:border-border lg:px-0">
             {ORDER_TABS.map((t) => {
               const active = tab === t.key;
               const count = groups[t.key].length;
@@ -197,7 +197,7 @@ export function OrdersScreen() {
         )}
       </ShellHeader>
 
-      <div className="px-4 pt-4 pb-6" role="tabpanel">
+      <div className="px-4 pt-4 pb-6 lg:pt-6" role="tabpanel">
         {session.isLoading ? (
           <ListSkeleton count={3} />
         ) : !loggedIn ? (
@@ -212,17 +212,20 @@ export function OrdersScreen() {
         ) : q.isError && !offline ? (
           <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
             {offline && (
-              <ErrorState
-                compact
-                error={q.error}
-                message="Offline — menampilkan tiket yang tersimpan di perangkat."
-                onRetry={() => void q.refetch()}
-              />
+              <div className="lg:col-span-2">
+                <ErrorState
+                  compact
+                  error={q.error}
+                  message="Offline — menampilkan tiket yang tersimpan di perangkat."
+                  onRetry={() => void q.refetch()}
+                />
+              </div>
             )}
             {groups[tab].length === 0 ? (
               <EmptyState
+                className="lg:col-span-2"
                 icon={EMPTY_COPY[tab].icon}
                 title={EMPTY_COPY[tab].title}
                 description={EMPTY_COPY[tab].description}

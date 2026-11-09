@@ -123,7 +123,9 @@ export function PaymentView({ order }: { order: OrderDetail }) {
   const mmss = `${String(Math.floor(c.totalSeconds / 60)).padStart(2, "0")}:${String(c.seconds).padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4 pb-10">
+    <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
+      {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
+      <div className="contents lg:flex lg:flex-col lg:gap-4">
       {/* Countdown */}
       <section
         className={cn(
@@ -216,7 +218,10 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           <DownloadIcon className="size-4" /> Unduh QR
         </Button>
       </section>
+      </div>
 
+      {/* lg+: sticky details column. */}
+      <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       {/* Demo simulator */}
       <section className="rounded-3xl border-2 border-dashed border-violet-300 bg-violet-50/70 p-4 dark:border-violet-800 dark:bg-violet-950/30">
         <p className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-violet-700 uppercase dark:text-violet-300">
@@ -244,6 +249,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
       >
         <XCircleIcon className="size-4" /> Batalkan pesanan
       </Button>
+      </div>
 
       <ConfirmDialog
         open={confirmCancel}

@@ -178,7 +178,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
       const unauth = q.error instanceof ApiClientError && q.error.code === "UNAUTHENTICATED";
       const notFound = q.error instanceof ApiClientError && (q.error.status === 404 || q.error.status === 403);
       return (
-        <>
+        <div className="contents lg:mx-auto lg:block lg:w-full lg:max-w-5xl">
           {header}
           {unauth || (!session.isLoading && !session.user && !isNetworkError(q.error)) ? (
             <LoginCta
@@ -200,19 +200,19 @@ export function OrderDetailScreen({ id }: { id: string }) {
           ) : (
             <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
           )}
-        </>
+        </div>
       );
     }
     return (
-      <>
+      <div className="contents lg:mx-auto lg:block lg:w-full lg:max-w-5xl">
         {header}
         <DetailSkeleton />
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="contents lg:mx-auto lg:block lg:w-full lg:max-w-5xl">
       {header}
       {showingOffline && (
         <div className="mx-4 mt-3 flex items-center gap-2 rounded-2xl bg-warning-soft px-3 py-2.5 text-xs font-semibold ring-1 ring-warning/30" role="status">
@@ -239,6 +239,6 @@ export function OrderDetailScreen({ id }: { id: string }) {
           {!order.review && <ReviewFormSheet order={order} open={reviewOpen} onOpenChange={setReviewOpen} />}
         </>
       )}
-    </>
+    </div>
   );
 }

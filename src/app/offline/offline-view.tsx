@@ -97,12 +97,13 @@ export function OfflineView() {
 
   return (
     <div className="app-backdrop min-h-dvh">
-      <div className="safe-top safe-bottom mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-10">
-        <header className="flex h-16 items-center">
+      {/* lg+: status card on the left, saved tickets on the right (max 1024px). */}
+      <div className="safe-top safe-bottom mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-10 lg:grid lg:max-w-5xl lg:grid-cols-2 lg:content-start lg:items-start lg:gap-x-10 lg:px-8">
+        <header className="flex h-16 items-center lg:col-span-2 lg:h-20">
           <Logo />
         </header>
 
-        <section className="flex flex-col items-center pt-6 text-center">
+        <section className="flex flex-col items-center pt-6 text-center lg:sticky lg:top-8 lg:mt-6 lg:rounded-[1.75rem] lg:bg-card lg:p-10 lg:shadow-card lg:ring-1 lg:ring-border">
           <div className="relative">
             <div className="absolute inset-0 scale-150 rounded-full bg-deal-soft blur-2xl" aria-hidden />
             <span
@@ -125,7 +126,7 @@ export function OfflineView() {
           </Button>
         </section>
 
-        <section aria-labelledby="tiket-offline" className="mt-10">
+        <section aria-labelledby="tiket-offline" className="mt-10 lg:mt-6">
           <h2 id="tiket-offline" className="flex items-center gap-2 text-base font-extrabold">
             <TicketIcon className="size-5 text-primary" /> Tiket tersimpan
           </h2>

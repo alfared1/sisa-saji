@@ -151,9 +151,14 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
 
 export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4 pb-10">
-      <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} />
-      <DigitalPickupPass order={order} savedOffline={savedOffline} />
+    <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
+      {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
+      <div className="contents lg:flex lg:flex-col lg:gap-4">
+        <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} />
+        <DigitalPickupPass order={order} savedOffline={savedOffline} />
+      </div>
+      {/* lg+: sticky details column. */}
+      <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
         <h2 className="text-sm font-extrabold">Cara ambil pesanan</h2>
         <ol className="mt-3 space-y-3">
@@ -172,6 +177,7 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
         </ol>
       </section>
       <OrderItemsCard order={order} />
+      </div>
     </div>
   );
 }

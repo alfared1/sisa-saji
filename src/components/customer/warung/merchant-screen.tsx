@@ -66,7 +66,7 @@ function useMerchantDetail(slug: string) {
 function MerchantSkeleton() {
   return (
     <div className="space-y-4 px-4 pt-2" aria-busy="true" aria-label="Memuat warung">
-      <Skeleton className="h-40 w-full rounded-3xl" />
+      <Skeleton className="h-40 w-full rounded-3xl lg:h-64" />
       <Skeleton className="h-7 w-2/3" />
       <Skeleton className="h-4 w-1/2" />
       <div className="grid grid-cols-2 gap-2">
@@ -237,15 +237,23 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
       {!m ? (
         <MerchantSkeleton />
       ) : (
-        <div className="flex flex-col gap-5 px-4 pt-3 pb-8">
+        <div
+          className={cn(
+            "flex flex-col gap-5 px-4 pt-3 pb-8",
+            // lg+: full-width hero, then a sticky info column beside the menu + reviews.
+            "lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-x-8 lg:gap-y-6 lg:pt-2 lg:pb-12",
+            "xl:grid-cols-[360px_minmax(0,1fr)] xl:gap-x-10",
+          )}
+        >
           {/* ---------- Banner ---------- */}
-          <section className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
+          {/* lg+: `contents` makes the photo and the info card separate grid items. */}
+          <section className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border lg:contents">
             <FoodThumb
               category={m.category}
               imageUrl={m.banner_url}
               alt={`Foto ${m.name}`}
-              className="h-32 w-full"
-              iconClassName="size-12"
+              className="h-32 w-full lg:col-span-2 lg:h-60 lg:rounded-3xl lg:shadow-card lg:ring-1 lg:ring-border xl:h-72"
+              iconClassName="size-12 lg:size-20"
             >
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent" />
               {window_ && m.is_open && (
@@ -253,11 +261,11 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                   endIso={window_.end}
                   variant="solid"
                   prefix="Tutup dalam"
-                  className="absolute right-3 bottom-3 px-2.5 py-1.5 shadow-card"
+                  className="absolute right-3 bottom-3 px-2.5 py-1.5 shadow-card lg:right-5 lg:bottom-5"
                 />
               )}
             </FoodThumb>
-            <div className="p-4">
+            <div className="p-4 lg:sticky lg:top-20 lg:rounded-3xl lg:bg-card lg:p-5 lg:shadow-card lg:ring-1 lg:ring-border">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   {/* The sticky PageHeader already carries the page's h1 (same name). */}
@@ -330,114 +338,116 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
             </div>
           </section>
 
-          {!m.is_open && (
-            <div className="flex items-start gap-3 rounded-2xl bg-muted p-4" role="status">
-              <MoonIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-bold">Warung sedang tutup</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Ikuti warung ini supaya kamu dapat notifikasi saat porsi surplus dibuka lagi.
-                </p>
+          <div className="flex min-w-0 flex-col gap-5 lg:gap-8">
+            {!m.is_open && (
+              <div className="flex items-start gap-3 rounded-2xl bg-muted p-4" role="status">
+                <MoonIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-bold">Warung sedang tutup</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Ikuti warung ini supaya kamu dapat notifikasi saat porsi surplus dibuka lagi.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* ---------- Menu ---------- */}
-          <section aria-labelledby="menu-title" className="space-y-3">
-            <SectionHeader
-              id="menu-title"
-              title="Menu Surplus Malam Ini"
-              subtitle={
-                sortedBatches.length
-                  ? `${live} menu tersedia · harga & stok diperbarui langsung`
-                  : "Belum ada porsi surplus yang dibuka"
-              }
-              icon={UtensilsCrossedIcon}
-              iconClassName="text-primary"
-            />
-            {sortedBatches.length === 0 ? (
-              <EmptyState
-                icon={MoonIcon}
-                className="rounded-3xl bg-card py-10 ring-1 ring-border"
-                title="Belum ada surplus"
-                description="Warung ini biasanya membuka porsi surplus menjelang tutup. Tekan “Ingatkan” supaya tidak ketinggalan."
+            {/* ---------- Menu ---------- */}
+            <section aria-labelledby="menu-title" className="space-y-3">
+              <SectionHeader
+                id="menu-title"
+                title="Menu Surplus Malam Ini"
+                subtitle={
+                  sortedBatches.length
+                    ? `${live} menu tersedia · harga & stok diperbarui langsung`
+                    : "Belum ada porsi surplus yang dibuka"
+                }
+                icon={UtensilsCrossedIcon}
+                iconClassName="text-primary"
               />
-            ) : (
-              <div className="space-y-3">
-                {sortedBatches.map((b) => (
-                  <DynamicPriceMenuCard
-                    key={b.batch_id}
-                    batch={b}
-                    merchant={cartMerchantOf(m)}
-                    disabled={!m.is_open}
-                    onAdd={addToCart}
-                    onOpenDetail={() => openQuickOrder(b, { disabledLabel: closedLabel })}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+              {sortedBatches.length === 0 ? (
+                <EmptyState
+                  icon={MoonIcon}
+                  className="rounded-3xl bg-card py-10 ring-1 ring-border"
+                  title="Belum ada surplus"
+                  description="Warung ini biasanya membuka porsi surplus menjelang tutup. Tekan “Ingatkan” supaya tidak ketinggalan."
+                />
+              ) : (
+                <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+                  {sortedBatches.map((b) => (
+                    <DynamicPriceMenuCard
+                      key={b.batch_id}
+                      batch={b}
+                      merchant={cartMerchantOf(m)}
+                      disabled={!m.is_open}
+                      onAdd={addToCart}
+                      onOpenDetail={() => openQuickOrder(b, { disabledLabel: closedLabel })}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
 
-          {/* ---------- Reviews ---------- */}
-          <section aria-labelledby="review-title" className="space-y-3">
-            <SectionHeader
-              id="review-title"
-              title="Ulasan Pembeli"
-              icon={StarIcon}
-              iconClassName="text-amber-500"
-              action={
-                <span className="text-xs font-semibold text-muted-foreground">
-                  {formatRating(m.rating_avg)} / 5 · {m.total_reviews} ulasan
-                </span>
-              }
-            />
-            {m.reviews.length === 0 ? (
-              <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-border">
-                Belum ada ulasan. Jadilah yang pertama setelah mengambil pesananmu!
-              </p>
-            ) : (
-              <ul className="space-y-2.5">
-                {(showAllReviews ? m.reviews : m.reviews.slice(0, 3)).map((r) => (
-                  <li key={r.id} className="rounded-2xl bg-card p-3.5 ring-1 ring-border">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-extrabold text-primary">
-                          {r.customer_name.charAt(0)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold">{r.customer_name}</p>
-                          <RatingStars value={r.rating} />
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">{formatDateId(r.created_at)}</span>
-                    </div>
-                    {r.comment && <p className="mt-2 text-sm leading-relaxed text-foreground/85">{r.comment}</p>}
-                    {r.tags.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {r.tags.map((t) => (
-                          <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground/75">
-                            {t}
+            {/* ---------- Reviews ---------- */}
+            <section aria-labelledby="review-title" className="space-y-3">
+              <SectionHeader
+                id="review-title"
+                title="Ulasan Pembeli"
+                icon={StarIcon}
+                iconClassName="text-amber-500"
+                action={
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {formatRating(m.rating_avg)} / 5 · {m.total_reviews} ulasan
+                  </span>
+                }
+              />
+              {m.reviews.length === 0 ? (
+                <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-border">
+                  Belum ada ulasan. Jadilah yang pertama setelah mengambil pesananmu!
+                </p>
+              ) : (
+                <ul className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                  {(showAllReviews ? m.reviews : m.reviews.slice(0, 3)).map((r) => (
+                    <li key={r.id} className="rounded-2xl bg-card p-3.5 ring-1 ring-border">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-extrabold text-primary">
+                            {r.customer_name.charAt(0)}
                           </span>
-                        ))}
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold">{r.customer_name}</p>
+                            <RatingStars value={r.rating} />
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">{formatDateId(r.created_at)}</span>
                       </div>
-                    )}
-                  </li>
-                ))}
-                {m.reviews.length > 3 && (
-                  <li>
-                    <Button
-                      variant="ghost"
-                      className="h-11 w-full rounded-full font-bold"
-                      onClick={() => setShowAllReviews((v) => !v)}
-                      aria-expanded={showAllReviews}
-                    >
-                      {showAllReviews ? "Tampilkan lebih sedikit" : `Lihat ${m.reviews.length - 3} ulasan lainnya`}
-                    </Button>
-                  </li>
-                )}
-              </ul>
-            )}
-          </section>
+                      {r.comment && <p className="mt-2 text-sm leading-relaxed text-foreground/85">{r.comment}</p>}
+                      {r.tags.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {r.tags.map((t) => (
+                            <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-foreground/75">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                  {m.reviews.length > 3 && (
+                    <li className="lg:col-span-2">
+                      <Button
+                        variant="ghost"
+                        className="h-11 w-full rounded-full font-bold"
+                        onClick={() => setShowAllReviews((v) => !v)}
+                        aria-expanded={showAllReviews}
+                      >
+                        {showAllReviews ? "Tampilkan lebih sedikit" : `Lihat ${m.reviews.length - 3} ulasan lainnya`}
+                      </Button>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </section>
+          </div>
         </div>
       )}
       {dialog}

@@ -35,7 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Logo />
           </Link>
         </header>
-        <main id="konten" className="safe-bottom mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-2 pb-10 lg:justify-center lg:pt-10">
+        <main id="konten" className="safe-bottom mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-2 pb-10 lg:max-w-[32rem] lg:justify-center lg:pt-10">
           {children}
         </main>
       </div>

@@ -24,6 +24,15 @@ import { LogoMark } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  RESPONSIVE_SHEET_DESKTOP_QUERY,
+  ResponsiveSheet,
+  ResponsiveSheetContent,
+  ResponsiveSheetDescription,
+  ResponsiveSheetHeader,
+  ResponsiveSheetTitle,
+} from "@/components/common/responsive-sheet";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiClientError, api } from "@/lib/api/client";
 import type { OrderDetail, OrderResponse, ReviewBody } from "@/lib/contracts";
@@ -225,13 +234,10 @@ export function ReviewFormSheet({
     onError: (err) => toast.error(err instanceof ApiClientError ? err.message : "Gagal mengirim ulasan."),
   });
 
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
-      <DrawerContent className="mx-auto max-w-md rounded-t-3xl">
-        <DrawerHeader className="text-left">
-          <DrawerTitle className="text-lg font-bold">Gimana pesananmu?</DrawerTitle>
-          <DrawerDescription>{order.merchant.name}</DrawerDescription>
-        </DrawerHeader>
+  // Phones keep the vaul sheet exactly as before (incl. repositionInputs={false});
+  // lg+ shows the same form in a centred dialog via <ResponsiveSheet>.
+  const desktop = useMediaQuery(RESPONSIVE_SHEET_DESKTOP_QUERY);
+  const form = (
         <form
           className="space-y-5 overflow-y-auto px-4 pb-6"
           onSubmit={(e) => {
@@ -308,6 +314,30 @@ export function ReviewFormSheet({
             {rating < 1 ? "Pilih bintang dulu" : "Kirim ulasan"}
           </Button>
         </form>
+  );
+
+  if (desktop) {
+    return (
+      <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
+        <ResponsiveSheetContent>
+          <ResponsiveSheetHeader>
+            <ResponsiveSheetTitle className="text-lg font-bold">Gimana pesananmu?</ResponsiveSheetTitle>
+            <ResponsiveSheetDescription>{order.merchant.name}</ResponsiveSheetDescription>
+          </ResponsiveSheetHeader>
+          {form}
+        </ResponsiveSheetContent>
+      </ResponsiveSheet>
+    );
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+      <DrawerContent className="mx-auto max-w-md rounded-t-3xl">
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="text-lg font-bold">Gimana pesananmu?</DrawerTitle>
+          <DrawerDescription>{order.merchant.name}</DrawerDescription>
+        </DrawerHeader>
+        {form}
       </DrawerContent>
     </Drawer>
   );
@@ -317,7 +347,9 @@ export function ReviewFormSheet({
 
 export function CompletedView({ order, onReview }: { order: OrderDetail; onReview: () => void }) {
   return (
-    <div className="flex flex-col gap-4 px-4 pt-4 pb-10">
+    <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
+      {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
+      <div className="contents lg:flex lg:flex-col lg:gap-4">
       <ImpactInfographic order={order} />
       <Button variant="outline" className="h-12 rounded-full font-bold" onClick={() => void shareImpact(order)}>
         <Share2Icon className="size-4" /> Bagikan ke Instagram Story / WhatsApp
@@ -354,7 +386,10 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
           <StarIcon className="size-5 fill-amber-400 text-amber-400" />
         </button>
       )}
+      </div>
 
+      {/* lg+: sticky details column. */}
+      <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       <OrderItemsCard order={order} />
       {order.picked_up_at && (
         <p className="text-center text-xs text-muted-foreground">Diambil {formatDateTimeId(order.picked_up_at)} WIB</p>
@@ -362,6 +397,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
       <Button asChild className="h-12 rounded-full font-bold">
         <Link href="/discover">Selamatkan makanan lagi</Link>
       </Button>
+      </div>
     </div>
   );
 }

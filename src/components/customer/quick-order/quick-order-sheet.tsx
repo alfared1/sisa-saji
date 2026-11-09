@@ -29,9 +29,16 @@ import { CountdownBadge } from "@/components/common/countdown-badge";
 import { useAddToCart } from "@/components/common/diff-merchant-dialog";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { PriceTag } from "@/components/common/price-tag";
+import {
+  ResponsiveSheet,
+  ResponsiveSheetContent,
+  ResponsiveSheetDescription,
+  ResponsiveSheetFooter,
+  ResponsiveSheetTitle,
+  useResponsiveSheetVariant,
+} from "@/components/common/responsive-sheet";
 import { StockBadge } from "@/components/common/stock-badge";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerTitle } from "@/components/ui/drawer";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
@@ -103,9 +110,11 @@ export function QuickOrderSheet({
   const ctaRef = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <Drawer open={open && batch !== null} onOpenChange={onOpenChange}>
-        <DrawerContent
+      {/* Phones: bottom drawer. lg+ (≥ 1024px): centred dialog. Both are role=dialog named by the menu title. */}
+      <ResponsiveSheet open={open && batch !== null} onOpenChange={onOpenChange}>
+        <ResponsiveSheetContent
           className="mx-auto max-w-md rounded-t-3xl"
+          dialogClassName="sm:max-w-[600px]"
           onOpenAutoFocus={(e) => {
             // Start keyboard / screen-reader users on the primary action.
             const cta = ctaRef.current;
@@ -129,8 +138,8 @@ export function QuickOrderSheet({
               }}
             />
           )}
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveSheetContent>
+      </ResponsiveSheet>
       {dialog}
     </>
   );
@@ -152,6 +161,7 @@ function QuickOrderBody({
   const router = useRouter();
   const qc = useQueryClient();
   const session = useSession();
+  const desktop = useResponsiveSheetVariant() === "dialog";
   const countdown = useCountdown(batch.pickup_end_time);
   const [rawQty, setQty] = useState(1);
   const qty = clampQuickOrderQty(rawQty, batch.available_stock);
@@ -254,26 +264,31 @@ function QuickOrderBody({
 
   return (
     <>
-      <div className="overflow-y-auto px-4 pt-2">
-        <div className="flex gap-3">
+      <div className={cn("overflow-y-auto px-4 pt-2", desktop && "min-h-0 flex-1 px-6 pt-6")}>
+        <div className={cn("flex gap-3", desktop && "gap-5")}>
           <FoodThumb
             category={batch.category}
             imageUrl={batch.image_url}
             mystery={batch.is_mystery_bag}
             alt={batch.menu_name}
-            className={cn("size-28 shrink-0 rounded-2xl", blocked && "grayscale")}
-            iconClassName="size-10"
+            className={cn("size-28 shrink-0 rounded-2xl", desktop && "size-44 rounded-3xl", blocked && "grayscale")}
+            iconClassName={desktop ? "size-14" : "size-10"}
           />
-          <div className="min-w-0 flex-1">
+          {/* Dialog: right padding keeps the badge / title clear of the close button. */}
+          <div className={cn("min-w-0 flex-1", desktop && "pt-1 pr-8")}>
             <DiscountBadge pct={batch.discount_pct} endIso={batch.pickup_end_time} />
-            <DrawerTitle className="mt-1.5 line-clamp-2 text-lg leading-snug font-extrabold">{batch.menu_name}</DrawerTitle>
-            <DrawerDescription className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <ResponsiveSheetTitle
+              className={cn("mt-1.5 line-clamp-2 text-lg leading-snug font-extrabold", desktop && "mt-2 text-xl")}
+            >
+              {batch.menu_name}
+            </ResponsiveSheetTitle>
+            <ResponsiveSheetDescription className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
               <StoreIcon className="size-3.5 shrink-0" aria-hidden />
               <span className="truncate">
                 {batch.merchant_name}
                 {batch.distance_m !== null && ` · ${formatDistance(batch.distance_m)}`}
               </span>
-            </DrawerDescription>
+            </ResponsiveSheetDescription>
             <PriceTag
               original={batch.original_price_idr}
               selling={batch.selling_price_idr}
@@ -328,7 +343,7 @@ function QuickOrderBody({
         )}
       </div>
 
-      <DrawerFooter className="gap-2 pt-3 pb-5">
+      <ResponsiveSheetFooter className={cn("gap-2 pt-3 pb-5", desktop && "flex-row px-6 pt-4 pb-6 *:flex-1")}>
         <Button
           ref={ctaRef}
           className="h-12 w-full rounded-full text-base font-bold shadow-soft"
@@ -345,14 +360,14 @@ function QuickOrderBody({
         {!blocked && (
           <Button
             variant="outline"
-            className="h-11 w-full rounded-full font-bold"
+            className={cn("h-11 w-full rounded-full font-bold", desktop && "h-12")}
             disabled={checkout.isPending}
             onClick={() => onAddToCart(qty)}
           >
             <ShoppingBagIcon className="size-4" aria-hidden /> Tambah ke Keranjang
           </Button>
         )}
-      </DrawerFooter>
+      </ResponsiveSheetFooter>
     </>
   );
 }

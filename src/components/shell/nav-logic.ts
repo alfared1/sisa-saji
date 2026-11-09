@@ -17,6 +17,33 @@ export function showsCartBar(pathname: string): boolean {
   return CART_BAR_ROUTES.some((r) => r.test(pathname));
 }
 
+/** Desktop (lg+) top nav: which customer tab is lit (deeper pages light their section, e.g. /orders/abc → /orders). */
+export function activeCustomerHref(pathname: string): string | null {
+  return activeNavHref(pathname, CUSTOMER_TAB_HREFS);
+}
+
+/**
+ * Desktop cart button: only once the persisted cart has hydrated, when it has
+ * items, and not on /checkout itself (the page already is the cart).
+ */
+export function showsDesktopCartButton(args: { pathname: string; hydrated: boolean; count: number }): boolean {
+  const { pathname, hydrated, count } = args;
+  return hydrated && count > 0 && pathname !== "/checkout" && !pathname.startsWith("/checkout/");
+}
+
+/**
+ * Desktop "Masuk" button: only after hydration (server HTML never knows the
+ * session) and once /auth/me has answered with no user.
+ */
+export function showsDesktopLoginButton(args: { hydrated: boolean; isLoading: boolean; loggedIn: boolean }): boolean {
+  return args.hydrated && !args.isLoading && !args.loggedIn;
+}
+
+/** Login link that brings the visitor back to where they were. */
+export function loginHrefFor(pathname: string): string {
+  return pathname && pathname !== "/" ? `/auth/login?next=${encodeURIComponent(pathname)}` : "/auth/login";
+}
+
 /** Longest matching href wins (so /merchant/orders/scan lights up "Scan", not "Pesanan"). */
 export function activeNavHref(pathname: string, hrefs: readonly string[]): string | null {
   let best: string | null = null;

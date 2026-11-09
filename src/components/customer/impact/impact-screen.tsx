@@ -53,7 +53,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
   const remaining = next ? Math.max(0, next.min_food_saved_grams - d.total_food_saved_grams) : 0;
   const CurrentIcon = TIER_ICONS[currentIdx] ?? SproutIcon;
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary via-brand-strong to-emerald-900 p-5 text-white shadow-float">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary via-brand-strong to-emerald-900 p-5 text-white shadow-float lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:self-stretch lg:p-6">
       <span className="absolute -top-14 -right-10 size-48 rounded-full bg-white/10" aria-hidden />
       <div className="relative flex items-center gap-3">
         <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
@@ -121,9 +121,9 @@ function Totals({ d }: { d: ImpactSummary }) {
     },
   ];
   return (
-    <section aria-label="Total dampak" className="grid grid-cols-2 gap-2.5">
+    <section aria-label="Total dampak" className="grid grid-cols-2 gap-2.5 lg:col-span-7 lg:gap-4 xl:grid-cols-4">
       {tiles.map((t) => (
-        <div key={t.label} className="rounded-3xl bg-card p-3.5 shadow-soft ring-1 ring-border">
+        <div key={t.label} className="rounded-3xl bg-card p-3.5 shadow-soft ring-1 ring-border lg:p-4">
           <span className={cn("inline-flex size-9 items-center justify-center rounded-xl", t.tint)}>
             <t.icon className="size-4.5" />
           </span>
@@ -131,7 +131,7 @@ function Totals({ d }: { d: ImpactSummary }) {
           <p className="text-xs text-muted-foreground">{t.label}</p>
         </div>
       ))}
-      <p className="col-span-2 text-center text-xs text-muted-foreground">
+      <p className="col-span-2 text-center text-xs text-muted-foreground lg:text-left xl:col-span-4">
         Dari <b className="text-foreground">{d.completed_orders}</b> pesanan selesai · faktor IPCC 2,5 kg CO₂e per kg pangan
       </p>
     </section>
@@ -329,7 +329,13 @@ export function ImpactScreen() {
       <ShellHeader>
         <TabTitle title="Dampak" subtitle="Makanan yang kamu selamatkan" />
       </ShellHeader>
-      <div className="flex flex-col gap-5 px-4 pt-4 pb-6">
+      <div
+        className={cn(
+          "flex flex-col gap-5 px-4 pt-4 pb-6",
+          // lg+: dashboard grid (badge + stat cards, then wide chart beside the favourites column).
+          loggedIn && q.data && "lg:grid lg:grid-cols-12 lg:items-start lg:gap-6 lg:pt-6",
+        )}
+      >
         {session.isLoading ? (
           <Skeleton className="h-44 w-full rounded-3xl" />
         ) : !loggedIn ? (
@@ -355,9 +361,13 @@ export function ImpactScreen() {
           <>
             <EcoHeroBadgeProgress d={q.data} />
             <Totals d={q.data} />
-            <MonthlyImpactChart monthly={q.data.monthly} metric={metric} onMetricChange={setMetric} />
-            <PushOptIn />
-            <PredictiveSubscriptionList />
+            <div className="contents lg:block lg:col-span-7 xl:col-span-8">
+              <MonthlyImpactChart monthly={q.data.monthly} metric={metric} onMetricChange={setMetric} />
+            </div>
+            <div className="contents lg:sticky lg:top-20 lg:col-span-5 lg:flex lg:flex-col lg:gap-5 xl:col-span-4">
+              <PushOptIn />
+              <PredictiveSubscriptionList />
+            </div>
           </>
         )}
       </div>

@@ -15,8 +15,18 @@ import { useStoresHydrated } from "@/stores/hydration";
 import { RADIUS_OPTIONS, formatRadius, useLocationStore } from "@/stores/location";
 import { LocationSheet } from "./location-sheet";
 
-/** Sticky-header location: label (opens LocationSheet) + radius selector. */
-export function LocationPill({ className }: { className?: string }) {
+/**
+ * Sticky-header location: label (opens LocationSheet) + radius selector.
+ * `variant="compact"` is the slimmer pill used in the desktop top nav (lg+).
+ */
+export function LocationPill({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  variant?: "default" | "compact";
+}) {
+  const compact = variant === "compact";
   const hydrated = useStoresHydrated();
   const label = useLocationStore((s) => s.label);
   const source = useLocationStore((s) => s.source);
@@ -30,15 +40,25 @@ export function LocationPill({ className }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group flex min-w-0 flex-1 items-center gap-2 rounded-2xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className={cn(
+          "group flex min-w-0 flex-1 items-center gap-2 rounded-2xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          compact && "rounded-full py-1 pr-2 pl-1 transition-colors hover:bg-muted",
+        )}
         aria-label={`Lokasi: ${label}. Ubah lokasi`}
       >
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary">
+        <span
+          className={cn(
+            "inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary",
+            compact && "size-8 rounded-full",
+          )}
+        >
           <Icon className="size-4" />
         </span>
         <span className="min-w-0">
-          <span className="block text-[11px] font-medium text-muted-foreground">Ambil di sekitar</span>
-          <span className="flex items-center gap-1 text-sm font-bold">
+          <span className={cn("block text-[11px] font-medium text-muted-foreground", compact && "truncate leading-tight")}>
+            Ambil di sekitar
+          </span>
+          <span className={cn("flex items-center gap-1 text-sm font-bold", compact && "leading-tight")}>
             <span className={cn("truncate", !hydrated && "opacity-60")}>{label}</span>
             <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-y-px" />
           </span>
