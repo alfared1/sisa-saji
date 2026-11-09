@@ -115,7 +115,7 @@ export function MonthlyImpactChart({
     : "Belum ada data bulanan";
 
   return (
-    <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border lg:p-6" aria-labelledby="chart-title">
+    <section className="relative rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border lg:p-6" aria-labelledby="chart-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="chart-title" className="flex items-center gap-1.5 text-sm font-extrabold whitespace-nowrap">
           <BarChart3Icon className="size-4 text-primary" /> Per bulan

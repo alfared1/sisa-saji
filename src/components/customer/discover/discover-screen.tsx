@@ -314,7 +314,7 @@ export function DiscoverScreen() {
 
   return (
     <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-4 lg:pb-10 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <ShellHeader className="pb-0 lg:sticky lg:top-20 lg:z-10 lg:mt-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-3xl lg:bg-card lg:shadow-soft lg:ring-1 lg:ring-border lg:[&>div]:py-5">
+      <ShellHeader className="pb-0 lg:sticky lg:top-20 lg:z-10 lg:mt-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin] lg:rounded-3xl lg:bg-card lg:shadow-soft lg:ring-1 lg:ring-border lg:[&>div]:py-5">
         <h1 className="sr-only lg:not-sr-only lg:mb-4 lg:text-lg! lg:font-extrabold">Cari makanan surplus</h1>
         <LocationPill className="lg:hidden" />
         <div className="mt-3 flex items-center gap-2 lg:mt-0">

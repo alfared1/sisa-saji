@@ -13,6 +13,9 @@
  * Specs share one database, so they run serially (workers: 1). Each spec
  * creates the data it needs (fresh customers, own orders/batches).
  */
+// Load .env so test helpers sign session cookies with the same SESSION_SECRET
+// the app server uses (`npm run demo` / setup:secrets writes a real one there).
+import "dotenv/config";
 import { defineConfig, devices } from "@playwright/test";
 import { E2E_BASE_URL } from "./e2e/env";
 

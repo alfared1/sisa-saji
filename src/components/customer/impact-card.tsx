@@ -8,6 +8,12 @@ import { api } from "@/lib/api/client";
 import type { GlobalStats, ImpactSummary } from "@/lib/contracts";
 import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
+
+/** "Rp 616,5 rb" — fits the narrow stat tile; the full amount is in the title. */
+export function formatIdrCompact(amount: number): string {
+  if (Math.abs(amount) < 100_000) return formatIdr(amount);
+  return `Rp ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}`;
+}
 import { badgeLabel, firstName, formatDecimal } from "./lib/format";
 import { customerKeys } from "./lib/queries";
 
@@ -64,11 +70,13 @@ export function ImpactCard({ name }: { name: string }) {
         {[
           { icon: LeafIcon, value: formatKg(d.total_food_saved_grams), label: "pangan" },
           { icon: CloudIcon, value: formatKg(d.total_co2_avoided_grams), label: "CO₂e" },
-          { icon: WalletIcon, value: formatIdr(d.total_money_saved_idr), label: "dihemat" },
+          { icon: WalletIcon, value: formatIdrCompact(d.total_money_saved_idr), full: formatIdr(d.total_money_saved_idr), label: "dihemat" },
         ].map((s) => (
           <div key={s.label} className="min-w-0 rounded-2xl bg-white/12 px-1.5 py-2 ring-1 ring-white/15">
             <s.icon className="mx-auto size-4 opacity-90" aria-hidden />
-            <p className="mt-1 truncate text-sm font-extrabold tabular-nums">{s.value}</p>
+            <p className="mt-1 truncate text-sm font-extrabold tabular-nums" title={"full" in s ? s.full : undefined}>
+              {s.value}
+            </p>
             <p className="text-[10px] text-primary-foreground/80">{s.label}</p>
           </div>
         ))}

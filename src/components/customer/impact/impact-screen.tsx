@@ -53,7 +53,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
   const remaining = next ? Math.max(0, next.min_food_saved_grams - d.total_food_saved_grams) : 0;
   const CurrentIcon = TIER_ICONS[currentIdx] ?? SproutIcon;
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary via-brand-strong to-emerald-900 p-5 text-white shadow-float lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:self-stretch lg:p-6">
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary via-brand-strong to-emerald-900 p-5 text-white shadow-float lg:col-span-5 lg:flex lg:flex-col lg:self-start lg:p-6 xl:justify-between xl:self-stretch">
       <span className="absolute -top-14 -right-10 size-48 rounded-full bg-white/10" aria-hidden />
       <div className="relative flex items-center gap-3">
         <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
