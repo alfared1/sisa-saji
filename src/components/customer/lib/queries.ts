@@ -10,6 +10,8 @@ export const customerKeys = {
     ["discover", "nearby", p] as const,
   pinsAll: ["discover", "map-pins"] as const,
   pins: (p: { lat: number; lng: number; radius_m: number }) => ["discover", "map-pins", p] as const,
+  /** Nationwide map. Not under `pinsAll`, so SSE batch events do not refetch it (it polls). */
+  allPins: ["discover", "all-pins"] as const,
   warungAll: ["warung"] as const,
   warung: (slug: string) => ["warung", slug] as const,
   ordersAll: ["orders"] as const,

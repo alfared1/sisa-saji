@@ -42,6 +42,15 @@ export function useGeolocation({ autoIfGranted = false, notify = true }: UseGeol
   const [status, setStatus] = useState<GeoStatus>("idle");
   const [accuracyM, setAccuracyM] = useState<number | null>(null);
   const inflight = useRef(false);
+  // False while the owner is unmounted or hidden (a left page kept in <Activity>):
+  // a fix that lands then is dropped instead of moving the location behind the user's back.
+  const active = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
 
   const request = useCallback(async (): Promise<boolean> => {
     if (inflight.current) return false;
@@ -54,6 +63,10 @@ export function useGeolocation({ autoIfGranted = false, notify = true }: UseGeol
     setStatus("locating");
     try {
       const pos = await getCurrentPosition();
+      if (!active.current) {
+        setStatus("idle");
+        return false;
+      }
       setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, source: "gps" });
       setAccuracyM(Math.round(pos.coords.accuracy));
       setStatus("granted");
@@ -63,7 +76,7 @@ export function useGeolocation({ autoIfGranted = false, notify = true }: UseGeol
         typeof err === "object" && err !== null && "code" in err && (err as GeolocationPositionError).code === 1;
       const next: GeoStatus = denied ? "denied" : "error";
       setStatus(next);
-      if (notify) toast.error(ERROR_COPY[next]);
+      if (notify && active.current) toast.error(ERROR_COPY[next]);
       return false;
     } finally {
       inflight.current = false;

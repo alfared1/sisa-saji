@@ -124,6 +124,11 @@
   .ss-pin--pulse .ss-pin__body {
     animation: none !important;
   }
+  .ss-pin__wrap,
+  .ss-group__wrap,
+  .ss-idle__wrap {
+    transition: none !important;
+  }
 }
 
 @keyframes soft-pulse {
@@ -398,6 +403,147 @@
   .ss-pin--closed .ss-pin__wrap {
     opacity: 0.55;
     filter: grayscale(0.8);
+  }
+
+  /* Leaflet 1.9 blends tiles with plus-lighter against Chromium gaps, but at fractional
+     zoom (the nationwide fit) on 2x screens neighbouring tiles overlap by a subpixel and the
+     sum draws bright seams: a pale "rectangle" around one tile column. Normal blending
+     leaves no visible gap there. (!important: leaflet.css is unlayered, so it would win.) */
+  .leaflet-container img.leaflet-tile {
+    mix-blend-mode: normal !important;
+  }
+
+  /* Warung without live surplus: small muted ring; the ::before widens the tap target to 44px. */
+  .ss-idle,
+  .ss-group {
+    background: transparent !important;
+    border: 0 !important;
+  }
+  .ss-idle__wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: var(--card);
+    border: 2px solid color-mix(in oklch, var(--muted-foreground) 70%, transparent);
+    box-shadow: var(--elev-1);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .ss-idle__wrap::before {
+    content: "";
+    position: absolute;
+    inset: -13px;
+    border-radius: 999px;
+  }
+  .ss-idle__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--muted-foreground);
+  }
+  .leaflet-marker-icon.ss-idle:hover .ss-idle__wrap,
+  .ss-idle--selected .ss-idle__wrap {
+    transform: translate(-50%, -50%) scale(1.3);
+    border-color: var(--foreground);
+  }
+
+  /* Group bubble: count in the middle. Solid green ring = some warung there have
+     live surplus; dashed grey ring = none yet (shape tells them apart, not only colour). */
+  .ss-group__wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--size, 40px);
+    height: var(--size, 40px);
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: var(--card);
+    border: 3px solid var(--primary);
+    box-shadow: var(--elev-2);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: transform 0.15s ease;
+  }
+  .ss-group--idle .ss-group__wrap {
+    border: 2px dashed color-mix(in oklch, var(--muted-foreground) 80%, transparent);
+  }
+  .ss-group__count {
+    color: var(--card-foreground);
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .ss-group--idle .ss-group__count {
+    color: var(--muted-foreground);
+  }
+  /* Area caption ("Bogor +2"): a pill on the side placeCaptions() found free. */
+  .ss-group__caption {
+    position: absolute;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--background) 92%, transparent);
+    box-shadow: var(--elev-1);
+    color: var(--foreground);
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .ss-group__caption--below {
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .ss-group__caption--above {
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .ss-group__caption--right {
+    left: calc(100% + 2px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .ss-group__caption--left {
+    right: calc(100% + 2px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .ss-group__caption--below-start {
+    top: calc(100% + 2px);
+    left: 0;
+  }
+  .ss-group__caption--below-end {
+    top: calc(100% + 2px);
+    right: 0;
+  }
+  .ss-group__caption--above-start {
+    bottom: calc(100% + 2px);
+    left: 0;
+  }
+  .ss-group__caption--above-end {
+    bottom: calc(100% + 2px);
+    right: 0;
+  }
+  .leaflet-marker-icon.ss-group:hover .ss-group__wrap {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  /* Keyboard focus on map markers (the Leaflet root is a 0×0 box; ring the visible part). */
+  .leaflet-marker-icon:focus {
+    outline: none;
+  }
+  .leaflet-marker-icon:focus-visible .ss-pin__body,
+  .leaflet-marker-icon:focus-visible .ss-group__wrap,
+  .leaflet-marker-icon:focus-visible .ss-idle__wrap {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
   }
 
   .ss-user-dot {

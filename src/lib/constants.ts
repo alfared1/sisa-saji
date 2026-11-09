@@ -53,29 +53,31 @@ export const APP_TIMEZONE = "Asia/Jakarta";
  * Quick-pick search points: campus areas across Indonesia, grouped by region
  * (approximate centroids). Bogor is the platform's home base, so its hubs come
  * first and CAMPUSES[0] (IPB Dramaga) is the app's default search point.
+ * `city` groups hubs in one city (three Bogor hubs, two in Yogyakarta); `tz` is
+ * the local time zone, since surplus hours are local evening time.
  */
 export const CAMPUSES = [
-  { id: "ipb", name: "IPB Dramaga, Bogor", region: "Bogor", lat: -6.5568, lng: 106.7313 },
-  { id: "bogor", name: "Kota Bogor (Baranangsiang)", region: "Bogor", lat: -6.6016, lng: 106.8058 },
-  { id: "cibinong", name: "Cibinong, Kab. Bogor", region: "Bogor", lat: -6.4816, lng: 106.8541 },
-  { id: "ui", name: "UI Depok", region: "Jabodetabek", lat: -6.3628, lng: 106.8269 },
-  { id: "unj", name: "UNJ Rawamangun, Jakarta", region: "Jabodetabek", lat: -6.1935, lng: 106.8789 },
-  { id: "itb", name: "ITB Bandung", region: "Jawa Barat", lat: -6.8915, lng: 107.6107 },
-  { id: "unpad", name: "UNPAD Jatinangor", region: "Jawa Barat", lat: -6.9261, lng: 107.7748 },
-  { id: "ugm", name: "UGM Yogyakarta", region: "DI Yogyakarta", lat: -7.7713, lng: 110.3775 },
-  { id: "uny", name: "UNY Yogyakarta", region: "DI Yogyakarta", lat: -7.7756, lng: 110.3866 },
-  { id: "undip", name: "UNDIP Tembalang, Semarang", region: "Jawa Tengah", lat: -7.0506, lng: 110.4381 },
-  { id: "uns", name: "UNS Surakarta", region: "Jawa Tengah", lat: -7.5598, lng: 110.8565 },
-  { id: "its", name: "ITS Surabaya", region: "Jawa Timur", lat: -7.2819, lng: 112.7949 },
-  { id: "ub", name: "UB Malang", region: "Jawa Timur", lat: -7.9526, lng: 112.6145 },
-  { id: "usu", name: "USU Medan", region: "Sumatera Utara", lat: 3.562, lng: 98.6563 },
-  { id: "unand", name: "UNAND Padang", region: "Sumatera Barat", lat: -0.9146, lng: 100.46 },
-  { id: "unsri", name: "UNSRI Bukit Besar, Palembang", region: "Sumatera Selatan", lat: -2.9855, lng: 104.7322 },
-  { id: "untan", name: "UNTAN Pontianak", region: "Kalimantan Barat", lat: -0.0592, lng: 109.3459 },
-  { id: "unud", name: "Universitas Udayana, Denpasar", region: "Bali", lat: -8.6724, lng: 115.2187 },
-  { id: "unhas", name: "UNHAS Tamalanrea, Makassar", region: "Sulawesi Selatan", lat: -5.1323, lng: 119.488 },
-  { id: "unsrat", name: "UNSRAT Manado", region: "Sulawesi Utara", lat: 1.4559, lng: 124.8263 },
-  { id: "uncen", name: "UNCEN Abepura, Jayapura", region: "Papua", lat: -2.61, lng: 140.6598 },
+  { id: "ipb", name: "IPB Dramaga, Bogor", region: "Bogor", lat: -6.5568, lng: 106.7313, city: "Bogor", tz: "WIB" },
+  { id: "bogor", name: "Kota Bogor (Baranangsiang)", region: "Bogor", lat: -6.6016, lng: 106.8058, city: "Bogor", tz: "WIB" },
+  { id: "cibinong", name: "Cibinong, Kab. Bogor", region: "Bogor", lat: -6.4816, lng: 106.8541, city: "Bogor", tz: "WIB" },
+  { id: "ui", name: "UI Depok", region: "Jabodetabek", lat: -6.3628, lng: 106.8269, city: "Depok", tz: "WIB" },
+  { id: "unj", name: "UNJ Rawamangun, Jakarta", region: "Jabodetabek", lat: -6.1935, lng: 106.8789, city: "Jakarta", tz: "WIB" },
+  { id: "itb", name: "ITB Bandung", region: "Jawa Barat", lat: -6.8915, lng: 107.6107, city: "Bandung", tz: "WIB" },
+  { id: "unpad", name: "UNPAD Jatinangor", region: "Jawa Barat", lat: -6.9261, lng: 107.7748, city: "Jatinangor", tz: "WIB" },
+  { id: "ugm", name: "UGM Yogyakarta", region: "DI Yogyakarta", lat: -7.7713, lng: 110.3775, city: "Yogyakarta", tz: "WIB" },
+  { id: "uny", name: "UNY Yogyakarta", region: "DI Yogyakarta", lat: -7.7756, lng: 110.3866, city: "Yogyakarta", tz: "WIB" },
+  { id: "undip", name: "UNDIP Tembalang, Semarang", region: "Jawa Tengah", lat: -7.0506, lng: 110.4381, city: "Semarang", tz: "WIB" },
+  { id: "uns", name: "UNS Surakarta", region: "Jawa Tengah", lat: -7.5598, lng: 110.8565, city: "Surakarta", tz: "WIB" },
+  { id: "its", name: "ITS Surabaya", region: "Jawa Timur", lat: -7.2819, lng: 112.7949, city: "Surabaya", tz: "WIB" },
+  { id: "ub", name: "UB Malang", region: "Jawa Timur", lat: -7.9526, lng: 112.6145, city: "Malang", tz: "WIB" },
+  { id: "usu", name: "USU Medan", region: "Sumatera Utara", lat: 3.562, lng: 98.6563, city: "Medan", tz: "WIB" },
+  { id: "unand", name: "UNAND Padang", region: "Sumatera Barat", lat: -0.9146, lng: 100.46, city: "Padang", tz: "WIB" },
+  { id: "unsri", name: "UNSRI Bukit Besar, Palembang", region: "Sumatera Selatan", lat: -2.9855, lng: 104.7322, city: "Palembang", tz: "WIB" },
+  { id: "untan", name: "UNTAN Pontianak", region: "Kalimantan Barat", lat: -0.0592, lng: 109.3459, city: "Pontianak", tz: "WIB" },
+  { id: "unud", name: "Universitas Udayana, Denpasar", region: "Bali", lat: -8.6724, lng: 115.2187, city: "Denpasar", tz: "WITA" },
+  { id: "unhas", name: "UNHAS Tamalanrea, Makassar", region: "Sulawesi Selatan", lat: -5.1323, lng: 119.488, city: "Makassar", tz: "WITA" },
+  { id: "unsrat", name: "UNSRAT Manado", region: "Sulawesi Utara", lat: 1.4559, lng: 124.8263, city: "Manado", tz: "WITA" },
+  { id: "uncen", name: "UNCEN Abepura, Jayapura", region: "Papua", lat: -2.61, lng: 140.6598, city: "Jayapura", tz: "WIT" },
 ] as const;
 
 /** The platform's home region: its hubs lead every list and get the most demo data. */

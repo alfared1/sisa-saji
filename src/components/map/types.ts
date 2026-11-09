@@ -8,6 +8,7 @@ import {
   type DiscountBadgeState,
 } from "@/components/common/discount-logic";
 import type { MapPin, MerchantSummary } from "@/lib/contracts";
+import type { CaptionPlacement } from "./cluster";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -28,6 +29,8 @@ export type SurplusMapMarker = {
   /** ISO pickup_end_time (latest among active batches); null = unknown. */
   closes_at: string | null;
   is_verified?: boolean;
+  /** Short place name (hub city) for group captions on the nationwide map. */
+  area?: string;
 };
 
 export function markerFromPin(pin: MapPin): SurplusMapMarker {
@@ -126,6 +129,48 @@ export function pinHtml(marker: SurplusMapMarker, state: PinState, badge: Discou
     `<span class="ss-pin__pct">${pctLabel}</span>` +
     `<span class="ss-pin__stock">${stockLabel}</span>` +
     `</div><div class="ss-pin__tail"></div></div>`
+  );
+}
+
+/** A warung without live surplus right now: a small muted marker. */
+export type IdleMapMarker = { id: string; lat: number; lng: number; name: string; area?: string };
+
+/** Accessible name / tooltip of a live pin. */
+export function pinLabel(marker: SurplusMapMarker, badge: DiscountBadgeState | null): string {
+  return `${marker.name}: ${badge ? badge.label : `diskon ${Math.round(marker.discount_pct)}%`}, sisa ${marker.stock} porsi`;
+}
+
+export function idleLabel(name: string): string {
+  return `${name}: belum ada surplus saat ini`;
+}
+
+export function idleClassName(selected: boolean): string {
+  return selected ? "ss-idle ss-idle--selected" : "ss-idle";
+}
+
+export const IDLE_HTML = '<div class="ss-idle__wrap"><span class="ss-idle__dot"></span></div>';
+
+/** "Bogor +2: 28 warung, 26 ada surplus. Perbesar peta ke sini" (no "porsi": e2e tells pins apart by it). */
+export function groupLabel(count: number, live: number, caption?: string): string {
+  const status = live === 0 ? "belum ada surplus" : live === count ? "semua ada surplus" : `${live} ada surplus`;
+  return `${caption ? `${caption}: ` : ""}${count} warung, ${status}. Perbesar peta ke sini`;
+}
+
+/** Live groups get a solid green ring, all-idle groups a dashed grey one (shape, not only colour). */
+export function groupClassName(live: number): string {
+  return live > 0 ? "ss-group ss-group--live" : "ss-group ss-group--idle";
+}
+
+export type GroupCaptionHtml = { text: string; placement: CaptionPlacement };
+
+/** Count bubble, with the area caption (aria-hidden: the marker label says it) on a free side. */
+export function groupHtml(count: number, sizePx: number, caption?: GroupCaptionHtml | null): string {
+  const cap = caption
+    ? `<span class="ss-group__caption ss-group__caption--${caption.placement}" aria-hidden="true">${escapeHtml(caption.text)}</span>`
+    : "";
+  return (
+    `<div class="ss-group__wrap" data-count="${count}" style="--size:${sizePx}px">` +
+    `<span class="ss-group__count">${count}</span>${cap}</div>`
   );
 }
 

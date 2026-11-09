@@ -46,6 +46,11 @@ export function nearestCampus(
   return best && best.distanceM <= maxDistanceM ? best : null;
 }
 
+/** Local time zone label (WIB / WITA / WIT) of the hub nearest to a point; surplus hours are local time. */
+export function localTimeZone(point: { lat: number; lng: number }): Campus["tz"] {
+  return nearestCampus(point)?.campus.tz ?? "WIB";
+}
+
 export function isHomeRegion(region: string): boolean {
   return region === HOME_REGION;
 }

@@ -315,6 +315,50 @@ export type MapPin = {
 };
 export type MapPinsResponse = { pins: MapPin[] };
 
+/**
+ * GET /api/v1/discover/map-pins/all?lat&lng — public. Every warung on the
+ * platform (the nationwide "Seluruh Indonesia" map), with or without live
+ * surplus. lat/lng are optional (both or neither) and only add `distance_m`.
+ */
+export const AllMapPinsQuery = z
+  .object({ lat: lat.optional(), lng: lng.optional() })
+  .refine((q) => (q.lat === undefined) === (q.lng === undefined), {
+    message: "lat dan lng harus dikirim bersama",
+    path: ["lat"],
+  });
+export type AllMapPinsQuery = z.input<typeof AllMapPinsQuery>;
+
+/** Upper bound of GET /discover/map-pins/all (live warung come first, so they are never cut). */
+export const ALL_MAP_PINS_LIMIT = 2000;
+
+export type WarungMapPin = {
+  merchant_id: string;
+  slug: string;
+  merchant_name: string;
+  category: MenuCategory;
+  lat: number;
+  lng: number;
+  /** Nearest campus/city hub (a CampusId from src/lib/constants.ts); null when far from every hub. */
+  hub_id: string | null;
+  is_verified: boolean;
+  is_open: boolean;
+  rating_avg: number;
+  total_reviews: number;
+  /** Has at least one live batch now (warung open, ACTIVE, stock > 0, before pickup_end_time). */
+  live: boolean;
+  /** Live batches (menus) right now; 0 when idle. */
+  live_menu_count: number;
+  total_available_stock: number;
+  max_discount_pct: number;
+  /** Cheapest live recovery price; 0 when idle. */
+  min_price_idr: number;
+  /** Soonest pickup_end_time among live batches; null when idle. */
+  pickup_end_time: string | null;
+  /** Meters from lat/lng when given, otherwise null. */
+  distance_m: number | null;
+};
+export type AllMapPinsResponse = { pins: WarungMapPin[]; truncated: boolean };
+
 export type ReviewItem = {
   id: string;
   rating: number;

@@ -44,6 +44,13 @@ test.describe("discovery", () => {
 
   test("map shows pins and opens the warung bottom sheet", async ({ page }) => {
     await page.goto("/map");
+    // /map opens on all of Indonesia; re-picking the stored campus (IPB Dramaga)
+    // in "Ambil di sekitar" switches to the 2 km radius pins.
+    await expect(page.getByRole("button", { name: /^Lokasi: Seluruh Indonesia/ })).toBeVisible();
+    await page.getByRole("button", { name: /^Lokasi: / }).click();
+    await page.getByRole("dialog", { name: "Lokasi pencarian" }).getByRole("button", { name: "IPB Dramaga, Bogor" }).click();
+    await expect(page.getByRole("button", { name: /^Lokasi: IPB Dramaga, Bogor/ })).toBeVisible();
+
     const pins = page.locator(".leaflet-marker-icon[title*='porsi']");
     // Leaflet DivIcon roots are 0×0 boxes (the pill is an overflowing child), so
     // assert attachment and dispatch the click Leaflet listens for.

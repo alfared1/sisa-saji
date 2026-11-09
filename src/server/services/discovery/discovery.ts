@@ -1,6 +1,6 @@
 /**
- * Customer discovery: PostGIS radius search over live surplus batches, map pins,
- * merchant detail, favourites and the SSE change feed.
+ * Customer discovery: PostGIS radius search over live surplus batches, map pins
+ * (radius and nationwide), merchant detail, favourites and the SSE change feed.
  *
  * "Live" batch = merchant is_open, batch ACTIVE, available_stock > 0, pickup_end_time > now.
  */
@@ -9,6 +9,8 @@ import { and, desc, eq, sql, type SQL } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { customerMerchantSubscriptions, merchants, reviews, users } from "@/db/schema";
+import { nearestCampus } from "@/lib/campuses";
+import { ALL_MAP_PINS_LIMIT } from "@/lib/contracts";
 import type {
   BatchCard,
   BatchStatus,
@@ -21,6 +23,7 @@ import type {
   MerchantTier,
   ReviewItem,
   SubscribeBody,
+  WarungMapPin,
 } from "@/lib/contracts";
 import { ApiError } from "@/server/http";
 import { abbreviateName } from "@/server/services/auth/identifier";
@@ -259,6 +262,89 @@ export async function findMapPins(db: Db, q: DiscoverInput, now: Date = new Date
     pickup_end_time: earliestEnd(m),
     is_verified: m.is_verified,
   }));
+}
+
+/** A warung farther than this from every campus hub gets `hub_id: null`. */
+export const HUB_MAX_DISTANCE_M = 50_000;
+
+type AllPinRow = {
+  merchant_id: string;
+  slug: string;
+  merchant_name: string;
+  category: MenuCategory;
+  lat: number;
+  lng: number;
+  is_verified: boolean;
+  is_open: boolean;
+  rating_avg: string | number;
+  total_reviews: number;
+  live_menu_count: number | string | null;
+  total_available_stock: number | string | null;
+  max_discount_pct: number | string | null;
+  min_price_idr: number | string | null;
+  pickup_end_time: Date | string | null;
+  distance_m: number | string | null;
+};
+
+/**
+ * Every warung for the nationwide map in one query: merchants LEFT JOIN their live
+ * batches aggregated per merchant. Live warung sort first, so the cap never drops one.
+ */
+export async function findAllMapPins(
+  db: Db,
+  q: { lat?: number; lng?: number },
+  now: Date = new Date(),
+  limit: number = ALL_MAP_PINS_LIMIT,
+): Promise<{ pins: WarungMapPin[]; truncated: boolean }> {
+  const distance =
+    q.lat !== undefined && q.lng !== undefined ? sql`ST_Distance(m.geom, ${point(q.lat, q.lng)})` : sql`NULL::float8`;
+  const { rows } = await db.execute<AllPinRow>(sql`
+    SELECT m.id AS merchant_id, m.slug, m.merchant_name, m.merchant_category AS category,
+           m.latitude AS lat, m.longitude AS lng, m.merchant_verified AS is_verified, m.is_open,
+           m.rating_avg, m.total_reviews,
+           l.live_menu_count, l.total_available_stock, l.max_discount_pct, l.min_price_idr, l.pickup_end_time,
+           ${distance} AS distance_m
+    FROM merchants m
+    LEFT JOIN (
+      SELECT b.merchant_id,
+             COUNT(*) AS live_menu_count,
+             SUM(b.available_stock) AS total_available_stock,
+             MAX(b.current_discount_pct) AS max_discount_pct,
+             MIN(b.current_selling_price_idr) AS min_price_idr,
+             MIN(b.pickup_end_time) AS pickup_end_time
+      FROM surplus_batches b
+      WHERE b.status = 'ACTIVE' AND b.available_stock > 0 AND b.pickup_end_time > ${now}
+      GROUP BY b.merchant_id
+    ) l ON l.merchant_id = m.id AND m.is_open
+    ORDER BY (l.merchant_id IS NOT NULL) DESC, m.created_at ASC, m.id ASC
+    LIMIT ${limit + 1}`);
+
+  const pins = rows.slice(0, limit).map((r): WarungMapPin => {
+    const lat = Number(r.lat);
+    const lng = Number(r.lng);
+    const live = r.live_menu_count !== null && Number(r.live_menu_count) > 0;
+    return {
+      merchant_id: r.merchant_id,
+      slug: r.slug,
+      merchant_name: r.merchant_name,
+      category: r.category,
+      lat,
+      lng,
+      hub_id: nearestCampus({ lat, lng }, HUB_MAX_DISTANCE_M)?.campus.id ?? null,
+      is_verified: r.is_verified,
+      is_open: r.is_open,
+      rating_avg: Number(r.rating_avg),
+      total_reviews: Number(r.total_reviews),
+      live,
+      live_menu_count: live ? Number(r.live_menu_count) : 0,
+      total_available_stock: live ? Number(r.total_available_stock) : 0,
+      max_discount_pct: live ? Number(r.max_discount_pct) : 0,
+      min_price_idr: live ? Number(r.min_price_idr) : 0,
+      pickup_end_time: live && r.pickup_end_time ? toDate(r.pickup_end_time).toISOString() : null,
+      distance_m: roundDistance(r.distance_m),
+    };
+  });
+  return { pins, truncated: rows.length > limit };
 }
 
 /** Resolves a slug or uuid to a merchant id (null when not found). */
