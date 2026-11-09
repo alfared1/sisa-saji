@@ -26,7 +26,8 @@
     "ml:train": "tsx scripts/ml-run.ts",
     "setup:secrets": "tsx scripts/gen-secrets.ts",
     "demo": "tsx scripts/demo.ts start",
-    "demo:reseed": "tsx scripts/demo.ts reseed"
+    "demo:reseed": "tsx scripts/demo.ts reseed",
+    "vercel-build": "tsx scripts/db-migrate.ts && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",

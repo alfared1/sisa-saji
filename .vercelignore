@@ -1,0 +1,12 @@
+# Keep CLI uploads small: local data, builds, Python env and test output.
+.pglite*
+.next
+.next-*
+.venv
+ml/artifacts
+test-results
+playwright-report
+tsconfig.*.local.json
+.env
+.env.*
+!.env.example
