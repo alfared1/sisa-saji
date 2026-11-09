@@ -1,4 +1,5 @@
 import "server-only";
+import { attachDatabasePool } from "@vercel/functions";
 import { getDatabaseUrl } from "@/lib/env";
 import { createDb, type Db } from "./client";
 
@@ -8,8 +9,14 @@ import { createDb, type Db } from "./client";
 const globalForDb = globalThis as unknown as { sisaSajiDb?: Db };
 
 export function getDb(): Db {
-  // Serverless (Vercel): keep the per-instance pool small and use a pooled DATABASE_URL.
-  globalForDb.sisaSajiDb ??= createDb(getDatabaseUrl(), { max: Number(process.env.DB_POOL_MAX) || 10 }).db;
+  if (!globalForDb.sisaSajiDb) {
+    // Neon: DATABASE_URL is the pooled (-pooler, PgBouncer) string for app traffic.
+    // Serverless instances keep their pool small (DB_POOL_MAX).
+    const { db, pool } = createDb(getDatabaseUrl(), { max: Number(process.env.DB_POOL_MAX) || 10 });
+    // Vercel Fluid compute: keep the instance alive until idle connections are released.
+    if (process.env.VERCEL) attachDatabasePool(pool);
+    globalForDb.sisaSajiDb = db;
+  }
   return globalForDb.sisaSajiDb;
 }
 

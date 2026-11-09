@@ -60,3 +60,4 @@ __pycache__/
 
 # per-dist-dir tsconfig written by next.config.ts (NEXT_DIST_DIR runs)
 /tsconfig.*.local.json
+.neon

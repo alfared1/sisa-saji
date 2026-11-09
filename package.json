@@ -31,7 +31,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",
+    "@neon/config": "^1.13.0",
+    "@neon/env": "^2.1.0",
     "@tanstack/react-query": "^5.107.1",
+    "@vercel/functions": "^3.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cn": "^0.5.2",
