@@ -117,12 +117,13 @@ export function StoreStatusHeader({
               className="mr-1 scale-125"
             />
           </label>
-          <div className="flex min-h-16 min-w-0 items-center gap-2.5 rounded-2xl bg-surface px-3.5 py-2 ring-1 ring-border lg:min-w-48">
-            <WalletIcon className="size-5 shrink-0 text-primary" aria-hidden />
-            <span className="min-w-0">
-              <span className="block text-[11px] font-semibold text-muted-foreground">Saldo warung</span>
-              <span className="block truncate text-base leading-tight font-extrabold tabular-nums">{formatIdr(merchant.wallet_balance_idr)}</span>
+          {/* Icon on the label line, so the amount gets the full tile width ("Rp 2.637.5…" was cut on phones). */}
+          <div className="flex min-h-16 min-w-0 flex-col justify-center rounded-2xl bg-surface px-3.5 py-2 ring-1 ring-border lg:min-w-48">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+              <WalletIcon className="size-3.5 shrink-0 text-primary" aria-hidden />
+              Saldo warung
             </span>
+            <span className="block truncate text-base leading-tight font-extrabold tabular-nums sm:text-lg">{formatIdr(merchant.wallet_balance_idr)}</span>
           </div>
           <div className="hidden lg:flex lg:items-center"><div className="flex shrink-0 gap-1.5">
             <Link

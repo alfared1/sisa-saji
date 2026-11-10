@@ -68,13 +68,13 @@ export function clockValue(ms: number): string {
   return wibTime(new Date(ms));
 }
 
-/** "2 j 15 m" / "45 menit" duration label. */
+/** "2j 15m" (same style as the app's countdowns) / "2 jam" / "45 menit" duration label. */
 export function formatDuration(minutes: number): string {
   const m = Math.max(0, Math.round(minutes));
   if (m < 60) return `${m} menit`;
   const h = Math.floor(m / 60);
   const r = m % 60;
-  return r ? `${h} j ${r} m` : `${h} jam`;
+  return r ? `${h}j ${r}m` : `${h} jam`;
 }
 
 /* ------------------------------------------------------------------ */

@@ -144,8 +144,8 @@ export function PaymentView({ order }: { order: OrderDetail }) {
             <HourglassIcon className={cn("size-5", !timesUp && "animate-soft-pulse")} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">Selesaikan pembayaran dalam</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm font-bold text-balance">Selesaikan pembayaran dalam</p>
+            <p className="text-xs text-balance text-muted-foreground">
               Stok dikunci untukmu sampai {formatClockId(order.payment_expires_at)} WIB
             </p>
           </div>

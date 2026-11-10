@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRightIcon, MapPinIcon, StarIcon } from "lucide-react";
+import { BadgeCheckIcon, ChevronRightIcon, MapPinIcon, StarIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { StockBadge } from "@/components/common/stock-badge";
@@ -51,7 +51,9 @@ export function MerchantCard({
     <Link
       href={`/warung/${merchant.slug}`}
       className={cn(
-        "group flex gap-3 rounded-3xl bg-card p-3 shadow-soft ring-1 ring-border transition-all outline-none hover:shadow-card focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.99]",
+        "group flex gap-3 rounded-3xl transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.99]",
+        // The sheet variant sits flat inside the map preview, which is already a card.
+        variant === "list" && "bg-card p-3 shadow-soft ring-1 ring-border hover:shadow-card",
         soldOut && "opacity-70",
         className,
       )}
@@ -68,10 +70,20 @@ export function MerchantCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
           <h3 className="truncate text-[15px] font-bold">{merchant.name}</h3>
-          {merchant.is_verified && <VerifiedBadge compact />}
+          {merchant.is_verified &&
+            (variant === "sheet" ? (
+              // Static icon, not the tooltip badge: the preview sheet focuses its first control on open.
+              <BadgeCheckIcon
+                className="size-4 shrink-0 text-sky-600 dark:text-sky-400"
+                aria-label="Mitra Terverifikasi"
+                role="img"
+              />
+            ) : (
+              <VerifiedBadge compact />
+            ))}
         </div>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-0.5 font-semibold text-foreground">
+          <span className="inline-flex items-center gap-1 font-semibold text-foreground">
             <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
             {formatRating(merchant.rating_avg)}
           </span>
@@ -79,8 +91,8 @@ export function MerchantCard({
           {merchant.distance_m !== null && (
             <>
               <span aria-hidden>·</span>
-              <span className="inline-flex items-center gap-0.5">
-                <MapPinIcon className="size-3" aria-hidden />
+              <span className="inline-flex items-center gap-1">
+                <MapPinIcon className="size-3.5" aria-hidden />
                 {formatDistance(merchant.distance_m)}
                 {walk !== null && <span className="hidden min-[380px]:inline"> · {walk} mnt jalan</span>}
               </span>

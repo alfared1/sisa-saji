@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { GiftIcon, MegaphoneIcon, PencilIcon, PlusIcon, ScaleIcon, UtensilsCrossedIcon } from "lucide-react";
+import { GiftIcon, MegaphoneIcon, PencilIcon, PlusIcon, ScaleIcon, ShieldCheckIcon, TagIcon, UtensilsCrossedIcon } from "lucide-react";
 import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState, errorMessage } from "@/components/common/error-state";
@@ -75,11 +75,15 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
       {menu.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{menu.description}</p>}
       <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
         <div className="rounded-2xl bg-surface p-2.5">
-          <dt className="text-[11px] text-muted-foreground">Normal</dt>
+          <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <TagIcon className="size-3" aria-hidden /> Normal
+          </dt>
           <dd className="font-extrabold tabular-nums">{formatIdr(menu.original_price_idr)}</dd>
         </div>
         <div className="rounded-2xl bg-surface p-2.5">
-          <dt className="text-[11px] text-muted-foreground">Minimum</dt>
+          <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <ShieldCheckIcon className="size-3" aria-hidden /> Minimum
+          </dt>
           <dd className="font-extrabold tabular-nums">
             {formatIdr(menu.min_recovery_price_idr)} <span className="text-[11px] font-semibold text-muted-foreground">{floorPct}%</span>
           </dd>
@@ -225,13 +229,14 @@ export function MerchantMenusView() {
       <Sheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
         <SheetContent
           side={isDesktop ? "right" : "bottom"}
-          className={cn("overflow-y-auto", isDesktop ? "w-full sm:max-w-lg" : "max-h-[92dvh] rounded-t-3xl pb-[env(safe-area-inset-bottom)]")}
+          className={cn("overflow-hidden", isDesktop ? "data-[side=right]:sm:max-w-lg" : "max-h-[92dvh] rounded-t-3xl pb-[env(safe-area-inset-bottom)]")}
         >
           <SheetHeader className="px-5 pt-5 pb-0">
             <SheetTitle className="text-xl font-extrabold">{editing?.mode === "edit" ? "Ubah menu" : "Menu baru"}</SheetTitle>
             <SheetDescription>{editing?.mode === "edit" ? editing.menu.menu_name : "Cukup sekali — setelah ini publikasi surplus tinggal 3 ketukan."}</SheetDescription>
           </SheetHeader>
-          <div className="px-5 pb-6">
+          {/* Only the form scrolls, so the title and the close button stay in view. */}
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
             {editing && (
               <MenuForm
                 key={editing.mode === "edit" ? editing.menu.id : "new"}

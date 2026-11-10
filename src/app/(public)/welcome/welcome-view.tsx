@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
+  Clock3Icon,
   CloudIcon,
   LeafIcon,
   MapPinnedIcon,
@@ -14,7 +15,6 @@ import {
   StoreIcon,
   WalletIcon,
 } from "lucide-react";
-import { DiscountBadge } from "@/components/common/discount-badge";
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
@@ -144,15 +144,16 @@ function DealPreview() {
         <div className="flex gap-3">
           <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.9_0.08_70)] to-[oklch(0.8_0.12_45)]">
             <ShoppingBagIcon className="size-8 text-white drop-shadow" />
-            <DiscountBadge pct={60} size="sm" className="absolute top-1.5 left-1.5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold">Nasi Timbel Ayam Goreng</p>
             <p className="truncate text-xs text-muted-foreground">Warung Nasi Teh Euis · 240 m</p>
-            <PriceTag original={18000} selling={7000} showBadge={false} className="mt-1.5" />
+            {/* Badge beside the price: inside the 80 px photo it was clipped ("Hemat 60…"). */}
+            <PriceTag original={18000} selling={7000} discountPct={60} className="mt-1.5" />
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <StockBadge available={3} />
               <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-1 text-xs leading-none font-semibold text-urgent tabular-nums">
+                <Clock3Icon className="size-3.5 shrink-0" aria-hidden />
                 Tutup 00:38:12
               </span>
             </div>
@@ -213,7 +214,7 @@ export function WelcomeView() {
           </Button>
         </header>
 
-        <div className="grid gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:pt-12">
+        <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:pt-12">
           <section className="space-y-5">
             <span className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft ring-1 ring-border">
               <span className="size-2 animate-soft-pulse rounded-full bg-deal" />
@@ -238,7 +239,7 @@ export function WelcomeView() {
               menjelang tutup. Hemat hingga 70%, ambil sendiri dalam 3 menit.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {ROLE_CARDS.map(({ href, title, body, icon: Icon, tone, iconTone, cta }) => (
                 <Link
                   key={href}
@@ -275,7 +276,7 @@ export function WelcomeView() {
             Cara kerjanya
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">Tiga langkah, kurang dari 3 menit.</p>
-          <ol className="mt-4 grid gap-3 lg:grid-cols-3">
+          <ol className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
             {STEPS.map(({ icon: Icon, title, body }, i) => (
               <li key={title} className="flex gap-3 rounded-3xl bg-card p-4 ring-1 ring-border">
                 <span className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-primary">

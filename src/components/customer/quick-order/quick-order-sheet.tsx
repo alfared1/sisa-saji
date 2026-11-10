@@ -22,12 +22,12 @@ import {
   QrCodeIcon,
   ShoppingBagIcon,
   SparklesIcon,
-  SproutIcon,
   StoreIcon,
 } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { useAddToCart } from "@/components/common/diff-merchant-dialog";
 import { DiscountBadge } from "@/components/common/discount-badge";
+import { ImpactLine } from "@/components/common/impact-line";
 import { PriceTag } from "@/components/common/price-tag";
 import {
   ResponsiveSheet,
@@ -43,7 +43,6 @@ import { useCountdown } from "@/hooks/use-countdown";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
 import type { BatchCard, CheckoutResponse } from "@/lib/contracts";
-import { co2GramsFromFoodGrams, formatKg } from "@/lib/impact";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { QtyStepper } from "../bits";
@@ -313,10 +312,10 @@ function QuickOrderBody({
           {!soldOut && <CountdownBadge endIso={batch.pickup_end_time} />}
         </div>
 
-        <p className="mt-3 flex items-center gap-1.5 rounded-2xl bg-brand-soft/70 px-3 py-2.5 text-xs font-semibold text-secondary-foreground">
-          <SproutIcon className="size-4 shrink-0 text-primary" aria-hidden />
-          Selamatkan {foodGrams.toLocaleString("id-ID")} g pangan • −{formatKg(co2GramsFromFoodGrams(foodGrams))} CO₂e
-        </p>
+        <ImpactLine
+          foodGrams={foodGrams}
+          className="mt-3 rounded-2xl bg-brand-soft/70 px-3 py-2.5 text-xs text-secondary-foreground"
+        />
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-muted/70 p-3">
           <div className="min-w-0">

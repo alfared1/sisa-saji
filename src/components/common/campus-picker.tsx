@@ -78,7 +78,8 @@ export function CampusPicker({
                 </span>
               )}
             </h4>
-            <div className="grid grid-cols-2 gap-2">
+            {/* Two columns where a button gets ≥ 10rem (location sheet), one in the narrow profile editor. */}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
               {g.campuses.map((c) => {
                 const active = value === c.id;
                 return (
@@ -96,7 +97,7 @@ export function CampusPicker({
                       className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")}
                       aria-hidden
                     />
-                    <span className="min-w-0 flex-1 leading-tight [overflow-wrap:anywhere]">{c.name}</span>
+                    <span className="min-w-0 flex-1 leading-tight break-words">{c.name}</span>
                     {active && <CheckIcon className="size-4 shrink-0 text-primary" aria-hidden />}
                   </button>
                 );

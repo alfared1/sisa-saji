@@ -213,7 +213,7 @@ export function HoursSection({ form, idPrefix = "hrs" }: { form: ProfileForm; id
   const fields = [
     { name: "operational_open_time", label: "Jam buka", hint: "Warung mulai melayani" },
     { name: "operational_close_time", label: "Jam tutup", hint: "Default batas ambil surplus" },
-    { name: "default_surplus_start_time", label: "Mulai surplus", hint: "Biasanya 20.00 WIB" },
+    { name: "default_surplus_start_time", label: "Mulai surplus", hint: "Saat sisa biasanya mulai ada" },
   ] as const;
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -260,7 +260,7 @@ export function BankSection({
           control={control}
           name="bank_code"
           render={({ field }) => (
-            <div role="radiogroup" aria-label="Bank atau e-wallet" className="flex flex-wrap gap-2">
+            <div role="radiogroup" aria-label="Bank atau e-wallet" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {options.map((b) => (
                 <button
                   key={b}
@@ -269,7 +269,7 @@ export function BankSection({
                   aria-checked={field.value === b}
                   onClick={() => field.onChange(field.value === b ? "" : b)}
                   className={cn(
-                    "h-10 rounded-full px-4 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "h-10 truncate rounded-full px-3 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     field.value === b ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
                   )}
                 >
@@ -306,7 +306,7 @@ export function BankSection({
           <Label htmlFor={id("holder")} className="text-sm font-semibold">
             Nama pemilik
           </Label>
-          <Input id={id("holder")} autoComplete="name" placeholder="Euis Kurniasih" className="h-12 rounded-2xl bg-card text-base" {...register("bank_account_holder")} />
+          <Input id={id("holder")} autoComplete="name" placeholder="Nama sesuai rekening" className="h-12 rounded-2xl bg-card text-base" {...register("bank_account_holder")} />
           <FieldError>{e.bank_account_holder?.message}</FieldError>
         </div>
       </div>

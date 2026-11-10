@@ -143,7 +143,7 @@ export function PickupScanView() {
         }
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
         <div className="min-w-0 space-y-4">
           <QrScanner paused={stage.kind !== "idle" || lookup.isPending} onDecode={(t) => check(t, "camera")} className="mx-auto max-w-md lg:max-w-none" />
 
@@ -184,7 +184,8 @@ export function PickupScanView() {
                   onComplete={(v: string) => check(v, "pin")}
                   disabled={lookup.isPending}
                 >
-                  <InputOTPGroup className="gap-2">
+                  {/* The slots are separate pills with their own red border, so drop the group-wide invalid ring. */}
+                  <InputOTPGroup className="gap-2 has-aria-invalid:ring-0">
                     {[0, 1, 2, 3].map((i) => (
                       <InputOTPSlot
                         key={i}

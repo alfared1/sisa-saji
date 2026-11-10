@@ -212,7 +212,7 @@ export function VerifyForm() {
             disabled={verify.isPending}
             containerClassName="gap-2"
           >
-            <InputOTPGroup className="gap-2">
+            <InputOTPGroup className="gap-2 has-aria-invalid:ring-0">
               {Array.from({ length: OTP_LENGTH }, (_, i) => (
                 <InputOTPSlot
                   key={i}
@@ -226,7 +226,12 @@ export function VerifyForm() {
         </div>
 
         {error && (
-          <Alert variant="destructive" className="rounded-2xl">
+          <Alert
+            variant="destructive"
+            // Tinted fill instead of a white bordered pill (which read as an input);
+            // darker text keeps ≥ 4.5:1 on the tint.
+            className="rounded-2xl border-0 bg-urgent-soft *:data-[slot=alert-description]:text-red-700 dark:*:data-[slot=alert-description]:text-red-300"
+          >
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}

@@ -90,17 +90,29 @@ export function DealTile({
             {batch.merchant_name}
             {batch.distance_m !== null && <> · {formatDistance(batch.distance_m)}</>}
           </p>
-          <PriceTag
-            original={batch.original_price_idr}
-            selling={batch.selling_price_idr}
-            showBadge={false}
-            size="sm"
-            className="pr-9"
-          />
-          <p className={cn("text-[11px] font-semibold", batch.available_stock <= 3 ? "text-deal" : "text-muted-foreground")}>
-            {batch.available_stock <= 3 ? "Hampir Habis! " : ""}Sisa {batch.available_stock} porsi
-          </p>
-          <ImpactLine portionWeightGrams={batch.portion_weight_grams} className="pr-10 text-[10.5px]" />
+          {/*
+            Impact runs full width; price + stock sit beside the add button. min-h-12
+            keeps this block at least as tall as the button + ring, so a one-line
+            impact never sits on top of the button on wide tiles.
+          */}
+          <ImpactLine portionWeightGrams={batch.portion_weight_grams} className="text-[10.5px]" />
+          <div className="min-h-12 space-y-0.5 pt-0.5 pr-12">
+            <PriceTag
+              original={batch.original_price_idr}
+              selling={batch.selling_price_idr}
+              showBadge={false}
+              size="sm"
+            />
+            <p
+              className={cn(
+                "flex flex-wrap gap-x-1 text-[11px] leading-snug font-semibold",
+                batch.available_stock <= 3 ? "text-deal" : "text-muted-foreground",
+              )}
+            >
+              {batch.available_stock <= 3 && <span className="whitespace-nowrap">Hampir Habis!</span>}
+              <span className="whitespace-nowrap">Sisa {batch.available_stock} porsi</span>
+            </p>
+          </div>
         </div>
       </Body>
       <button

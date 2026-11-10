@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiClientError, api } from "@/lib/api/client";
 import { shouldRetry } from "@/components/providers/query-client";
@@ -8,6 +9,10 @@ import { useTicketsStore } from "@/stores/tickets";
 import type { AuthMeResponse, SessionUser } from "@/lib/contracts";
 
 export const SESSION_QUERY_KEY = ["auth", "me"] as const;
+
+const noopSubscribe = () => () => {};
+const isClientSnapshot = () => true;
+const isServerSnapshot = () => false;
 
 export function fetchSession(): Promise<AuthMeResponse> {
   return api.get<AuthMeResponse>("/auth/me");
@@ -79,11 +84,16 @@ export function useSession(): SessionState {
     },
   });
 
-  const user = query.data?.user ?? null;
+  // The shell (nav, badges) starts /auth/me before a page segment hydrates, so the
+  // answer can already be cached when that segment's first client render runs.
+  // Until hydration is over, report what the server rendered (loading, no user),
+  // otherwise React throws a hydration mismatch and re-renders the page.
+  const hydrated = useSyncExternalStore(noopSubscribe, isClientSnapshot, isServerSnapshot);
+  const user = hydrated ? (query.data?.user ?? null) : null;
   return {
     user,
-    isLoading: query.isPending,
-    isError: query.isError,
+    isLoading: !hydrated || query.isPending,
+    isError: hydrated && query.isError,
     error: query.error,
     isLoggedIn: user !== null,
     isMerchant: user?.role === "MERCHANT" || Boolean(user?.merchant_id),

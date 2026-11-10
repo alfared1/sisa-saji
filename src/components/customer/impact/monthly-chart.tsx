@@ -155,7 +155,9 @@ export function MonthlyImpactChart({
             size={DESKTOP_SIZE}
             className="mt-5 hidden h-auto w-full lg:block"
           />
-          <table className="sr-only">
+          {/* sr-only on a wrapper: a <table> can't shrink to 1px, so on 360px phones it widened the page. */}
+          <div className="sr-only">
+          <table>
             <caption>Dampak per bulan</caption>
             <thead>
               <tr>
@@ -178,6 +180,7 @@ export function MonthlyImpactChart({
               ))}
             </tbody>
           </table>
+          </div>
         </>
       )}
     </section>

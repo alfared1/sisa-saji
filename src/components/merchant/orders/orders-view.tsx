@@ -36,7 +36,9 @@ function groupByDate(orders: OrderDetail[]): [string, OrderDetail[]][] {
     arr.push(o);
     map.set(d, arr);
   }
-  return [...map.entries()];
+  // Within a day, newest first by the time the card shows (pickup time, else order time).
+  const shownAt = (o: OrderDetail) => Date.parse(o.picked_up_at ?? o.created_at);
+  return [...map.entries()].map(([d, list]) => [d, list.sort((a, b) => shownAt(b) - shownAt(a))]);
 }
 
 function OrderList({ orders }: { orders: OrderDetail[] }) {
@@ -116,7 +118,7 @@ export function MerchantOrdersView() {
 
       {tab === "history" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="relative inline-flex h-11 items-center gap-2 rounded-full bg-card pr-2 pl-4 text-sm font-semibold ring-1 ring-border">
+          <label className="relative inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold ring-1 ring-border">
             <CalendarIcon className="size-4 text-primary" aria-hidden />
             <span className="sr-only">Filter tanggal</span>
             <input

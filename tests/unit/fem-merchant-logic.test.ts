@@ -72,7 +72,7 @@ describe("pickup window defaults", () => {
     expect(ceilTo5Minutes(Date.parse("2026-11-08T11:05:00Z"))).toBe(Date.parse("2026-11-08T11:05:00Z"));
     expect(formatDuration(45)).toBe("45 menit");
     expect(formatDuration(120)).toBe("2 jam");
-    expect(formatDuration(135)).toBe("2 j 15 m");
+    expect(formatDuration(135)).toBe("2j 15m");
   });
 });
 

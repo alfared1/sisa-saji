@@ -275,23 +275,20 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                 <SubscribeButton merchant={m} />
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              {/* No "·" between the groups (the footprints icon separates them), so none is left dangling on a wrap. */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                 <span className="inline-flex items-center gap-1 font-bold">
                   <StarIcon className="size-4 fill-amber-400 text-amber-400" aria-hidden />
                   {formatRating(m.rating_avg)}
+                  <span className="font-normal text-muted-foreground">({m.total_reviews} ulasan)</span>
                 </span>
-                <span className="text-muted-foreground">({m.total_reviews} ulasan)</span>
                 {m.distance_m !== null && (
-                  <>
-                    <span className="text-muted-foreground" aria-hidden>
-                      ·
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-muted-foreground">
-                      <FootprintsIcon className="size-3.5" aria-hidden />
-                      {formatDistance(m.distance_m)}
-                      {walk !== null && ` · ${walk} mnt jalan kaki`}
-                    </span>
-                  </>
+                  <span className="inline-flex items-center gap-1 text-muted-foreground">
+                    <FootprintsIcon className="size-3.5" aria-hidden />
+                    {formatDistance(m.distance_m)}
+                    {/* Walking time only where walking is realistic (e.g. not 674 km away). */}
+                    {walk !== null && walk <= 60 && ` · ${walk} mnt jalan kaki`}
+                  </span>
                 )}
               </div>
               <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">

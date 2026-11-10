@@ -4,7 +4,7 @@
  * /orders — order history with tabs Belum Dibayar / Siap Diambil / Selesai /
  * Dibatalkan (tab kept in ?tab=), live countdowns and offline fallback.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -44,8 +44,17 @@ function OrderCard({ order }: { order: OrderDetail }) {
       <div className="flex items-start justify-between gap-2 p-4 pb-3">
         <div className="min-w-0">
           <p className="truncate text-[15px] font-bold">{order.merchant.name}</p>
-          <p className="text-[11px] text-muted-foreground tabular-nums">
-            {order.order_number} · {formatDateTimeId(order.created_at)}
+          {/* Same clipped-separator trick as ImpactLine: when the date wraps, its "·" lands in the clipped margin. */}
+          <p className="overflow-hidden text-[11px] text-muted-foreground tabular-nums">
+            <span className="-ml-2 flex flex-wrap">
+              <span className="pl-2 whitespace-nowrap">{order.order_number}</span>
+              <span className="relative pl-2 whitespace-nowrap">
+                <span className="absolute inset-y-0 left-0 w-2 text-center" aria-hidden>
+                  ·
+                </span>
+                {formatDateTimeId(order.created_at)}
+              </span>
+            </span>
           </p>
         </div>
         <OrderStatusChip status={order.status} />
@@ -67,7 +76,7 @@ function OrderCard({ order }: { order: OrderDetail }) {
       {pending && (
         <div className="mx-4 mt-3 flex items-center gap-3 rounded-2xl bg-deal-soft p-3">
           <WalletIcon className="size-5 shrink-0 text-deal" />
-          <p className="min-w-0 flex-1 text-xs font-semibold">Selesaikan pembayaran QRIS sebelum stok dilepas</p>
+          <p className="min-w-0 flex-1 text-xs font-semibold text-balance">Bayar sebelum stok dilepas</p>
           <CountdownBadge endIso={order.payment_expires_at} prefix="Bayar" overLabel="Habis" variant="solid" />
         </div>
       )}
@@ -135,6 +144,21 @@ export function OrdersScreen() {
 
   const setTab = (t: OrderTabKey) => router.replace(`${pathname}?tab=${t}`, { scroll: false });
 
+  // Phones: the tab strip scrolls sideways, so a deep link to the last tab
+  // (?tab=cancelled) would leave it off-screen. Nudge scrollLeft only when the
+  // active tab is clipped (scrollIntoView could also jump the page vertically).
+  const tabListRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = tabListRef.current;
+    const el = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !el) return;
+    const l = list.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (r.left < l.left + 16) list.scrollLeft -= l.left + 16 - r.left;
+    else if (r.right > l.right - 16) list.scrollLeft += r.right - (l.right - 16);
+    // groups: the count badges arrive with the data and widen the strip.
+  }, [tab, loggedIn, groups]);
+
   return (
     <>
       <ShellHeader className="[&>div]:pb-0">
@@ -157,7 +181,7 @@ export function OrdersScreen() {
           }
         />
         {loggedIn && (
-          <div role="tablist" aria-label="Status pesanan" className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:mt-5 lg:border-b lg:border-border lg:px-0">
+          <div ref={tabListRef} role="tablist" aria-label="Status pesanan" className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:mt-5 lg:border-b lg:border-border lg:px-0">
             {ORDER_TABS.map((t) => {
               const active = tab === t.key;
               const count = groups[t.key].length;

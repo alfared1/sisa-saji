@@ -277,7 +277,8 @@ export function MerchantShell({
                   {emphasis ? (
                     <span
                       className={cn(
-                        "inline-flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card transition-transform group-active:scale-95 group-focus-visible:ring-3 group-focus-visible:ring-ring/50",
+                        // -my-1: the 40 px button takes the same 32 px of layout as the other icons, so every label sits on one line.
+                        "-my-1 inline-flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-card transition-transform group-active:scale-95 group-focus-visible:ring-3 group-focus-visible:ring-ring/50",
                         isActive && "ring-4 ring-brand-soft",
                       )}
                     >
@@ -293,7 +294,7 @@ export function MerchantShell({
                       <Icon className="size-5" aria-hidden />
                     </span>
                   )}
-                  <span className={cn(emphasis && "-mt-0.5")}>{label}</span>
+                  <span>{label}</span>
                 </Link>
               </li>
             );

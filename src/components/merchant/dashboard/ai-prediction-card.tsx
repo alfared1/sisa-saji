@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRightIcon, BrainCircuitIcon, GiftIcon, MegaphoneIcon } from "lucide-react";
+import { ArrowRightIcon, BrainCircuitIcon, CheckIcon, GiftIcon, MegaphoneIcon } from "lucide-react";
 import type { TonightPrediction } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { percent, roundPortions } from "../lib/logic";
@@ -58,7 +58,7 @@ export function AiPredictionAlertCard({
     <section
       aria-label="Prediksi surplus malam ini"
       className={cn(
-        "relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-strong via-primary to-emerald-600 p-4 text-white shadow-float sm:p-5",
+        "relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-strong via-primary to-emerald-600 p-4 text-white shadow-float sm:p-5 dark:from-emerald-800 dark:via-emerald-700 dark:to-emerald-900",
         className,
       )}
     >
@@ -97,14 +97,22 @@ export function AiPredictionAlertCard({
                     href={`/merchant/surplus/new?menu=${m.menu_id}`}
                     className={cn(
                       "inline-flex min-h-9 max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-white/60",
-                      live ? "bg-white/10 text-white/70 ring-white/15" : "bg-white text-foreground ring-white hover:bg-white/90",
+                      // White chip: fixed dark ink, since the theme tokens turn light in dark mode.
+                      live ? "bg-white/10 text-white/70 ring-white/15" : "bg-white text-neutral-900 ring-white hover:bg-white/90",
                     )}
                   >
-                    {/kejutan|mystery/i.test(m.menu_name) && <GiftIcon className="size-3.5 text-deal" aria-hidden />}
+                    {/kejutan|mystery/i.test(m.menu_name) && (
+                      <GiftIcon className={cn("size-3.5 shrink-0 text-deal", !live && "dark:text-orange-600")} aria-hidden />
+                    )}
                     <span className="truncate">{m.menu_name}</span>
-                    <span className={cn("tabular-nums", live ? "text-white/70" : "font-extrabold text-primary")}>
-                      {live ? "· tayang" : roundPortions(m.predicted_surplus_portions) > 0 ? `~${roundPortions(m.predicted_surplus_portions)}` : ""}
-                    </span>
+                    {live ? (
+                      <span className="inline-flex shrink-0 items-center gap-0.5 text-white/70">
+                        <CheckIcon className="size-3.5" aria-hidden />
+                        tayang
+                      </span>
+                    ) : roundPortions(m.predicted_surplus_portions) > 0 ? (
+                      <span className="shrink-0 font-extrabold text-primary tabular-nums dark:text-emerald-700">~{roundPortions(m.predicted_surplus_portions)}</span>
+                    ) : null}
                   </Link>
                 </li>
               );
@@ -114,7 +122,7 @@ export function AiPredictionAlertCard({
 
         <Link
           href={top ? `/merchant/surplus/new?menu=${top.menu_id}` : "/merchant/surplus/new"}
-          className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-extrabold text-primary shadow-card outline-none transition-transform active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
+          className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-extrabold text-primary shadow-card outline-none transition-transform active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto dark:text-emerald-700"
         >
           <MegaphoneIcon className="size-4" />
           Publikasikan sekarang

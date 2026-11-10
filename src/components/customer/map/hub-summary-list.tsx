@@ -62,16 +62,24 @@ export function HubSummaryList({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm leading-snug font-bold [overflow-wrap:anywhere]">{h.hub.name}</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
-                          {/* Wraps at the separator, never inside "19 menu live". */}
-                          {hubRowText(h)
-                            .split(" · ")
-                            .map((part, i) => (
-                              <span key={part}>
-                                {i > 0 && " · "}
-                                <span className="whitespace-nowrap">{part}</span>
-                              </span>
-                            ))}
+                        {/*
+                          Wraps between parts, never inside "19 menu live". Each "·" sits in its
+                          part's left padding, which falls into the clipped negative margin at
+                          the start of a line (as in ImpactLine), so no line starts or ends with one.
+                        */}
+                        <span className="mt-0.5 block overflow-hidden text-xs text-muted-foreground tabular-nums">
+                          <span className="-ml-2 flex flex-wrap">
+                            {hubRowText(h)
+                              .split(" · ")
+                              .map((part) => (
+                                <span key={part} className="relative pl-2 whitespace-nowrap">
+                                  <span className="absolute inset-y-0 left-0 w-2 text-center" aria-hidden>
+                                    ·
+                                  </span>
+                                  {part}
+                                </span>
+                              ))}
+                          </span>
                         </span>
                       </span>
                       {live && (

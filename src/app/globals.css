@@ -300,6 +300,32 @@
   ::selection {
     background: color-mix(in oklch, var(--primary) 25%, transparent);
   }
+  /* Chrome's clock button in <input type="time">: small and muted, not a 2xl black glyph beside the digits. */
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    width: 1rem;
+    height: 1rem;
+    margin-inline-start: 0.25rem;
+    opacity: 0.45;
+    cursor: pointer;
+  }
+  input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.8;
+  }
+  /*
+   * Date inputs sit in a pill that already shows a lucide calendar icon: hide Chrome's own glyph and
+   * stretch it into an invisible hit area over the nearest positioned ancestor (the pill), so a tap
+   * anywhere on it opens the picker.
+   */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
 }
 
 @layer components {

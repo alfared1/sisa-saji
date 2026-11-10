@@ -14,6 +14,7 @@ import {
   HandPlatterIcon,
   LeafIcon,
   MapPinIcon,
+  ReceiptTextIcon,
   RecycleIcon,
   TicketPercentIcon,
   TriangleAlertIcon,
@@ -277,7 +278,9 @@ export function BringOwnContainerToggle({
             <div className="flex items-center gap-3 rounded-2xl bg-deal-soft p-3 text-left">
               <TicketPercentIcon className="size-5 shrink-0 text-deal" />
               <p className="text-xs leading-snug">
-                Pakai voucher <b className="font-extrabold">BAWABEKAL</b> — potongan Rp 1.500 (min. belanja Rp 8.000).
+                Pakai voucher <b className="font-extrabold">BAWABEKAL</b> — potongan{" "}
+                <span className="whitespace-nowrap">Rp 1.500</span> (min. belanja{" "}
+                <span className="whitespace-nowrap">Rp 8.000</span>).
               </p>
             </div>
           )}
@@ -318,8 +321,11 @@ export function VoucherRow({
 }) {
   const ok = voucher ? voucherEligibility(voucher, subtotal) : null;
   return (
-    <div className="flex items-center gap-2 rounded-3xl bg-card p-2 pl-4 shadow-soft ring-1 ring-border">
-      <TicketPercentIcon className="size-5 shrink-0 text-deal" />
+    // Same 44px icon tile as BringOwnContainerToggle above, so both rows' titles line up.
+    <div className="flex items-center gap-3 rounded-3xl bg-card p-2 pl-4 shadow-soft ring-1 ring-border">
+      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-deal-soft text-deal">
+        <TicketPercentIcon className="size-5" />
+      </span>
       <button
         type="button"
         onClick={onOpen}
@@ -378,7 +384,8 @@ export function VoucherSelectorSheet({
           <ResponsiveSheetTitle className="text-lg font-bold">Voucher Sisa-Saji</ResponsiveSheetTitle>
           <ResponsiveSheetDescription>Potongan ditanggung platform — warung tetap menerima penuh.</ResponsiveSheetDescription>
         </ResponsiveSheetHeader>
-        <div className="min-h-0 space-y-2.5 overflow-y-auto px-4 pb-6">
+        {/* pt-1: room for the first card's ring / focus ring inside the scroller. */}
+        <div className="min-h-0 space-y-2.5 overflow-y-auto px-4 pt-1 pb-6">
           {loading &&
             Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}
           {vouchers.map((v) => {
@@ -468,7 +475,7 @@ export function PriceAndImpactBreakdown({
   children?: React.ReactNode;
 }) {
   return (
-    <CheckoutCard title="Rincian Pembayaran">
+    <CheckoutCard title="Rincian Pembayaran" icon={ReceiptTextIcon}>
       <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-2">
           <dt className="text-muted-foreground">Harga normal</dt>

@@ -136,7 +136,7 @@ function PublisherSkeleton() {
   return (
     <MerchantPage>
       <Skeleton className="mb-5 h-10 w-64" />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-4">
           <Skeleton className="h-52 rounded-3xl" />
           <Skeleton className="h-40 rounded-3xl" />
@@ -307,9 +307,10 @@ export function SurplusPublisherView() {
     >
       <span className="min-w-0">
         <span className="block text-base leading-tight font-extrabold">{publish.isPending ? "Mempublikasikan…" : "Publikasikan Sekarang"}</span>
-        <span className="block truncate text-xs font-semibold text-primary-foreground/85 tabular-nums">
-          {menu ? `${stock} porsi ${menu.menu_name}` : "Pilih menu"}
-          {effectivePrice !== undefined ? ` · ${formatIdr(effectivePrice)}` : ""}
+        {/* Only the menu name truncates; the price stays whole. */}
+        <span className="flex min-w-0 gap-1 text-xs font-semibold text-primary-foreground/85 tabular-nums">
+          <span className="truncate">{menu ? `${stock} porsi ${menu.menu_name}` : "Pilih menu"}</span>
+          {effectivePrice !== undefined && <span className="shrink-0">· {formatIdr(effectivePrice)}</span>}
         </span>
       </span>
       <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -326,7 +327,7 @@ export function SurplusPublisherView() {
         subtitle="Pilih menu, isi porsi, cek harga AI — selesai dalam 60 detik."
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
         <div className="min-w-0 space-y-4">
           <SectionCard title={<StepLabel n={1}>Menu apa yang tersisa?</StepLabel>}>
             <MenuTemplateSelector

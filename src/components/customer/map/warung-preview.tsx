@@ -120,17 +120,16 @@ export function WarungPreview({
   const { merchant, warung, pin } = sources;
   const slug = previewSlug(sources);
   const idle = previewIsIdle(sources);
-  const cardClass = "p-0 shadow-none ring-0 hover:shadow-none";
   return (
     <>
       {merchant ? (
-        <MerchantCard merchant={merchant} variant="sheet" className={cardClass} />
+        <MerchantCard merchant={merchant} variant="sheet" />
       ) : idle && warung ? (
         <IdleWarungPreview warung={warung} />
       ) : warung ? (
-        <MerchantCard merchant={merchantCardFromWarungPin(warung)} variant="sheet" className={cardClass} />
+        <MerchantCard merchant={merchantCardFromWarungPin(warung)} variant="sheet" />
       ) : pin ? (
-        <MerchantCard merchant={merchantFromPin(pin)} variant="sheet" className={cardClass} />
+        <MerchantCard merchant={merchantFromPin(pin)} variant="sheet" />
       ) : null}
       {merchant && <PreviewBatches merchant={merchant} layout={layout} onPick={(b) => onPick(merchant, b)} />}
       {slug && (

@@ -386,7 +386,7 @@ export function DiscoverScreen() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 shrink-0 rounded-full px-3 text-xs font-bold"
+            className="-mr-3 h-9 shrink-0 rounded-full px-3 text-xs font-bold"
             onClick={() => void query.refetch()}
             disabled={query.isFetching}
             aria-label="Perbarui daftar"

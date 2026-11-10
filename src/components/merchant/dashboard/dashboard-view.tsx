@@ -25,7 +25,7 @@ function DashboardSkeleton() {
           <Skeleton key={i} className="h-28 rounded-2xl" />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
           <Skeleton className="h-56 rounded-3xl" />
           <Skeleton className="h-52 rounded-3xl" />
@@ -87,7 +87,7 @@ export function MerchantDashboardView() {
         </div>
       </section>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
         <div className="min-w-0 space-y-4 lg:space-y-6">
           <AiPredictionAlertCard prediction={d.ai_prediction} publishedMenuIds={publishedMenuIds} />
           <ActiveSurplusBatchList batches={d.active_batches} />

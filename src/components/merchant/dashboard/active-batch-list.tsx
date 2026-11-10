@@ -216,7 +216,8 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
             </button>
           </div>
 
-          <div className="flex items-center gap-1">
+          {/* -ml-2 cancels the label's hit-area padding, so on phones (wrapped row) the switch lines up with the stepper. */}
+          <div className="-ml-2 flex items-center gap-1">
             <label className="flex h-11 cursor-pointer items-center gap-2 rounded-2xl px-2 text-xs font-semibold">
               <Switch
                 checked={batch.auto_discount_enabled}
@@ -283,11 +284,6 @@ export function ActiveSurplusBatchList({ batches }: { batches: MerchantBatchView
             icon={MegaphoneIcon}
             title="Belum ada surplus yang tayang"
             description="Ada porsi tersisa malam ini? Publikasikan dalam 60 detik — AI menentukan harga terbaiknya."
-            action={
-              <Link href="/merchant/surplus/new" className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground">
-                <MegaphoneIcon className="size-4" /> Publikasikan surplus
-              </Link>
-            }
           />
         </div>
       ) : (

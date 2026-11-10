@@ -76,14 +76,6 @@ export function DynamicPriceMenuCard({
         alt={batch.menu_name}
         className={cn("size-26 shrink-0 rounded-2xl", inactive && "grayscale")}
       >
-        {!inactive && (
-          <DiscountBadge
-            pct={batch.discount_pct}
-            endIso={batch.pickup_end_time}
-            size="sm"
-            className="absolute top-1.5 left-1.5 shadow-soft"
-          />
-        )}
         {soldOut && (
           <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-extrabold tracking-wide text-background uppercase">
             Habis
@@ -103,13 +95,18 @@ export function DynamicPriceMenuCard({
           batch.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{batch.description}</p>
         )}
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        {/* One chip size for the row: 24 px tall, 11 px text, 12 px icons (the badges' own sizes differ). */}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 *:h-6">
+          {/* The discount badge lives with the chips: on the 104 px photo it covered the food icon. */}
+          {!inactive && (
+            <DiscountBadge pct={batch.discount_pct} endIso={batch.pickup_end_time} size="sm" className="px-2" />
+          )}
           {batch.auto_discount_enabled && !inactive && (
             <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-1 text-[11px] leading-none font-bold text-deal">
               <TrendingDownIcon className="size-3" aria-hidden /> Harga Turun Otomatis
             </span>
           )}
-          <StockBadge available={batch.available_stock} />
+          <StockBadge available={batch.available_stock} className="text-[11px] [&>svg]:size-3" />
         </div>
 
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">

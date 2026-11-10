@@ -80,10 +80,11 @@ export function SectionCard({
       className={cn("rounded-3xl bg-card shadow-soft ring-1 ring-border", className)}
     >
       {title && (
-        <header className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
+        <header className="flex items-start justify-between gap-3 px-4 pt-5 sm:px-5 sm:pt-6">
           <div className="flex min-w-0 items-start gap-2.5">
             {Icon && (
-              <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary">
+              // -my-1.5 centres the 32 px icon on the 20 px title line (also for 2-line titles + descriptions).
+              <span className="-my-1.5 inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-primary">
                 <Icon className="size-4" />
               </span>
             )}
@@ -259,7 +260,7 @@ export function StatTile({
         <span className={cn("inline-flex size-8 shrink-0 items-center justify-center rounded-xl", tints[tint])}>
           <Icon className="size-4" aria-hidden />
         </span>
-        <span className="min-w-0 text-xs leading-tight font-semibold text-muted-foreground">{label}</span>
+        <span className="min-w-0 text-xs leading-tight font-semibold text-balance text-muted-foreground">{label}</span>
       </div>
       <div className="truncate text-xl leading-none font-extrabold tabular-nums sm:text-2xl">{value}</div>
       {hint && <div className="text-xs leading-snug text-muted-foreground">{hint}</div>}

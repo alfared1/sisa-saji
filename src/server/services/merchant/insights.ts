@@ -62,7 +62,8 @@ export async function getInsights(db: Db, merchantId: string, now: Date = new Da
     const saving = Math.round((cut * h.price * FOOD_COST_SHARE) / 1000) * 1000;
     advisories.push(
       `Rata-rata ${h.menuName} masih tersisa ${String(h.avgLeftover).replace(".", ",")} porsi tiap ${DAY_NAMES_ID[h.dow]} malam. ` +
-        `Kurangi produksi ~${cut} porsi untuk menghemat bahan baku ±${formatIdr(saving)}/hari.`,
+        // Non-breaking space keeps "±Rp" and the amount on one line.
+        `Kurangi produksi ~${cut} porsi untuk menghemat bahan baku ±${formatIdr(saving).replace(" ", " ")}/hari.`,
     );
   }
   const peak = [...week].sort((a, b) => b.row.predicted_surplus_portions - a.row.predicted_surplus_portions)[0];

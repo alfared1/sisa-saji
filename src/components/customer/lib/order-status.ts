@@ -37,7 +37,7 @@ export function defaultOrderTab(groups: Record<OrderTabKey, OrderDetail[]>): Ord
 export type StatusTone = "deal" | "brand" | "success" | "muted" | "urgent";
 
 export const STATUS_META: Record<OrderStatus, { label: string; tone: StatusTone }> = {
-  PENDING_PAYMENT: { label: "Menunggu Pembayaran", tone: "deal" },
+  PENDING_PAYMENT: { label: "Belum Dibayar", tone: "deal" },
   PAID: { label: "Dibayar", tone: "brand" },
   READY_FOR_PICKUP: { label: "Siap Diambil", tone: "brand" },
   COMPLETED: { label: "Selesai", tone: "success" },

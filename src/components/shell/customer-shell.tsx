@@ -196,7 +196,7 @@ export function ShellHeader({ children, className }: { children: ReactNode; clas
   return (
     <header
       className={cn(
-        "safe-top sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur-xl",
+        "safe-top sticky top-0 z-30 border-b border-border/60 bg-background/95 backdrop-blur-xl",
         "lg:static lg:z-auto lg:border-b-0 lg:bg-transparent lg:backdrop-blur-none",
         className,
       )}

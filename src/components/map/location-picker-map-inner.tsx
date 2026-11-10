@@ -109,7 +109,8 @@ export default function LocationPickerMapInner({
           <FollowValue value={value} />
         </MapContainer>
         {!value && (
-          <div className="pointer-events-none absolute inset-x-3 top-3 z-[500] rounded-xl bg-card/95 px-3 py-2 text-center text-xs font-medium shadow-card ring-1 ring-border">
+          // left-14 keeps the hint clear of Leaflet's zoom control (top-left, 10px + 34px).
+          <div className="pointer-events-none absolute top-3 right-3 left-14 z-[500] rounded-xl bg-card/95 px-3 py-2 text-center text-xs font-medium text-balance shadow-card ring-1 ring-border">
             Ketuk peta untuk menaruh pin lokasi warung
           </div>
         )}

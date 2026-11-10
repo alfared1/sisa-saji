@@ -16,7 +16,6 @@ import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/hooks/use-session";
 import { MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
-import { cn } from "@/lib/utils";
 import { useMerchantMe, useUpdateMerchant } from "../lib/queries";
 import { ZOD_ID_OPTIONS } from "../lib/zod-id";
 import {
@@ -66,26 +65,22 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
         <BankSection form={form} idPrefix="set" savedNumberMasked={merchant.bank_account_number_masked} />
       </SectionCard>
 
-      <div
-        className={cn(
-          "sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl bg-card/95 p-3 shadow-float ring-1 ring-border backdrop-blur transition-opacity lg:bottom-6",
-          !dirty && !update.isPending && "pointer-events-none opacity-0",
-        )}
-        aria-hidden={!dirty && !update.isPending}
-      >
-        <span className="pl-1 text-sm font-semibold">
-          <span className="sm:hidden">Belum disimpan</span>
-          <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
-        </span>
-        <div className="flex gap-2">
-          <Button type="button" variant="ghost" className="h-11 rounded-full" onClick={() => form.reset()} disabled={update.isPending} tabIndex={dirty ? 0 : -1}>
-            Batal
-          </Button>
-          <Button type="submit" className="h-11 rounded-full px-5 font-bold" disabled={update.isPending} tabIndex={dirty ? 0 : -1}>
-            {update.isPending ? <Loader2Icon className="animate-spin" /> : <SaveIcon />} Simpan
-          </Button>
+      {(dirty || update.isPending) && (
+        <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex animate-in items-center justify-between gap-3 rounded-2xl bg-card/95 p-3 shadow-float ring-1 ring-border backdrop-blur fade-in-0 slide-in-from-bottom-2 lg:bottom-6">
+          <span className="pl-1 text-sm font-semibold">
+            <span className="sm:hidden">Belum disimpan</span>
+            <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
+          </span>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" className="h-11 rounded-full" onClick={() => form.reset()} disabled={update.isPending}>
+              Batal
+            </Button>
+            <Button type="submit" className="h-11 rounded-full px-5 font-bold" disabled={update.isPending}>
+              {update.isPending ? <Loader2Icon className="animate-spin" /> : <SaveIcon />} Simpan
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </form>
   );
 }
@@ -111,7 +106,7 @@ export function MerchantSettingsView() {
       ) : me.isError || !m ? (
         <ErrorState error={me.error} onRetry={() => void me.refetch()} />
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
           <div className="min-w-0">
             <SettingsForm key={m.id} merchant={m} />
           </div>

@@ -52,13 +52,17 @@ export function MenuForm({
   submitLabel,
   pending,
   secondary,
+  actionsClassName,
   idPrefix = "menu",
 }: {
   defaultValues?: MenuFormInput;
   onSubmit: (values: MenuFormOutput) => void;
   submitLabel: ReactNode;
   pending?: boolean;
+  /** Extra action placed before the submit button (e.g. "Kembali"). */
   secondary?: ReactNode;
+  /** Extra classes for the actions row (the onboarding wizard makes it its sticky bar). */
+  actionsClassName?: string;
   idPrefix?: string;
 }) {
   const uid = useId();
@@ -207,7 +211,7 @@ export function MenuForm({
           {errors.min_recovery_price_idr ? (
             <FieldError id={id("floor-err")}>{errors.min_recovery_price_idr.message}</FieldError>
           ) : (
-            <p id={id("floor-hint")} className="text-xs text-muted-foreground">
+            <p id={id("floor-hint")} className="text-xs text-pretty text-muted-foreground">
               Diskon AI tidak akan menembus harga ini{floorPct !== null ? ` (${floorPct}% dari normal)` : ""}.
             </p>
           )}
@@ -232,7 +236,7 @@ export function MenuForm({
           control={control}
           name="portion_weight_grams"
           render={({ field }) => (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="space-y-2">
               <div className="relative w-32">
                 <Input
                   id={id("weight")}
@@ -245,20 +249,22 @@ export function MenuForm({
                 />
                 <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-sm text-muted-foreground">g</span>
               </div>
-              {WEIGHT_PRESETS.map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => field.onChange(w)}
-                  aria-pressed={field.value === w}
-                  className={cn(
-                    "h-10 rounded-full px-3 text-xs font-bold tabular-nums ring-1",
-                    field.value === w ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
-                  )}
-                >
-                  {w} g
-                </button>
-              ))}
+              <div className="flex flex-wrap gap-2">
+                {WEIGHT_PRESETS.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => field.onChange(w)}
+                    aria-pressed={field.value === w}
+                    className={cn(
+                      "h-10 rounded-full px-3 text-xs font-bold tabular-nums ring-1",
+                      field.value === w ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
+                    )}
+                  >
+                    {w} g
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         />
@@ -280,9 +286,9 @@ export function MenuForm({
         <FieldError>{errors.description?.message}</FieldError>
       </div>
 
-      <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+      <div className={cn("flex gap-2 pt-1 sm:justify-end", actionsClassName)}>
         {secondary}
-        <Button type="submit" className="h-12 rounded-full px-6 text-base font-bold" disabled={pending}>
+        <Button type="submit" className={cn("h-12 flex-1 rounded-full px-4 text-base font-bold sm:px-6", !secondary && "sm:flex-none")} disabled={pending}>
           {pending && <Loader2Icon className="animate-spin" />}
           {submitLabel}
         </Button>

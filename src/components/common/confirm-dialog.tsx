@@ -69,7 +69,8 @@ export function ConfirmDialog({
           )}
         </DialogHeader>
         {children}
-        <DialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex-none">
+        {/* No grey band: DialogFooter's -mx-4/-mb-4 bleed assumes p-4, this dialog is p-6. */}
+        <DialogFooter className="mx-0 mt-2 mb-0 grid grid-cols-2 gap-2 rounded-none border-t-0 bg-transparent p-0 sm:flex-none">
           <Button
             variant="outline"
             className="h-11 rounded-full"

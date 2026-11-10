@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,10 @@ const STEPS = [
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
+
+/** Wizard actions: a full-bleed sticky bar on phones, a plain row under the fields on sm+. */
+const ACTION_BAR =
+  "sticky bottom-0 -mx-4 flex gap-2 border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none";
 
 function Progress({ step }: { step: number }) {
   return (
@@ -83,6 +87,13 @@ export function OnboardingWizard() {
       bank_account_holder: "",
     },
   });
+
+  // On a hard load the session user arrives after useForm has read its defaults
+  // (useSession reports no user during hydration): prefill then, unless already typed.
+  const accountPhone = user?.phone_number;
+  useEffect(() => {
+    if (accountPhone && !form.getValues("whatsapp_number")) form.resetField("whatsapp_number", { defaultValue: accountPhone });
+  }, [accountPhone, form]);
 
   const finish = useMutation({
     mutationFn: async ({ profile, menu }: { profile: ProfileOutput; menu: MenuFormOutput | null }) => {
@@ -140,7 +151,9 @@ export function OnboardingWizard() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-clip">
+      {/* Clip the step slide at the main padding edge, not the content edge, so focus rings
+          and the phone action bar's -mx-4 bleed are not cut off. */}
+      <div className="-mx-4 mt-6 overflow-x-clip px-4">
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.div
             key={current.key}
@@ -151,7 +164,7 @@ export function OnboardingWizard() {
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {current.key === "menu" ? (
-              <div className="rounded-3xl bg-card/70 p-4 ring-1 ring-border sm:p-5">
+              <div>
                 <MenuForm
                   idPrefix="onb-menu"
                   pending={finish.isPending}
@@ -161,9 +174,19 @@ export function OnboardingWizard() {
                     </>
                   }
                   onSubmit={(menu) => submitWith(menu)}
+                  actionsClassName={cn(ACTION_BAR, "mt-3")}
                   secondary={
-                    <Button type="button" variant="ghost" className="h-12 rounded-full px-5" onClick={() => go(step - 1)} disabled={finish.isPending}>
-                      <ArrowLeftIcon /> Kembali
+                    // Icon-only on phones: the long finish label and "Kembali" don't share a 360px row.
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-label="Kembali"
+                      className="size-12 rounded-full sm:w-auto sm:px-5"
+                      onClick={() => go(step - 1)}
+                      disabled={finish.isPending}
+                    >
+                      <ArrowLeftIcon />
+                      <span className="hidden sm:inline">Kembali</span>
                     </Button>
                   }
                 />
@@ -196,7 +219,7 @@ export function OnboardingWizard() {
                   </div>
                 )}
 
-                <div className="sticky bottom-0 -mx-4 mt-8 flex gap-2 border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:backdrop-blur-none">
+                <div className={cn(ACTION_BAR, "mt-8")}>
                   {step > 0 && (
                     <Button type="button" variant="outline" className="h-12 rounded-full px-5" onClick={() => go(step - 1)}>
                       <ArrowLeftIcon /> Kembali
