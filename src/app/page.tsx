@@ -3,14 +3,15 @@
 /**
  * "/" — role/visitor router:
  *  merchant session → /merchant/dashboard · returning visitor or logged-in
- *  customer → /discover · first visit → /welcome
+ *  customer → /discover · first-time guest → /tour (product walkthrough) ·
+ *  guest who already finished or skipped the tour → /welcome
  *  offline with a saved pickup ticket → /offline (shows the ticket at once)
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppSplash } from "@/components/shell/app-splash";
 import { useSession } from "@/hooks/use-session";
-import { hasVisited } from "@/lib/pwa/visitor";
+import { hasSeenTour, hasVisited } from "@/lib/pwa/visitor";
 import { useTicketsStore } from "@/stores/tickets";
 
 export default function RootRedirectPage() {
@@ -30,7 +31,7 @@ export default function RootRedirectPage() {
     } else if (user || hasVisited()) {
       router.replace("/discover");
     } else {
-      router.replace("/welcome");
+      router.replace(hasSeenTour() ? "/welcome" : "/tour");
     }
   }, [isLoading, isError, user, router]);
 

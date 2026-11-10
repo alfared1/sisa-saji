@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
+  CirclePlayIcon,
   Clock3Icon,
   CloudIcon,
   LeafIcon,
@@ -238,6 +239,15 @@ export function WelcomeView() {
               Sisa-Saji mempertemukan warung di sekitar kampus dengan mahasiswa untuk menyelamatkan porsi surplus
               menjelang tutup. Hemat hingga 70%, ambil sendiri dalam 3 menit.
             </p>
+            <Link
+              href="/tour"
+              className="-mt-2 -ml-1 flex min-h-11 w-fit items-center gap-2.5 rounded-full py-1 pr-4 pl-1 text-sm font-bold outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-primary">
+                <CirclePlayIcon className="size-5" aria-hidden />
+              </span>
+              Lihat tur 1 menit
+            </Link>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {ROLE_CARDS.map(({ href, title, body, icon: Icon, tone, iconTone, cta }) => (

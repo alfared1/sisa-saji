@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   CheckIcon,
   ChevronRightIcon,
+  CompassIcon,
   DownloadIcon,
   GraduationCapIcon,
   HeartIcon,
@@ -320,6 +321,13 @@ export function ProfileScreen() {
                 tint="bg-deal-soft text-deal"
               />
             )}
+            <LinkRow
+              href="/tour"
+              icon={CompassIcon}
+              label="Tur aplikasi"
+              hint="Cara pakai Sisa-Saji dalam 1 menit"
+              tint="bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+            />
             <InstallRow />
           </div>
         </section>

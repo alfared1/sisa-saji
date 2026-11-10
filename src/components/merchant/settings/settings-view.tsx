@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ClockIcon, CrownIcon, ExternalLinkIcon, LandmarkIcon, Loader2Icon, LogOutIcon, MapPinIcon, SaveIcon, StoreIcon } from "lucide-react";
+import { ClockIcon, CompassIcon, CrownIcon, ExternalLinkIcon, LandmarkIcon, Loader2Icon, LogOutIcon, MapPinIcon, SaveIcon, StoreIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
 import { VerifiedBadge } from "@/components/common/verified-badge";
@@ -134,6 +134,9 @@ export function MerchantSettingsView() {
               </Link>
               <Link href={`/warung/${m.slug}`} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
                 <ExternalLinkIcon className="size-4" /> Lihat halaman warung
+              </Link>
+              <Link href="/tour?peran=mitra" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
+                <CompassIcon className="size-4" /> Lihat tur mitra
               </Link>
             </section>
 
