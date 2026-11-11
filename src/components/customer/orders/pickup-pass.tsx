@@ -82,7 +82,7 @@ function LiveBand() {
 export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
   const [big, setBig] = useState(false);
   return (
-    <article className="overflow-hidden rounded-[1.75rem] bg-card shadow-card ring-1 ring-border">
+    <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
       <div className="flex items-center gap-2.5 bg-brand-soft px-4 py-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-soft">
           <StoreIcon className="size-4" />
@@ -102,7 +102,7 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
       </div>
 
       <div className="relative px-5 pt-5 pb-5 text-center">
-        <p className="text-[11px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Kode pengambilan</p>
+        <p className="text-xs font-bold text-muted-foreground">Kode pengambilan</p>
         <p
           className="mt-1 text-5xl font-black tracking-[0.12em] tabular-nums min-[380px]:text-[3.4rem]"
           aria-label={`Kode pengambilan ${pickupCodeLabel(order).split("").join(" ")}`}

@@ -93,14 +93,14 @@ describe("runEscalation (time-decay job)", () => {
     expect(await logsOf(manual)).toHaveLength(1);
   });
 
-  it("enters the 30-minute tier: 70%, TIME_DECAY_30M_RULE and one Flash Rescue per batch", async () => {
+  it("enters the 30-minute tier: 70%, TIME_DECAY_30M_RULE and one Diskon Kilat push per batch", async () => {
     const summary = await runEscalationJobs(db, at(100)); // 20 min to close
     const b = await row(escalating);
     expect(b.currentDiscountPct).toBeGreaterThanOrEqual(70);
     const logs = await logsOf(escalating);
     expect(logs[logs.length - 1].triggerReason).toBe("TIME_DECAY_30M_RULE");
     expect(logs[logs.length - 1].newPriceIdr).toBe(b.currentSellingPriceIdr); // latest log = live price
-    // escalating + pinned (marker row, price unchanged) both get their Flash Rescue.
+    // escalating + pinned (marker row, price unchanged) both get their Diskon Kilat push.
     expect(summary.flashRescues).toBeGreaterThanOrEqual(2);
 
     const pinnedLogs = await logsOf(pinned);
@@ -109,7 +109,7 @@ describe("runEscalation (time-decay job)", () => {
     expect(marker.newDiscountPct).toBe(marker.previousDiscountPct);
     expect((await row(pinned)).currentDiscountPct).toBe(80);
 
-    // A later run in the same tier sends no second Flash Rescue for these batches.
+    // A later run in the same tier sends no second Diskon Kilat push for these batches.
     await runEscalationJobs(db, at(105));
     for (const id of [escalating, pinned]) {
       const flashLogs = await db

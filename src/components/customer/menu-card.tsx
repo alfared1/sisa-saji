@@ -77,7 +77,7 @@ export function DynamicPriceMenuCard({
         className={cn("size-26 shrink-0 rounded-2xl", inactive && "grayscale")}
       >
         {soldOut && (
-          <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-extrabold tracking-wide text-background uppercase">
+          <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-extrabold text-background uppercase">
             Habis
           </span>
         )}
@@ -112,7 +112,7 @@ export function DynamicPriceMenuCard({
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">
           <div className="min-w-0">
             {flash && (
-              <span className="mb-0.5 block animate-float-up text-[11px] font-extrabold text-deal uppercase">
+              <span className="mb-0.5 block animate-float-up text-[11px] font-extrabold text-deal">
                 Harga turun!
               </span>
             )}

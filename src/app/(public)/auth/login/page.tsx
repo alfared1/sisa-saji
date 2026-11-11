@@ -15,7 +15,7 @@ function LoginFallback() {
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-12 w-full rounded-2xl" />
       <Skeleton className="h-12 w-full rounded-2xl" />
-      <Skeleton className="h-12 w-full rounded-full" />
+      <Skeleton className="h-12 w-full rounded-xl" />
     </div>
   );
 }

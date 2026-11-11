@@ -69,7 +69,7 @@ export function CampusPicker({
           <div key={g.region} role="group" aria-labelledby={headingId}>
             <h4
               id={headingId}
-              className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+              className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground"
             >
               {g.region}
               {isHomeRegion(g.region) && (

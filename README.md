@@ -92,7 +92,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 **Pembeli (±2 menit)**
 
 1. Buka `/welcome` → login sebagai `demo.pembeli@sisasaji.test`, masukkan kode OTP yang tampil di layar.
-2. `/discover`: daftar porsi surplus dalam 2 km, diurutkan Mitra Terverifikasi → jarak → diskon. Perhatikan badge **"Hemat 50%"** (hijau) dan **"Flash Rescue 70%"** (oranye, berdenyut menjelang tutup), sisa porsi, hitung mundur, dan estimasi dampak.
+2. `/discover`: daftar porsi surplus dalam 2 km, diurutkan Mitra Terverifikasi → jarak → diskon. Perhatikan badge **"Hemat 50%"** (hijau) dan **"Diskon Kilat 70%"** (oranye, berdenyut menjelang tutup), sisa porsi, hitung mundur, dan estimasi dampak.
 3. Ketuk satu kartu menu → **"Pesan & Ambil Sendiri"** → QRIS dinamis tampil dengan hitung mundur 10 menit (stok sudah dikunci).
 4. Ketuk **"Simulasi Bayar (Demo)"** → webhook bertanda tangan HMAC diproses → tiket pengambilan dengan QR dan kode **`SJ-XXXX`**. Tiket ini tetap bisa dibuka tanpa sinyal (PWA offline).
 
@@ -106,7 +106,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 **Penutup (±1 menit)**
 
 9. Di jendela pembeli, tiket langsung berubah menjadi **perayaan "Pesanan selesai!"** beserta jumlah makanan yang diselamatkan.
-10. `/impact`: total pangan terselamatkan, CO₂e yang dihindari (setara pohon), uang yang dihemat, dan badge (Rookie → Saver → Hero).
+10. `/impact`: total pangan terselamatkan, CO₂e yang dihindari (setara pohon), uang yang dihemat, dan level (Pemula → Penyelamat → Juara Pangan).
 
 > Batch "malam ini" kedaluwarsa ±2,5 jam setelah seed. Sebelum presentasi jalankan `npm run demo:reseed` (demo boleh tetap berjalan), lalu login ulang.
 
@@ -119,7 +119,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 - Seeder 95 warung fiktif di 21 kampus/kota di seluruh Indonesia dengan Bogor sebagai pusat, histori 28 hari (±14.800 pesanan), prediksi 7 hari; `db:verify` dengan 19 pemeriksaan.
 
 **Fase 2: mesin harga, prediksi, dan API**
-- *Dynamic Discount Optimizer*: baseline 50%, mid-window 55–60%, critical window 70% + push "Flash Rescue" sekali per batch; pembulatan ke atas kelipatan Rp 500 dengan aritmetika integer; harga lantai dijaga; setiap perubahan tercatat di `discount_adjustment_logs`.
+- *Dynamic Discount Optimizer*: baseline 50%, mid-window 55–60%, critical window 70% + push "Diskon Kilat" sekali per batch; pembulatan ke atas kelipatan Rp 500 dengan aritmetika integer; harga lantai dijaga; setiap perubahan tercatat di `discount_adjustment_logs`.
 - Worker eskalasi tiap 5 menit, kedaluwarsa pesanan tak dibayar, penutupan batch, notifikasi 17:30, refresh prediksi harian, training ML mingguan.
 - *Surplus Prediction Engine*: LightGBM batch (`ml/train_predict.py`) + heuristik cold-start (`heuristic-v0`); `quote-ai` dan publish batch.
 - Geo-discovery `ST_DWithin` radius 2 km (ekspansi 5/10 km), presensi pengguna aktif di Postgres.

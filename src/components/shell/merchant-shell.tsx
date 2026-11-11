@@ -162,7 +162,7 @@ export function MerchantShell({
           <Link href="/merchant/dashboard" className="outline-none">
             <Logo />
           </Link>
-          <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-deal uppercase">
+          <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold text-deal">
             Mitra
           </span>
           <ThemeToggle align="start" className="-mr-2 ml-auto size-10" />

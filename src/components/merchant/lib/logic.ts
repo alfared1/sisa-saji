@@ -203,7 +203,7 @@ export function curveLabelStride(count: number): number {
 
 /**
  * Columns that show their discount: the first and the last step, then the
- * steps where the discount changes (latest first: the Flash Rescue end of the
+ * steps where the discount changes (latest first: the Diskon Kilat end of the
  * curve), skipping any too close to one already shown. A run of equal
  * discounts needs no repeat, the bars have the same height.
  */

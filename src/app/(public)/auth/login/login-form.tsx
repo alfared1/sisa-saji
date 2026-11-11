@@ -97,7 +97,7 @@ export function LoginForm() {
 
   // lg+: the form sits in a card, vertically centred by the auth layout.
   return (
-    <div className="flex flex-1 flex-col gap-6 pt-2 lg:flex-none lg:rounded-[1.75rem] lg:bg-card lg:p-8 lg:shadow-card lg:ring-1 lg:ring-border">
+    <div className="flex flex-1 flex-col gap-6 pt-2 lg:flex-none lg:rounded-3xl lg:bg-card lg:p-8 lg:shadow-card lg:ring-1 lg:ring-border">
       <Tabs value={role} onValueChange={switchRole}>
         <TabsList className="grid h-12! w-full grid-cols-2 rounded-2xl bg-muted p-1">
           <TabsTrigger value="CUSTOMER" className="h-full rounded-xl text-sm font-bold data-active:shadow-soft">
@@ -192,7 +192,7 @@ export function LoginForm() {
           </Alert>
         )}
 
-        <Button type="submit" className="h-12 w-full rounded-full text-base font-bold" disabled={request.isPending || !value.trim()}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={request.isPending || !value.trim()}>
           {request.isPending ? <Loader2Icon className="animate-spin" /> : null}
           {request.isPending ? "Mengirim kode…" : "Kirim kode OTP"}
           {!request.isPending && <ArrowRightIcon />}

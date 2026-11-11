@@ -5,7 +5,7 @@
  *                                       (no-show), activate due SCHEDULED batches, close
  *                                       ended batches, end lapsed premium, prune presence,
  *                                       merchant "publish tonight?" reminders
- *   every 5 min   runEscalationJobs    time-decay discount escalation (+ Flash Rescue)
+ *   every 5 min   runEscalationJobs    time-decay discount escalation (+ Diskon Kilat push)
  *   daily 00:15   runPredictionRefresh heuristic-v0 predictions for today..+6
  *   daily 17:30   runProactiveNotifications  AI-prediction push to subscribers
  *   Sun 02:00     weekly ML training (ml/train_predict.py → lgbm-v1)

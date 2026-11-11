@@ -93,7 +93,7 @@ export function MenuTemplateSelector({
       </div>
       <Link
         href="/merchant/menus?baru=1"
-        className="mt-2 inline-flex h-11 items-center gap-1.5 rounded-full px-2 text-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="mt-2 inline-flex h-11 items-center gap-1.5 rounded-xl px-2 text-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <PlusIcon className="size-4" /> Tambah menu baru
       </Link>

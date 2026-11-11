@@ -73,7 +73,7 @@ export function ConfirmDialog({
         <DialogFooter className="mx-0 mt-2 mb-0 grid grid-cols-2 gap-2 rounded-none border-t-0 bg-transparent p-0 sm:flex-none">
           <Button
             variant="outline"
-            className="h-11 rounded-full"
+            className="h-11 rounded-xl"
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
@@ -81,7 +81,7 @@ export function ConfirmDialog({
           </Button>
           <Button
             className={cn(
-              "h-11 rounded-full",
+              "h-11 rounded-xl",
               destructive && "bg-urgent text-urgent-foreground hover:bg-urgent/90",
             )}
             onClick={() => void onConfirm()}

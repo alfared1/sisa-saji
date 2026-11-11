@@ -78,9 +78,9 @@ export function formatDecimal(n: number, digits = 1): string {
 }
 
 export const BADGE_LABELS: Record<string, string> = {
-  SURPLUS_ROOKIE: "Surplus Rookie",
-  SURPLUS_SAVER: "Surplus Saver",
-  SURPLUS_HERO: "Surplus Hero",
+  SURPLUS_ROOKIE: "Pemula",
+  SURPLUS_SAVER: "Penyelamat",
+  SURPLUS_HERO: "Juara Pangan",
 };
 
 export function badgeLabel(tier: string | null | undefined): string {

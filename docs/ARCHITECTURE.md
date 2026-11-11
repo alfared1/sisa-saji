@@ -88,7 +88,7 @@ Input: sisa porsi, menit menuju `pickup_end_time`, jumlah pengguna aktif dalam 2
 
 | Sisa waktu dan stok | Diskon aturan |
 | :--- | :--- |
-| ≤ 30 menit, ≥ 5 porsi | 70%, plus push "Flash Rescue" ke pengguna terdekat sekali per batch |
+| ≤ 30 menit, ≥ 5 porsi | 70%, plus push "Diskon Kilat" ke pengguna terdekat sekali per batch |
 | ≤ 30 menit, 1–4 porsi | 65% |
 | ≤ 60 menit, ≥ 5 porsi | 60% |
 | ≤ 90 menit, ≥ 8 porsi | 55% |
@@ -118,12 +118,12 @@ Harga dibulatkan ke atas ke kelipatan Rp 500 dengan aritmetika integer, lalu `ma
 2. hitung dampak: pangan = Σ(jumlah × berat porsi), CO₂e = round(pangan × 2,5), uang hemat = subtotal normal − subtotal pemulihan + voucher;
 3. set `COMPLETED` dan `picked_up_at`;
 4. tambahkan `net_merchant_payout_idr` ke `merchants.wallet_balance_idr`;
-5. tambahkan dampak dan poin ke profil pembeli; badge naik dari Surplus Rookie ke Surplus Saver (≥ 2 kg) dan Surplus Hero (≥ 5 kg).
+5. tambahkan dampak dan poin ke profil pembeli; level naik dari Pemula ke Penyelamat (≥ 2 kg) dan Juara Pangan (≥ 5 kg). Enum di database tetap `SURPLUS_ROOKIE`/`SURPLUS_SAVER`/`SURPLUS_HERO`; labelnya di `BADGE_LABELS` (`src/components/customer/lib/format.ts`).
 
 ## Konvensi UI
 
 - **Bahasa:** semua teks UI berbahasa Indonesia yang ramah dan langsung ("Porsi Surplus", "Harga Pemulihan", "Ambil Sendiri di Warung"). Jangan memakai "makanan bekas". Jangan memakai em dash (—); pakai titik, koma, atau titik dua. Jangan menyebut aturan harga sebagai "AI"; sebut "saran harga" atau "harga otomatis".
-- **Kartu menu:** badge "Hemat 50%" hijau (`--color-hemat`), atau "Flash Rescue 70%" oranye (`--color-flash`) yang berdenyut bila kurang dari 45 menit sebelum tutup; sisa porsi; hitung mundur; dan estimasi dampak ("Selamatkan 200 g pangan • −0,5 kg CO₂e").
+- **Kartu menu:** badge "Hemat 50%" hijau (`--color-hemat`), atau "Diskon Kilat 70%" oranye (`--color-flash`) yang berdenyut bila kurang dari 45 menit sebelum tutup; sisa porsi; hitung mundur; dan estimasi dampak ("Selamatkan 200 g pangan • −0,5 kg CO₂e").
 - **Target kecepatan:** pembeli dari /discover sampai QRIS dalam maksimal 3 layar; mitra dari /merchant/surplus/new sampai "Publikasikan Sekarang" dalam kurang dari 60 detik.
 - **Tema:** Terang, Gelap, atau Sistem lewat next-themes (localStorage `theme`). Gaya gelap selalu lewat varian `dark:` (kelas `.dark` di `<html>`), bukan `prefers-color-scheme`. Setiap layar dicek di kedua tema.
 - **Warna punya peran, bukan hiasan.** Komponen hanya memakai token di `src/app/globals.css`:
@@ -133,6 +133,9 @@ Harga dibulatkan ke atas ke kelipatan Rp 500 dengan aritmetika integer, lalu `ma
   - selain itu netral (`muted`, `surface`, `food` untuk thumbnail tanpa foto).
 
   Jangan memberi ikon, tile, atau baris menu warna berbeda hanya supaya bervariasi. Pengecualian: bintang rating (kuning), warna merek e-wallet, dan overlay kamera pemindai. Hindari juga gradien dekoratif, orb blur, dan animasi denyut kecuali untuk status yang mendesak.
+- **Bentuk dan label.** Radius dasar 10px. Kartu dan panel memakai `rounded-2xl`/`rounded-3xl`, tombol aksi dan input `rounded-xl`, dan bentuk pil (`rounded-full`) hanya untuk chip, tag, filter, avatar, dan titik status. Label section ditulis huruf kalimat biasa, tanpa `uppercase` dan tanpa spasi huruf lebar. Pengecualian: kode yang harus dibaca dan diketik (SJ-1234, kode voucher) dan stempel "Habis".
+- **Istilah.** Diskon terbesar menjelang tutup bernama "Diskon Kilat". Level pembeli: Pemula, Penyelamat, Juara Pangan.
+- **Tur produk** (`src/components/tour/`) dirakit dari komponen asli aplikasi di dalam `ScreenPreview` berlabel "Contoh tampilan", tanpa bingkai HP tiruan. Bila tata letak sebuah tiruan berubah, ukur ulang `focusY` di `TOUR_MOCKS`.
 - **Kunjungan pertama:** "/" mengirim tamu baru ke /tour (`?peran=mitra` untuk mitra). Selesai atau lewati tur menyimpan `ss-tour-seen`, sehingga kunjungan berikutnya ke /welcome. Pembeli yang login langsung ke /discover, mitra ke /merchant/dashboard.
 
 ## Alur kerja

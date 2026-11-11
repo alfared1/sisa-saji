@@ -38,7 +38,7 @@ import { SESSION_QUERY_KEY, useSession } from "@/hooks/use-session";
 import type { AuthMeResponse } from "@/lib/contracts";
 import { markTourSeen } from "@/lib/pwa/visitor";
 import { cn } from "@/lib/utils";
-import { PhoneFrame } from "./phone-frame";
+import { ScreenPreview } from "./screen-preview";
 import {
   TOUR_ROLES,
   TOUR_ROLE_LABELS,
@@ -83,7 +83,7 @@ const SLIDE_TRANSITION = {
 };
 
 /** Primary pill used by every bottom-bar action (48 px tall: comfortable thumb target). */
-const ACTION = "h-12 cursor-pointer rounded-full px-5 text-base font-bold";
+const ACTION = "h-12 cursor-pointer rounded-xl px-5 text-base font-bold";
 
 /** Secondary actions on the last step: underlined text with a 44 px hit area. */
 const TEXT_ACTION =
@@ -275,7 +275,7 @@ export function TourView() {
                 type="button"
                 variant="ghost"
                 onClick={skip}
-                className="h-11 cursor-pointer rounded-full px-4 text-sm font-semibold text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="h-11 cursor-pointer rounded-xl px-4 text-sm font-semibold text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Lewati tur
               </Button>
@@ -383,7 +383,7 @@ function RoleSwitch({
             <span
               aria-hidden
               className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-full px-3 text-sm font-bold transition-colors md:h-11",
+                "flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors md:h-11",
                 "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary",
                 checked
                   ? "bg-primary text-primary-foreground shadow-soft"
@@ -401,12 +401,12 @@ function RoleSwitch({
 }
 
 /**
- * Tinted stage with the phone preview. Decorative (aria-hidden): the slide
- * text carries the same information plus an sr-only description. The phone can
+ * Tinted stage with the screen preview. Decorative (aria-hidden): the slide
+ * text carries the same information plus an sr-only description. The preview can
  * be dragged sideways (touch or mouse) to change step; motion sets
  * touch-action: pan-y on it, so vertical page scrolling keeps working.
  *
- * The stage is a size container: PhoneFrame reads its height (cqh), --pad and
+ * The stage is a size container: ScreenPreview reads its height (cqh), --pad and
  * the slide's --focus / --focus-below to scroll each screen to its highlight.
  */
 function Stage({
@@ -428,9 +428,9 @@ function Stage({
     <div
       aria-hidden
       className={cn(
-        "relative isolate overflow-hidden rounded-[2rem] ring-1 ring-black/[0.04] transition-colors duration-500 [container-type:size] dark:ring-white/[0.06]",
-        // --z scales the 316 px phone: 0.78 → ~246 px wide on a 360 px phone, 1.08 → ~341 px on a laptop.
-        // --callout is the on-screen size of the coachmark text; --pad the gap above the phone.
+        "relative isolate overflow-hidden rounded-3xl ring-1 ring-black/[0.04] transition-colors duration-500 [container-type:size] dark:ring-white/[0.06]",
+        // --z scales the 316 px preview: 0.78 → ~246 px wide on a 360 px phone, 1.08 → ~341 px on a laptop.
+        // --callout is the on-screen size of the coachmark text; --pad the gap above the preview.
         "[--callout:13px] [--pad:14px] [--z:0.78] min-[380px]:[--z:0.82] md:[--pad:40px] md:[--z:0.96] lg:[--callout:14px] lg:[--z:1.08]",
         // Phones: what is left after the header, role switch, slide text and bottom bar (~26.5rem; 28rem
         // below 380 px, where the copy wraps onto one more line), so the body does not run under the bar.
@@ -441,8 +441,6 @@ function Stage({
         className,
       )}
     >
-      {/* Soft spotlight behind the phone: gives the preview one clear focal point on the tint. */}
-      <span className="pointer-events-none absolute top-[14%] left-1/2 -z-10 aspect-square w-[88%] max-w-[30rem] -translate-x-1/2 rounded-full bg-card/50 dark:bg-card/30" />
       <AnimatePresence initial={false} mode="popLayout" custom={slideCustom}>
         <motion.div
           key={slideKey}
@@ -460,11 +458,11 @@ function Stage({
           style={{ "--focus": `${focusY}px`, "--focus-below": `${focusBelow}px` } as CSSProperties}
           className="absolute inset-0 cursor-grab pt-(--pad) [mask-image:linear-gradient(to_bottom,#000_88%,transparent)] active:cursor-grabbing"
         >
-          <PhoneFrame time={clock}>
+          <ScreenPreview time={clock}>
             <div inert>
               <Mock />
             </div>
-          </PhoneFrame>
+          </ScreenPreview>
         </motion.div>
       </AnimatePresence>
     </div>

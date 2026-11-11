@@ -288,7 +288,7 @@ export function MenuForm({
 
       <div className={cn("flex gap-2 pt-1 sm:justify-end", actionsClassName)}>
         {secondary}
-        <Button type="submit" className={cn("h-12 flex-1 rounded-full px-4 text-base font-bold sm:px-6", !secondary && "sm:flex-none")} disabled={pending}>
+        <Button type="submit" className={cn("h-12 flex-1 rounded-xl px-4 text-base font-bold sm:px-6", !secondary && "sm:flex-none")} disabled={pending}>
           {pending && <Loader2Icon className="animate-spin" />}
           {submitLabel}
         </Button>

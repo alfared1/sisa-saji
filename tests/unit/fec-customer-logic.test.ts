@@ -299,7 +299,7 @@ describe("formatting", () => {
   });
 
   it("labels badge tiers and keeps the last chart months in order", () => {
-    expect(badgeLabel("SURPLUS_HERO")).toBe("Surplus Hero");
+    expect(badgeLabel("SURPLUS_HERO")).toBe("Juara Pangan");
     expect(badgeLabel("ECO_LEGEND")).toBe("Eco Legend");
     const months = ["2026-05", "2026-11", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"].map((month) => ({
       month,

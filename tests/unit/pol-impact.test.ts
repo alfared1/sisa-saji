@@ -4,14 +4,14 @@ import { pinBadge, pinClassName, pinHtml } from "@/components/map/types";
 
 describe("impact text", () => {
   it("formats the reference line for one 200 g portion", () => {
-    expect(impactText(200)).toBe("🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e");
+    expect(impactText(200)).toBe("Selamatkan 200 g pangan • −0,5 kg CO₂e");
   });
 
   it("multiplies portion weight by quantity", () => {
     const f = impactFigures(250, 3);
     expect(f.foodGrams).toBe(750);
     expect(f.co2Grams).toBe(1875);
-    expect(f.text).toBe("🌱 Selamatkan 750 g pangan • −1,9 kg CO₂e");
+    expect(f.text).toBe("Selamatkan 750 g pangan • −1,9 kg CO₂e");
   });
 
   it("switches food weight to kg with a decimal comma from 1 kg", () => {
@@ -19,7 +19,7 @@ describe("impact text", () => {
     expect(formatFoodWeight(1000)).toBe("1 kg");
     expect(formatFoodWeight(1200)).toBe("1,2 kg");
     expect(formatFoodWeight(12_340)).toBe("12,3 kg");
-    expect(impactText(400, 3)).toBe("🌱 Selamatkan 1,2 kg pangan • −3,0 kg CO₂e");
+    expect(impactText(400, 3)).toBe("Selamatkan 1,2 kg pangan • −3,0 kg CO₂e");
   });
 
   it("always writes CO₂e in kg with a comma, never rounding small values to zero", () => {
@@ -31,8 +31,8 @@ describe("impact text", () => {
   });
 
   it("falls back to the default portion weight when unknown", () => {
-    expect(impactText(null)).toBe("🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e");
-    expect(impactText(0, 2)).toBe("🌱 Selamatkan 400 g pangan • −1,0 kg CO₂e");
+    expect(impactText(null)).toBe("Selamatkan 200 g pangan • −0,5 kg CO₂e");
+    expect(impactText(0, 2)).toBe("Selamatkan 400 g pangan • −1,0 kg CO₂e");
   });
 });
 

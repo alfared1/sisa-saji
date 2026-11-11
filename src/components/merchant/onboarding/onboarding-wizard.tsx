@@ -221,7 +221,7 @@ export function OnboardingWizard() {
 
                 <div className={cn(ACTION_BAR, "mt-8")}>
                   {step > 0 && (
-                    <Button type="button" variant="outline" className="h-12 rounded-full px-5" onClick={() => go(step - 1)}>
+                    <Button type="button" variant="outline" className="h-12 rounded-xl px-5" onClick={() => go(step - 1)}>
                       <ArrowLeftIcon /> Kembali
                     </Button>
                   )}
@@ -229,7 +229,7 @@ export function OnboardingWizard() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-12 rounded-full px-4"
+                      className="h-12 rounded-xl px-4"
                       onClick={() => {
                         form.setValue("bank_code", "");
                         form.setValue("bank_account_number", "");
@@ -240,7 +240,7 @@ export function OnboardingWizard() {
                       Lewati
                     </Button>
                   )}
-                  <Button type="submit" className="h-12 flex-1 rounded-full text-base font-bold">
+                  <Button type="submit" className="h-12 flex-1 rounded-xl text-base font-bold">
                     Lanjut <ArrowRightIcon />
                   </Button>
                 </div>

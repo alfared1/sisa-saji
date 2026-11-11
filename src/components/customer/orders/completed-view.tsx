@@ -83,7 +83,7 @@ function ImpactInfographic({ order }: { order: OrderDetail }) {
     { icon: TreesIcon, value: `${formatDecimal(trees * 12, 1)} bln`, label: "kerja 1 pohon menyerap CO₂" },
   ];
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-impact p-5 text-white shadow-card">
+    <section className="relative overflow-hidden rounded-3xl bg-impact p-5 text-white shadow-card">
       <div className="relative flex items-center gap-2">
         <LogoMark className="size-8" />
         <p className="text-xs font-bold text-white/85">Dampak pesanan {order.order_number}</p>
@@ -150,14 +150,14 @@ export function ImpactCelebrationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-2rem)] overflow-hidden rounded-[1.75rem] p-0 sm:max-w-sm">
+      <DialogContent className="max-w-[calc(100%-2rem)] overflow-hidden rounded-3xl p-0 sm:max-w-sm">
         <div className="relative bg-gradient-to-b from-brand-soft to-card px-6 pt-8 pb-6 text-center">
           {open && <Confetti />}
           <motion.span
             initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 14 }}
-            className="relative mx-auto inline-flex size-20 items-center justify-center rounded-[1.75rem] bg-primary text-primary-foreground"
+            className="relative mx-auto inline-flex size-20 items-center justify-center rounded-3xl bg-primary text-primary-foreground"
           >
             <PartyPopperIcon className="size-10" />
           </motion.span>
@@ -185,7 +185,7 @@ export function ImpactCelebrationModal({
           <div className="relative mt-5 grid gap-2">
             {!order.review && (
               <Button
-                className="h-12 rounded-full text-base font-bold"
+                className="h-12 rounded-xl text-base font-bold"
                 onClick={() => {
                   onOpenChange(false);
                   onReview();
@@ -194,7 +194,7 @@ export function ImpactCelebrationModal({
                 <StarIcon className="size-4" /> Beri ulasan
               </Button>
             )}
-            <Button variant="outline" className="h-11 rounded-full font-bold" onClick={() => void shareImpact(order)}>
+            <Button variant="outline" className="h-11 rounded-xl font-bold" onClick={() => void shareImpact(order)}>
               <Share2Icon className="size-4" /> Bagikan dampakku
             </Button>
           </div>
@@ -269,7 +269,7 @@ export function ReviewFormSheet({
           </div>
 
           <fieldset>
-            <legend className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <legend className="mb-2 text-sm font-semibold text-muted-foreground">
               Apa yang kamu suka?
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -294,7 +294,7 @@ export function ReviewFormSheet({
           </fieldset>
 
           <div>
-            <label htmlFor="review-comment" className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <label htmlFor="review-comment" className="mb-2 block text-sm font-semibold text-muted-foreground">
               Cerita singkat (opsional)
             </label>
             <Textarea
@@ -307,7 +307,7 @@ export function ReviewFormSheet({
             />
           </div>
 
-          <Button type="submit" className="h-12 w-full rounded-full text-base font-bold" disabled={rating < 1 || submit.isPending}>
+          <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={rating < 1 || submit.isPending}>
             {submit.isPending && <Loader2Icon className="size-4 animate-spin" />}
             {rating < 1 ? "Pilih bintang dulu" : "Kirim ulasan"}
           </Button>
@@ -349,7 +349,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
       <ImpactInfographic order={order} />
-      <Button variant="outline" className="h-12 rounded-full font-bold" onClick={() => void shareImpact(order)}>
+      <Button variant="outline" className="h-12 rounded-xl font-bold" onClick={() => void shareImpact(order)}>
         <Share2Icon className="size-4" /> Bagikan ke Instagram Story / WhatsApp
       </Button>
 
@@ -392,7 +392,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
       {order.picked_up_at && (
         <p className="text-center text-xs text-muted-foreground">Diambil {formatDateTimeId(order.picked_up_at)} WIB</p>
       )}
-      <Button asChild className="h-12 rounded-full font-bold">
+      <Button asChild className="h-12 rounded-xl font-bold">
         <Link href="/discover">Selamatkan makanan lagi</Link>
       </Button>
       </div>

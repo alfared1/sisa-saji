@@ -9,7 +9,7 @@
  * discount_adjustment_logs row (TIME_DECAY_RULE, or TIME_DECAY_30M_RULE when
  * ≤ 30 minutes to close).
  *
- * "Flash Rescue": the first time a batch is in the ≤ 30-minute tier with ≥ 5
+ * "Diskon Kilat": the first time a batch is in the ≤ 30-minute tier with ≥ 5
  * portions left, devices within 1.5 km and subscribers (notify_on_surplus_live)
  * get a push — once per batch, detected via an existing TIME_DECAY_30M_RULE log.
  * When the price cannot drop further (floor / already at 70%), a marker log row
@@ -56,7 +56,7 @@ export async function runEscalation(db: Db, now: Date = new Date()): Promise<Esc
   const summary: EscalationSummary = { checked: rows.length, raised: 0, flashRescues: 0, notifiedDevices: 0 };
   if (!rows.length) return summary;
 
-  // Batches that already had their Flash Rescue (30-minute tier) log.
+  // Batches that already had their Diskon Kilat (30-minute tier) log.
   const flashed = new Set(
     (
       await db
@@ -149,7 +149,7 @@ export async function runEscalation(db: Db, now: Date = new Date()): Promise<Esc
         nearbyRadiusM: FLASH_RESCUE_RADIUS_M,
         now,
         payload: {
-          title: `Flash Rescue ${newPct}% di ${merchant.merchantName}`,
+          title: `Diskon Kilat ${newPct}% di ${merchant.merchantName}`,
           body: `${menu.menuName} tinggal ${batch.availableStock} porsi, sekarang ${formatIdr(newPrice)}. Ambil sebelum ${formatClockId(batch.pickupEndTime)}!`,
           url: `/warung/${merchant.slug}`,
           tag: `flash-${batch.id}`,

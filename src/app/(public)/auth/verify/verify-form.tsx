@@ -128,7 +128,7 @@ export function VerifyForm() {
 
   // lg+: the form sits in a card, vertically centred by the auth layout.
   return (
-    <div className="flex flex-1 flex-col gap-6 pt-2 lg:flex-none lg:rounded-[1.75rem] lg:bg-card lg:p-8 lg:shadow-card lg:ring-1 lg:ring-border">
+    <div className="flex flex-1 flex-col gap-6 pt-2 lg:flex-none lg:rounded-3xl lg:bg-card lg:p-8 lg:shadow-card lg:ring-1 lg:ring-border">
       <Link
         href={backHref}
         className="-ml-2 inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -238,7 +238,7 @@ export function VerifyForm() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-full text-base font-bold"
+          className="h-12 w-full rounded-xl text-base font-bold"
           disabled={verify.isPending || code.length !== OTP_LENGTH}
         >
           {verify.isPending && <Loader2Icon className="animate-spin" />}

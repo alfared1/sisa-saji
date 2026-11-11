@@ -21,7 +21,7 @@ function TourFallback() {
       </div>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 md:grid md:max-w-5xl md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:items-center md:gap-x-10 md:py-8 lg:pt-2 lg:pb-8 md:px-8 lg:max-w-6xl lg:gap-x-16">
         <div className="contents md:block md:space-y-4">
-          <Skeleton className="h-12 rounded-full md:h-[52px] md:w-[22rem]" />
+          <Skeleton className="h-12 rounded-xl md:h-[52px] md:w-[22rem]" />
           <div className="mt-5 hidden space-y-3 md:block">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-10 w-4/5" />
@@ -29,7 +29,7 @@ function TourFallback() {
             <Skeleton className="h-4 w-2/3" />
           </div>
         </div>
-        <Skeleton className="mt-3 h-[clamp(15rem,calc(100svh-28rem),23rem)] rounded-[2rem] min-[380px]:h-[clamp(16rem,calc(100svh-26.5rem),23rem)] md:mt-0 md:h-[min(40rem,calc(100svh-10rem))] lg:h-[min(38rem,calc(100svh-7.5rem))]" />
+        <Skeleton className="mt-3 h-[clamp(15rem,calc(100svh-28rem),23rem)] rounded-3xl min-[380px]:h-[clamp(16rem,calc(100svh-26.5rem),23rem)] md:mt-0 md:h-[min(40rem,calc(100svh-10rem))] lg:h-[min(38rem,calc(100svh-7.5rem))]" />
         <div className="mt-4 space-y-3 md:hidden">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-8 w-4/5" />

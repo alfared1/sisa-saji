@@ -117,7 +117,7 @@
   }
 }
 
-/* "Flash Rescue" badge: orange (#F97316) halo that breathes out under 45 minutes. */
+/* "Diskon Kilat" badge: orange (#F97316) halo that breathes out under 45 minutes. */
 @keyframes flash-pulse {
   0% {
     box-shadow: 0 0 0 0 rgb(249 115 22 / 0.6);
@@ -166,7 +166,8 @@
 }
 
 :root {
-  --radius: 0.875rem;
+  /* 10px base: cards land on 18-22px, controls on 10-14px; pills only for chips and tags. */
+  --radius: 0.625rem;
 
   /* warm cream canvas, white cards, green-black ink */
   --background: oklch(0.982 0.008 85);
@@ -419,7 +420,7 @@
   .ss-pin--urgent .ss-pin__body {
     animation: var(--animate-pin-pulse);
   }
-  /* Hemat / Flash Rescue pins (same rule as <DiscountBadge />): orange halo only < 45 min. */
+  /* Hemat / Diskon Kilat pins (same rule as <DiscountBadge />): orange halo only < 45 min. */
   .ss-pin--hemat.ss-pin--urgent .ss-pin__body,
   .ss-pin--flash.ss-pin--urgent .ss-pin__body {
     animation: none;

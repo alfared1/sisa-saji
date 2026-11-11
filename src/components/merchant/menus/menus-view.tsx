@@ -197,7 +197,7 @@ export function MerchantMenusView() {
           <button
             type="button"
             onClick={() => setEditing({ mode: "create" })}
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <PlusIcon className="size-4" /> Tambah menu
           </button>

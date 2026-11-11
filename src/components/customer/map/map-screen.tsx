@@ -160,7 +160,7 @@ function MapLegend({ scope }: { scope: MapScope }) {
           <FlashSwatch />
         </span>
         <span>
-          <span className="font-extrabold text-flash dark:text-flash-accent">Pin oranye berdenyut</span> = Flash Rescue,
+          <span className="font-extrabold text-flash dark:text-flash-accent">Pin oranye berdenyut</span> = Diskon Kilat,
           tutup &lt; 45 menit
         </span>
       </li>
@@ -354,7 +354,7 @@ export function MapScreen() {
     selectedId && (indonesia || !selected) ? (
       <div className="mb-4 rounded-3xl bg-card p-3 shadow-card ring-2 ring-primary">
         <div className="-mt-1 mb-1.5 flex items-center justify-between gap-2 pl-1">
-          <span className="text-[11px] font-bold tracking-wide text-primary uppercase">Dipilih di peta</span>
+          <span className="text-xs font-bold text-primary">Dipilih di peta</span>
           <button
             type="button"
             onClick={clearSelection}
@@ -553,7 +553,7 @@ export function MapScreen() {
                         {isSelected ? (
                           <div className="rounded-3xl bg-card p-3 shadow-card ring-2 ring-primary">
                             <div className="-mt-1 mb-1.5 flex items-center justify-between gap-2 pl-1">
-                              <span className="text-[11px] font-bold tracking-wide text-primary uppercase">
+                              <span className="text-xs font-bold text-primary">
                                 Dipilih di peta
                               </span>
                               <button
@@ -610,7 +610,7 @@ export function MapScreen() {
               <Button
                 variant="outline"
                 onClick={() => setLocationSheetOpen(true)}
-                className="h-11 rounded-full bg-card px-4 text-sm font-bold shadow-float"
+                className="h-11 rounded-xl bg-card px-4 text-sm font-bold shadow-float"
               >
                 <MapPinIcon className="text-primary" />
                 Pilih kota / lokasi

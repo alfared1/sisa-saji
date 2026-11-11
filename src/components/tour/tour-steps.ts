@@ -71,7 +71,7 @@ export const SERVICE_FEE_LABEL = formatIdr(PLATFORM_COMMISSION_DEFAULT_IDR);
 
 /** CO₂e avoided by one default portion: "0,5 kg". */
 export const PORTION_CO2 = impactFigures(DEFAULT_PORTION_WEIGHT_GRAMS).co2;
-/** Badge thresholds in kg: Surplus Saver, Surplus Hero. */
+/** Badge thresholds in kg: Penyelamat, Juara Pangan. */
 export const SAVER_KG = BADGE_TIERS[1].minFoodSavedGrams / 1000;
 export const HERO_KG = BADGE_TIERS[2].minFoodSavedGrams / 1000;
 const CO2_PER_KG = CO2E_PER_KG_FOOD.toLocaleString("id-ID");
@@ -119,7 +119,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
       body: `Beranda menampilkan porsi surplus dalam radius ${RADIUS_KM} km dari kampusmu. Makin dekat jam tutup, makin besar diskonnya.`,
       bullets: [
         { icon: MapIcon, text: "Buka Peta untuk melihat warung di sekitarmu" },
-        { icon: BadgePercentIcon, text: "Hemat 50% bisa naik jadi Flash Rescue 70% saat warung hampir tutup" },
+        { icon: BadgePercentIcon, text: "Hemat 50% bisa naik jadi Diskon Kilat 70% saat warung hampir tutup" },
         { icon: FlameIcon, text: "Label “Hampir Habis!” berarti porsinya tinggal sedikit" },
       ],
       tint: "deal",
@@ -153,11 +153,11 @@ const STEPS: Record<TourRole, TourStep[]> = {
       title: "Lihat dampakmu tumbuh",
       body: "Setiap pesanan yang kamu ambil tercatat: pangan yang diselamatkan, emisi CO₂e yang dicegah, dan uang yang kamu hemat.",
       bullets: [
-        { icon: SproutIcon, text: `Naik level dari Surplus Rookie ke Saver di ${SAVER_KG} kg, lalu Hero di ${HERO_KG} kg` },
+        { icon: SproutIcon, text: `Naik level dari Pemula ke Penyelamat di ${SAVER_KG} kg, lalu Juara Pangan di ${HERO_KG} kg` },
         { icon: CloudIcon, text: `1 kg pangan yang diselamatkan mencegah ${CO2_PER_KG} kg emisi CO₂e` },
       ],
       tint: "brand",
-      mockLabel: "Contoh halaman dampak: level Surplus Saver, pangan diselamatkan, emisi dicegah, dan uang yang dihemat.",
+      mockLabel: "Contoh halaman dampak: level Penyelamat, pangan diselamatkan, emisi dicegah, dan uang yang dihemat.",
     },
   ],
   mitra: [
@@ -191,7 +191,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
       body: `Tiap ${ESCALATION_INTERVAL_MINUTES} menit sistem memeriksa sisa porsi dan waktu tutup. Kalau porsi masih banyak 30 menit sebelum tutup, diskon naik ke 70%.`,
       bullets: [
         { icon: TrendingUpIcon, text: "Diskon hanya naik, tidak pernah turun lagi" },
-        { icon: BellRingIcon, text: "Flash Rescue 70% dikabarkan ke pembeli terdekat" },
+        { icon: BellRingIcon, text: "Diskon Kilat 70% dikabarkan ke pembeli terdekat" },
         { icon: ShieldCheckIcon, text: "Harga minimum tetap jadi batas bawah" },
       ],
       tint: "deal",

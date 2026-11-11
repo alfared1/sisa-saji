@@ -79,12 +79,12 @@ export function DirectionsAndWhatsAppButtons({ order }: { order: OrderDetail }) 
   } dari Sisa-Saji.`;
   return (
     <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-      <Button asChild className="h-12 rounded-full font-bold">
+      <Button asChild className="h-12 rounded-xl font-bold">
         <a href={mapsDirectionsUrl(order.merchant.lat, order.merchant.lng)} target="_blank" rel="noreferrer">
           <NavigationIcon className="size-4" /> Petunjuk Arah
         </a>
       </Button>
-      <Button asChild variant="outline" className="h-12 rounded-full font-bold">
+      <Button asChild variant="outline" className="h-12 rounded-xl font-bold">
         <a href={whatsappUrl(order.merchant.whatsapp_number, text)} target="_blank" rel="noreferrer">
           <MessageCircleIcon className="size-4 text-primary" aria-hidden /> Hubungi Warung
         </a>

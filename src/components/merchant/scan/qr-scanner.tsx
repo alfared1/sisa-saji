@@ -124,7 +124,7 @@ export function QrScanner({ paused, onDecode, className }: { paused: boolean; on
                 </span>
                 <p className="text-base font-bold">Pindai QR tiket pembeli</p>
                 <p className="max-w-64 text-sm text-white/70">Arahkan kamera belakang ke QR di layar HP pembeli.</p>
-                <Button onClick={() => void start()} className="mt-1 h-12 rounded-full bg-white px-6 text-sm font-bold text-neutral-950 hover:bg-white/90">
+                <Button onClick={() => void start()} className="mt-1 h-12 rounded-xl bg-white px-6 text-sm font-bold text-neutral-950 hover:bg-white/90">
                   <CameraIcon /> Nyalakan kamera
                 </Button>
               </>
@@ -142,7 +142,7 @@ export function QrScanner({ paused, onDecode, className }: { paused: boolean; on
                     ? "Izinkan kamera lewat ikon gembok di bilah alamat, atau ketik 4 digit kode SJ- di bawah."
                     : "Perangkat ini tidak punya kamera yang bisa dipakai. Ketik 4 digit kode SJ- di bawah."}
                 </p>
-                <Button onClick={() => void start()} variant="outline" className="mt-1 h-11 rounded-full border-white/30 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
+                <Button onClick={() => void start()} variant="outline" className="mt-1 h-11 rounded-xl border-white/30 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
                   Coba lagi
                 </Button>
               </>

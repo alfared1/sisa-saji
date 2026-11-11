@@ -160,11 +160,11 @@ function GeoPrompt() {
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Button variant="outline" className="h-11 rounded-full font-semibold" onClick={dismiss}>
+        <Button variant="outline" className="h-11 rounded-xl font-semibold" onClick={dismiss}>
           Pakai kampus
         </Button>
         <Button
-          className="h-11 rounded-full font-bold"
+          className="h-11 rounded-xl font-bold"
           disabled={isLocating}
           onClick={async () => {
             if (await request()) dismiss();
@@ -409,7 +409,7 @@ export function DiscoverScreen() {
             action={
               <div className="flex flex-col items-center gap-2">
                 {bigger && (
-                  <Button className="h-11 rounded-full px-5 font-bold" onClick={() => setRadius(bigger)}>
+                  <Button className="h-11 rounded-xl px-5 font-bold" onClick={() => setRadius(bigger)}>
                     Perluas ke {formatRadius(bigger)}
                   </Button>
                 )}

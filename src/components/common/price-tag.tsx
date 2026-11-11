@@ -16,7 +16,7 @@ export function PriceTag({
   original: number;
   selling: number;
   discountPct?: number;
-  /** pickup_end_time — lets the badge switch to "Flash Rescue" (pulsing) under 45 min. */
+  /** pickup_end_time — lets the badge switch to "Diskon Kilat" (pulsing) under 45 min. */
   endIso?: string | null;
   size?: "sm" | "md" | "lg";
   showBadge?: boolean;

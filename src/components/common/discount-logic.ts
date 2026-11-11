@@ -3,7 +3,7 @@
  * <DiscountBadge />, the map pins and every card that shows a discount.
  *
  *  - "Hemat N%"         emerald, the normal case.
- *  - "Flash Rescue N%"  amber/orange when the discount is ≥ 70 % OR the batch
+ *  - "Diskon Kilat N%"  amber/orange when the discount is ≥ 70 % OR the batch
  *                       closes in < 45 minutes; it pulses only under 45 minutes.
  *
  * Colours (WCAG): the spec hues #10B981 / #F97316 only reach 2,5:1 / 2,8:1
@@ -23,7 +23,7 @@ export const DISCOUNT_COLORS = {
   hematAccent: "#10B981",
   /** Fill behind white text — emerald-700, 5,48:1. */
   hemat: "#047857",
-  /** Flash Rescue: amber/orange (accent: ring, pulse). */
+  /** Diskon Kilat: amber/orange (accent: ring, pulse). */
   flashAccent: "#F97316",
   /** Fill behind white text — orange-700, 5,18:1. */
   flash: "#C2410C",
@@ -36,7 +36,7 @@ export type DiscountBadgeState = {
   /** Pulses only while the batch closes within 45 minutes. */
   pulse: boolean;
   pct: number;
-  /** "Hemat 50%" / "Flash Rescue 70%". */
+  /** "Hemat 50%" / "Diskon Kilat 70%". */
   label: string;
   /** Short label for tight spots (map pins): "Hemat 50%" / "Flash 70%". */
   shortLabel: string;
@@ -62,7 +62,7 @@ export function discountBadgeState(pct: number, minutesToClose: number | null = 
     variant: flash ? "flash" : "hemat",
     pulse: closingSoon,
     pct: p,
-    label: flash ? `Flash Rescue ${p}%` : `Hemat ${p}%`,
+    label: flash ? `Diskon Kilat ${p}%` : `Hemat ${p}%`,
     shortLabel: flash ? `Flash ${p}%` : `Hemat ${p}%`,
   };
 }

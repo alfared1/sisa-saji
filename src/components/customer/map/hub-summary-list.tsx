@@ -29,7 +29,7 @@ export function HubSummaryList({
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3
                 id={headingId}
-                className="flex min-w-0 items-center gap-2 text-[11px] font-bold tracking-wide text-muted-foreground uppercase"
+                className="flex min-w-0 items-center gap-2 text-xs font-bold text-muted-foreground"
               >
                 <span className="truncate">{r.region}</span>
                 {r.isHome && (

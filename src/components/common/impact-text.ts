@@ -1,5 +1,5 @@
 /**
- * Per-item impact copy (docs/ARCHITECTURE.md, Konvensi UI): "🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e".
+ * Per-item impact copy (docs/ARCHITECTURE.md, Konvensi UI): "Selamatkan 200 g pangan • −0,5 kg CO₂e".
  * Pure, unit-tested in tests/unit/pol-impact.test.ts.
  */
 import { DEFAULT_PORTION_WEIGHT_GRAMS } from "@/lib/constants";
@@ -35,10 +35,10 @@ export function impactFiguresFromGrams(foodGrams: number): ImpactFigures {
   const co2Grams = co2GramsFromFoodGrams(foodGrams);
   const food = formatFoodWeight(foodGrams);
   const co2 = formatCo2Kg(co2Grams);
-  return { foodGrams, co2Grams, food, co2, text: `🌱 Selamatkan ${food} pangan • −${co2} CO₂e` };
+  return { foodGrams, co2Grams, food, co2, text: `Selamatkan ${food} pangan • −${co2} CO₂e` };
 }
 
-/** "🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e" */
+/** "Selamatkan 200 g pangan • −0,5 kg CO₂e" */
 export function impactText(portionWeightGrams: number | null | undefined, quantity = 1): string {
   return impactFigures(portionWeightGrams, quantity).text;
 }

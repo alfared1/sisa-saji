@@ -19,7 +19,7 @@ export default function NotFound() {
         </header>
         <section className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="relative">
-            <span className="relative inline-flex size-24 items-center justify-center rounded-[2rem] bg-card text-deal shadow-card ring-1 ring-border">
+            <span className="relative inline-flex size-24 items-center justify-center rounded-3xl bg-card text-deal shadow-card ring-1 ring-border">
               <SoupIcon className="size-11" />
             </span>
             <span className="absolute -top-2 -right-3 rounded-full bg-foreground px-2.5 py-1 text-xs font-black text-background shadow-soft">
@@ -32,12 +32,12 @@ export default function NotFound() {
             menunggu diselamatkan!
           </p>
           <div className="mt-8 grid w-full max-w-xs gap-2">
-            <Button asChild className="h-12 rounded-full text-base font-bold">
+            <Button asChild className="h-12 rounded-xl text-base font-bold">
               <Link href="/discover">
                 <CompassIcon className="size-5" /> Cari makanan surplus
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-12 rounded-full font-bold">
+            <Button asChild variant="outline" className="h-12 rounded-xl font-bold">
               <Link href="/welcome">
                 <HomeIcon className="size-4" /> Ke halaman utama
               </Link>

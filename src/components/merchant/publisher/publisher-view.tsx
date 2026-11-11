@@ -116,14 +116,14 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Link
           href="/merchant/dashboard"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-card"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-card"
         >
           <LayoutDashboardIcon className="size-4" /> Kembali ke dasbor
         </Link>
         <button
           type="button"
           onClick={onAnother}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-card px-5 text-sm font-bold ring-1 ring-border hover:bg-muted"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-5 text-sm font-bold ring-1 ring-border hover:bg-muted"
         >
           <PlusIcon className="size-4" /> Publikasikan menu lain
         </button>
@@ -269,7 +269,7 @@ export function SurplusPublisherView() {
             title="Belum ada menu aktif"
             description="Tambahkan menu (atau Paket Kejutan) dulu. Setelah itu publikasi surplus cukup 3 ketukan."
             action={
-              <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground">
+              <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
                 <PlusIcon className="size-4" /> Tambah menu
               </Link>
             }

@@ -20,8 +20,8 @@ export const DISCOUNT_TEXT_CLASS: Record<DiscountVariant, string> = {
 };
 
 /**
- * "Hemat 50%" (emerald) or "Flash Rescue 70%" (orange, pulsing under 45 min).
- * Pass `endIso` (pickup_end_time) for a live switch to Flash Rescue as closing
+ * "Hemat 50%" (emerald) or "Diskon Kilat 70%" (orange, pulsing under 45 min).
+ * Pass `endIso` (pickup_end_time) for a live switch to Diskon Kilat as closing
  * time approaches, or `minutesToClose` for a fixed value. Without either, only
  * the ≥ 70 % rule applies. `upTo` prefixes "s/d" (warung-level maximum).
  */

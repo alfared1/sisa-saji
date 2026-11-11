@@ -88,7 +88,7 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * Discount badge of an open pin — the same "Hemat N%" / "Flash Rescue N%"
+ * Discount badge of an open pin — the same "Hemat N%" / "Diskon Kilat N%"
  * rule as <DiscountBadge /> (Flash at ≥ 70 % or < 45 min to close; pulses
  * only < 45 min). Null for closed / sold-out pins and pins without discount.
  */

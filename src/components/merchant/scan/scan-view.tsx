@@ -136,7 +136,7 @@ export function PickupScanView() {
         actions={
           <Link
             href="/merchant/orders"
-            className="inline-flex h-11 items-center gap-1.5 rounded-full bg-card px-4 text-sm font-semibold ring-1 ring-border hover:bg-muted"
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-card px-4 text-sm font-semibold ring-1 ring-border hover:bg-muted"
           >
             <ClipboardListIcon className="size-4" /> Pesanan
           </Link>

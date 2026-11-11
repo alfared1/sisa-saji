@@ -264,7 +264,7 @@ export function CheckoutScreen() {
           title="Keranjang masih kosong"
           description="Pilih porsi surplus dari warung terdekat. Hemat sampai 70% dan bantu kurangi makanan terbuang."
           action={
-            <Button asChild className="h-11 rounded-full px-6 font-bold">
+            <Button asChild className="h-11 rounded-xl px-6 font-bold">
               <Link href="/discover">Cari makanan</Link>
             </Button>
           }

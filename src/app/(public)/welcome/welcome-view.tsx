@@ -43,7 +43,7 @@ const TIMELINE = [
   { when: "1 jam lagi tutup", text: "Masih banyak yang belum laku? Diskon naik sendiri.", quote: examplePrice(60, 6) },
   {
     when: "30 menit lagi",
-    text: "Flash Rescue: diskon terbesar, dan pembeli di sekitar warung dapat notifikasi.",
+    text: "Diskon Kilat: potongan terbesar, dan pembeli di sekitar warung dapat notifikasi.",
     quote: examplePrice(30, 5),
     flash: true,
   },
@@ -205,7 +205,7 @@ export function WelcomeView() {
           <Logo />
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <Button asChild variant="ghost" className="h-11 rounded-full px-4 font-semibold">
+            <Button asChild variant="ghost" className="h-11 rounded-xl px-4 font-semibold">
               <Link href="/auth/login">Masuk</Link>
             </Button>
           </div>
@@ -222,7 +222,7 @@ export function WelcomeView() {
             </p>
             <Link
               href="/tour"
-              className="-mt-2 -ml-1 flex min-h-11 w-fit items-center gap-2.5 rounded-full py-1 pr-4 pl-1 text-sm font-bold outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="-mt-2 -ml-1 flex min-h-11 w-fit items-center gap-2.5 rounded-xl py-1 pr-4 pl-1 text-sm font-bold outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-primary">
                 <CirclePlayIcon className="size-5" aria-hidden />

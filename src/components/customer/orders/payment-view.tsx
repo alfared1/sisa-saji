@@ -207,7 +207,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
         </p>
         <Button
           variant="outline"
-          className="mt-4 h-11 rounded-full px-5 font-bold"
+          className="mt-4 h-11 rounded-xl px-5 font-bold"
           disabled={!order.qris_string}
           onClick={() =>
             downloadQrPng(qrRef.current, `QRIS-${order.order_number}.png`)
@@ -224,14 +224,14 @@ export function PaymentView({ order }: { order: OrderDetail }) {
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       {/* Demo simulator */}
       <section className="rounded-3xl border-2 border-dashed border-amber-300 bg-warning-soft p-4 dark:border-amber-800">
-        <p className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-amber-900 uppercase dark:text-amber-100">
+        <p className="flex items-center gap-1.5 text-xs font-extrabold text-amber-900 dark:text-amber-100">
           <FlaskConicalIcon className="size-4" /> Mode demo
         </p>
         <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-100/85">
           Tidak perlu uang sungguhan. Tombol ini mengirim webhook pembayaran bertanda tangan seperti payment gateway asli.
         </p>
         <Button
-          className="mt-3 h-12 w-full rounded-full bg-foreground text-base font-extrabold text-background hover:bg-foreground/90"
+          className="mt-3 h-12 w-full rounded-xl bg-foreground text-base font-extrabold text-background hover:bg-foreground/90"
           onClick={() => pay.mutate()}
           disabled={pay.isPending || timesUp}
         >
@@ -244,7 +244,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
 
       <Button
         variant="ghost"
-        className="h-11 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+        className="h-11 rounded-xl font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
         onClick={() => setConfirmCancel(true)}
       >
         <XCircleIcon className="size-4" /> Batalkan pesanan
@@ -277,10 +277,10 @@ export function PaymentView({ order }: { order: OrderDetail }) {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-2 grid gap-2">
-            <Button asChild className="h-11 rounded-full font-bold">
+            <Button asChild className="h-11 rounded-xl font-bold">
               <Link href={`/warung/${order.merchant.slug}`}>Pesan ulang di {order.merchant.name}</Link>
             </Button>
-            <Button asChild variant="outline" className="h-11 rounded-full">
+            <Button asChild variant="outline" className="h-11 rounded-xl">
               <Link href="/discover">Cari makanan lain</Link>
             </Button>
           </div>

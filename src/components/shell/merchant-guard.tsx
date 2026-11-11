@@ -23,7 +23,7 @@ function OnboardingFrame({ children }: { children: ReactNode }) {
     <div className="app-backdrop min-h-dvh">
       <header className="safe-top mx-auto flex h-16 w-full max-w-2xl items-center px-4">
         <Logo />
-        <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-deal uppercase">
+        <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold text-deal">
           Mitra
         </span>
       </header>

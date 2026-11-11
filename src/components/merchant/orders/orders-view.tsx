@@ -95,7 +95,7 @@ export function MerchantOrdersView() {
         actions={
           <Link
             href="/merchant/orders/scan"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft"
           >
             <ScanLineIcon className="size-4" /> Scan tiket
           </Link>
@@ -118,7 +118,7 @@ export function MerchantOrdersView() {
 
       {tab === "history" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="relative inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-card px-4 text-sm font-semibold ring-1 ring-border">
+          <label className="relative inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-card px-4 text-sm font-semibold ring-1 ring-border">
             <CalendarIcon className="size-4 text-primary" aria-hidden />
             <span className="sr-only">Filter tanggal</span>
             <input
@@ -133,7 +133,7 @@ export function MerchantOrdersView() {
             <button
               type="button"
               onClick={() => setHistoryDate("")}
-              className="inline-flex h-11 items-center gap-1 rounded-full px-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
+              className="inline-flex h-11 items-center gap-1 rounded-xl px-3 text-sm font-semibold text-muted-foreground hover:bg-muted"
             >
               <XIcon className="size-4" /> Semua tanggal
             </button>

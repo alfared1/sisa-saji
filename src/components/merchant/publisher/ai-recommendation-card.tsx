@@ -33,7 +33,7 @@ export function SelloutGauge({ probability, size = 148 }: { probability: number;
       </svg>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center leading-none">
         <span className="text-3xl font-extrabold tabular-nums">{Math.round(p * 100)}%</span>
-        <span className="mt-1 text-[10px] font-bold tracking-wide text-muted-foreground uppercase">{label}</span>
+        <span className="mt-1 text-xs font-bold text-muted-foreground">{label}</span>
       </div>
     </div>
   );
@@ -54,7 +54,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
       <figcaption className="mb-2 text-xs font-bold text-muted-foreground">Kurva harga otomatis</figcaption>
       <ol className="flex items-end gap-1.5" aria-label="Jadwal diskon">
         {steps.map((s, i) => {
-          // Same Hemat / Flash Rescue colours as the customer-facing badge.
+          // Same Hemat / Diskon Kilat colours as the customer-facing badge.
           const variant = discountBadgeState(s.discount_pct, s.minutes_to_close).variant;
           const h = 28 + (s.discount_pct / maxPct) * 56;
           return (
@@ -122,7 +122,7 @@ export function ManualOverride({
       <button
         type="button"
         onClick={() => onChange(Math.min(max, quote.recommended_discount_pct))}
-        className="inline-flex h-11 items-center gap-2 rounded-full px-1 text-sm font-semibold text-foreground/80 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="inline-flex h-11 items-center gap-2 rounded-xl px-1 text-sm font-semibold text-foreground/80 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <SlidersHorizontalIcon className="size-4 text-primary" /> Atur diskon manual
       </button>

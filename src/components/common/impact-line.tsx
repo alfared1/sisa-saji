@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { impactFigures, impactFiguresFromGrams } from "./impact-text";
 
 /**
- * "🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e" — per-card / per-line impact
+ * "Selamatkan 200 g pangan • −0,5 kg CO₂e" — per-card / per-line impact
  * estimate (docs/ARCHITECTURE.md, Konvensi UI), drawn with the Sprout icon used elsewhere. Pass
  * `portionWeightGrams` × `quantity`, or a precomputed `foodGrams` total.
  */

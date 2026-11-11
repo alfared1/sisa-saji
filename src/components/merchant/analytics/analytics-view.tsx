@@ -125,7 +125,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-card text-sm font-bold ring-1 ring-border hover:bg-muted"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-bold ring-1 ring-border hover:bg-muted"
             >
               Perpanjang 30 hari
             </button>
@@ -134,7 +134,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-deal text-sm font-extrabold text-deal-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-deal text-sm font-extrabold text-deal-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <CrownIcon className="size-4" /> Upgrade ke Premium
           </button>

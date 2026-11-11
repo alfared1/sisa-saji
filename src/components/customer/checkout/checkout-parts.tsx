@@ -287,7 +287,7 @@ export function BringOwnContainerToggle({
           <div className="mt-1 grid grid-cols-1 gap-2">
             {voucherAvailable && (
               <Button
-                className="h-11 rounded-full font-bold"
+                className="h-11 rounded-xl font-bold"
                 onClick={() => {
                   onUseVoucher();
                   setOpen(false);
@@ -296,7 +296,7 @@ export function BringOwnContainerToggle({
                 Pakai voucher BAWABEKAL
               </Button>
             )}
-            <Button variant="outline" className="h-11 rounded-full" onClick={() => setOpen(false)}>
+            <Button variant="outline" className="h-11 rounded-xl" onClick={() => setOpen(false)}>
               Oke, mengerti
             </Button>
           </div>
@@ -513,7 +513,7 @@ export function PriceAndImpactBreakdown({
       </dl>
       <div className="mt-3 rounded-2xl bg-brand-soft/80 p-3">
         <p className="text-sm font-extrabold text-secondary-foreground">Kamu hemat {formatIdr(p.money_saved_idr)}</p>
-        <p className="mt-1 text-[11px] font-bold tracking-wide text-secondary-foreground/80 uppercase">Total dampak pesanan</p>
+        <p className="mt-1 text-xs font-bold text-secondary-foreground/80">Total dampak pesanan</p>
         <ImpactLine foodGrams={p.food_saved_grams} className="mt-0.5 text-xs" />
       </div>
       {children}

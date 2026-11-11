@@ -204,7 +204,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
             title="Warung tidak ditemukan"
             description="Mungkin tautannya salah atau warung ini sudah tidak aktif."
             action={
-              <Button asChild className="h-11 rounded-full px-5 font-bold">
+              <Button asChild className="h-11 rounded-xl px-5 font-bold">
                 <Link href="/discover">Cari warung lain</Link>
               </Button>
             }
@@ -317,12 +317,12 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button asChild variant="outline" className="h-11 rounded-full font-bold">
+                <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
                   <a href={mapsDirectionsUrl(m.lat, m.lng)} target="_blank" rel="noreferrer">
                     <NavigationIcon className="size-4 text-primary" /> Petunjuk Arah
                   </a>
                 </Button>
-                <Button asChild variant="outline" className="h-11 rounded-full font-bold">
+                <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
                   <a
                     href={whatsappUrl(m.whatsapp_number, `Halo ${m.name}, saya lihat porsi surplus di Sisa-Saji.`)}
                     target="_blank"
@@ -433,7 +433,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     <li className="lg:col-span-2">
                       <Button
                         variant="ghost"
-                        className="h-11 w-full rounded-full font-bold"
+                        className="h-11 w-full rounded-xl font-bold"
                         onClick={() => setShowAllReviews((v) => !v)}
                         aria-expanded={showAllReviews}
                       >

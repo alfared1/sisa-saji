@@ -11,7 +11,7 @@ import { RADIUS_OPTIONS, formatRadius, useLocationStore } from "@/stores/locatio
 
 export function RailLabel({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <p id={id} className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+    <p id={id} className="text-xs font-bold text-muted-foreground">
       {children}
     </p>
   );

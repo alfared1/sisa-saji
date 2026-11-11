@@ -620,7 +620,7 @@ function buildAll(now: Date, secret: string) {
 
   // --- Tonight: live batches relative to now ---------------------------
   // Every warung is live. Closing times cycle through 18–150 minutes, so every
-  // hub with a few warung shows the whole ladder (Hemat 50% → Flash Rescue 70%).
+  // hub with a few warung shows the whole ladder (Hemat 50% → Diskon Kilat 70%).
   const closeInMinutes = [150, 120, 95, 75, 55, 40, 28, 18, 140, 110, 85, 65, 45, 130, 100];
   const fToday = surplusFactors(today);
   SEED_MERCHANTS.forEach((m, idx) => {

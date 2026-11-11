@@ -73,10 +73,10 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
             <span className="hidden sm:inline">Ada perubahan belum disimpan</span>
           </span>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" className="h-11 rounded-full" onClick={() => form.reset()} disabled={update.isPending}>
+            <Button type="button" variant="ghost" className="h-11 rounded-xl" onClick={() => form.reset()} disabled={update.isPending}>
               Batal
             </Button>
-            <Button type="submit" className="h-11 rounded-full px-5 font-bold" disabled={update.isPending}>
+            <Button type="submit" className="h-11 rounded-xl px-5 font-bold" disabled={update.isPending}>
               {update.isPending ? <Loader2Icon className="animate-spin" /> : <SaveIcon />} Simpan
             </Button>
           </div>
@@ -130,13 +130,13 @@ export function MerchantSettingsView() {
               <p className="text-xs text-muted-foreground">
                 Saldo warung <b className="text-foreground tabular-nums">{formatIdr(m.wallet_balance_idr)}</b> · Rating {m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} ({m.total_reviews} ulasan)
               </p>
-              <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-deal-soft text-sm font-bold text-deal">
+              <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-deal-soft text-sm font-bold text-deal">
                 <CrownIcon className="size-4" /> {m.subscription_tier === "PREMIUM" ? "Kelola Premium" : "Upgrade ke Premium"}
               </Link>
-              <Link href={`/warung/${m.slug}`} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
+              <Link href={`/warung/${m.slug}`} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
                 <ExternalLinkIcon className="size-4" /> Lihat halaman warung
               </Link>
-              <Link href="/tour?peran=mitra" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
+              <Link href="/tour?peran=mitra" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
                 <CompassIcon className="size-4" /> Lihat tur mitra
               </Link>
             </section>
@@ -148,7 +148,7 @@ export function MerchantSettingsView() {
               <ThemeSwitcher className="max-w-md" />
             </SectionCard>
 
-            <Button variant="outline" className="h-12 w-full rounded-full border-urgent/30 text-urgent hover:bg-urgent-soft hover:text-urgent" onClick={() => setConfirmLogout(true)}>
+            <Button variant="outline" className="h-12 w-full rounded-xl border-urgent/30 text-urgent hover:bg-urgent-soft hover:text-urgent" onClick={() => setConfirmLogout(true)}>
               <LogOutIcon /> Keluar
             </Button>
           </aside>

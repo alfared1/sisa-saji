@@ -178,7 +178,7 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
       }}
     >
       <div className="space-y-1.5">
-        <label htmlFor="profile-name" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <label htmlFor="profile-name" className="text-sm font-semibold text-muted-foreground">
           Nama lengkap
         </label>
         <Input
@@ -195,7 +195,7 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
         />
       </div>
       <fieldset>
-        <legend className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Kampus / kota</legend>
+        <legend className="mb-2 text-sm font-semibold text-muted-foreground">Kampus / kota</legend>
         <div className="max-h-80 overflow-y-auto overscroll-contain rounded-2xl bg-muted/40 p-2 ring-1 ring-border">
           <CampusPicker value={campus} onSelect={setCampusId} />
         </div>
@@ -207,10 +207,10 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
         </p>
       )}
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" className="h-11 rounded-full" onClick={onDone} disabled={save.isPending}>
+        <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={onDone} disabled={save.isPending}>
           Batal
         </Button>
-        <Button type="submit" className="h-11 rounded-full font-bold" disabled={save.isPending}>
+        <Button type="submit" className="h-11 rounded-xl font-bold" disabled={save.isPending}>
           {save.isPending && <Loader2Icon className="animate-spin" />} Simpan
         </Button>
       </div>
@@ -243,7 +243,7 @@ export function ProfileScreen() {
         data-shell-width="narrow"
         className="flex flex-col gap-4 px-4 pt-4 pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_auto_1fr] lg:items-start lg:gap-x-6 lg:gap-y-2 lg:pt-6"
       >
-        <h2 className="hidden px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:col-start-1 lg:row-start-1 lg:block">
+        <h2 className="hidden px-1 text-sm font-semibold text-muted-foreground lg:col-start-1 lg:row-start-1 lg:block">
           Profil
         </h2>
         {session.isLoading ? (
@@ -300,13 +300,13 @@ export function ProfileScreen() {
         <div className="contents lg:col-start-2 lg:row-span-5 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
         {user && (
           <section aria-label="Notifikasi" className="space-y-2">
-            <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notifikasi</h2>
+            <h2 className="px-1 text-sm font-semibold text-muted-foreground">Notifikasi</h2>
             <PushOptIn />
           </section>
         )}
 
         <section className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Menu</h2>
+          <h2 className="px-1 text-sm font-semibold text-muted-foreground">Menu</h2>
           <div className="divide-y divide-border overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
             <LinkRow href="/orders" icon={ReceiptTextIcon} label="Pesanan saya" hint="Tiket pengambilan & riwayat" />
             <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" />
@@ -336,7 +336,7 @@ export function ProfileScreen() {
             Notifikasi and Menu on phones (a cosmetic choice should not push them down); on lg
             it sits in the left column under the profile card. */}
         <section aria-labelledby="tampilan-title" className="space-y-2 lg:col-start-1 lg:row-start-3 lg:mt-4">
-          <h2 id="tampilan-title" className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <h2 id="tampilan-title" className="px-1 text-sm font-semibold text-muted-foreground">
             Tampilan
           </h2>
           <div className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
@@ -347,7 +347,7 @@ export function ProfileScreen() {
         {user && (
           <Button
             variant="ghost"
-            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-4 lg:mt-2 lg:justify-self-start lg:px-6"
+            className="h-12 rounded-xl font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-4 lg:mt-2 lg:justify-self-start lg:px-6"
             onClick={() => setConfirmLogout(true)}
           >
             <LogOutIcon className="size-4" /> Keluar

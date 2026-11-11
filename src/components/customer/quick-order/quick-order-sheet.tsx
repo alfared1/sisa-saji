@@ -345,7 +345,7 @@ function QuickOrderBody({
       <ResponsiveSheetFooter className={cn("gap-2 pt-3 pb-5", desktop && "flex-row px-6 pt-4 pb-6 *:flex-1")}>
         <Button
           ref={ctaRef}
-          className="h-12 w-full rounded-full text-base font-bold shadow-soft"
+          className="h-12 w-full rounded-xl text-base font-bold shadow-soft"
           disabled={blocked || checkout.isPending || session.isLoading}
           onClick={order}
         >
@@ -359,7 +359,7 @@ function QuickOrderBody({
         {!blocked && (
           <Button
             variant="outline"
-            className={cn("h-11 w-full rounded-full font-bold", desktop && "h-12")}
+            className={cn("h-11 w-full rounded-xl font-bold", desktop && "h-12")}
             disabled={checkout.isPending}
             onClick={() => onAddToCart(qty)}
           >

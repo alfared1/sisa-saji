@@ -96,7 +96,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
               <span
                 aria-hidden
                 className={cn(
-                  "flex h-11 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-bold transition-[background-color,color,transform] duration-150 peer-active:scale-[0.97]",
+                  "flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-bold transition-[background-color,color,transform] duration-150 peer-active:scale-[0.97]",
                   "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary",
                   // Forced colours (Windows High Contrast) drop backgrounds and shadows: the
                   // chosen option opts out and paints itself in the system Highlight pair.

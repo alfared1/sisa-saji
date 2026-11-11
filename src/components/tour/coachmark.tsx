@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * arrow. The bubble is dark ink on light / light ink on dark (foreground on
  * background), so it reads in both themes without a new colour.
  *
- * The preview is scaled by `--z` (see PhoneFrame); the bubble divides its font
+ * The preview is scaled by `--z` (see ScreenPreview); the bubble divides its font
  * size by `--z` and sizes everything else in `em`, so its text keeps a fixed
  * on-screen size at every breakpoint while the phone itself shrinks or grows.
  * Place each callout over the least important part of its screen: the mocks

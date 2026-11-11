@@ -255,7 +255,7 @@ export function OrdersScreen() {
                 description={EMPTY_COPY[tab].description}
                 action={
                   (tab === "ready" || tab === "done") && (
-                    <Button asChild className="h-11 rounded-full px-6 font-bold">
+                    <Button asChild className="h-11 rounded-xl px-6 font-bold">
                       <Link href="/discover">Cari makanan surplus</Link>
                     </Button>
                   )

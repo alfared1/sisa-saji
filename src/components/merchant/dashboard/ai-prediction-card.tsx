@@ -47,7 +47,7 @@ export function AiPredictionAlertCard({
             </p>
             <Link
               href="/merchant/surplus/new"
-              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="mt-3 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <MegaphoneIcon className="size-4" aria-hidden /> Publikasikan surplus
             </Link>
@@ -113,7 +113,7 @@ export function AiPredictionAlertCard({
 
       <Link
         href={top ? `/merchant/surplus/new?menu=${top.menu_id}` : "/merchant/surplus/new"}
-        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-extrabold text-impact outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
+        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-impact outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
       >
         <MegaphoneIcon className="size-4" aria-hidden />
         Publikasikan sekarang

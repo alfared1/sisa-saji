@@ -95,7 +95,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
           </button>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Radius</h3>
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">Radius</h3>
             <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Radius pencarian">
               {RADIUS_OPTIONS.map((r) => (
                 <button
@@ -128,7 +128,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
           </section>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
               Pilih kampus / kota
             </h3>
             <CampusPicker

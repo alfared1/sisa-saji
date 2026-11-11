@@ -321,7 +321,7 @@ function PesanMock() {
           </p>
         </div>
         <Coachmark label={`Porsi dikunci ${LOCK_MINUTES} menit untukmu`} side="top" align="end" radius="rounded-full" className="shrink-0">
-          <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-[14px] font-bold whitespace-nowrap text-primary-foreground">
+          <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-bold whitespace-nowrap text-primary-foreground">
             <QrCodeIcon className="size-4" />
             Bayar QRIS
           </span>
@@ -333,7 +333,7 @@ function PesanMock() {
 
 function AmbilMock() {
   return (
-    <article className="overflow-hidden rounded-[1.6rem] bg-card shadow-card ring-1 ring-border">
+    <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
       <div className="flex items-center gap-2.5 bg-brand-soft px-3 py-2.5">
         <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-soft">
           <StoreIcon className="size-4" />
@@ -348,7 +348,7 @@ function AmbilMock() {
           <CloudOffIcon className="size-3.5" />
           Tersimpan offline
         </span>
-        <p className="mt-2.5 text-[11px] font-bold tracking-[0.16em] text-muted-foreground uppercase">Kode pengambilan</p>
+        <p className="mt-2.5 text-xs font-bold text-muted-foreground">Kode pengambilan</p>
         <Coachmark label="Tunjukkan ke kasir warung" radius="rounded-2xl" className="mt-1.5">
           <span className="px-2 py-0.5 text-[40px] leading-none font-black tracking-[0.08em] tabular-nums">SJ-8515</span>
         </Coachmark>
@@ -358,13 +358,13 @@ function AmbilMock() {
   );
 }
 
-/** Sample progress: 3,2 kg saved, between Surplus Saver and Surplus Hero. */
+/** Sample progress: 3,2 kg saved, between Penyelamat and Juara Pangan. */
 const DEMO_SAVED_KG = 3.2;
 
 const LEVELS = [
-  { label: "Rookie", state: "done" },
-  { label: "Saver", state: "current" },
-  { label: "Hero", state: "next" },
+  { label: "Pemula", state: "done" },
+  { label: "Penyelamat", state: "current" },
+  { label: "Juara", state: "next" },
 ] as const;
 
 function DampakMock() {
@@ -379,7 +379,7 @@ function DampakMock() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-muted-foreground">Level kamu</p>
-            <p className="text-[16px] font-extrabold">Surplus Saver</p>
+            <p className="text-[16px] font-extrabold">Penyelamat</p>
           </div>
         </div>
         <Coachmark
@@ -519,7 +519,7 @@ function PublikasiMock() {
           </div>
         </Coachmark>
       </div>
-      <span className="flex h-11 items-center justify-center rounded-full bg-primary text-[14px] font-bold text-primary-foreground">
+      <span className="flex h-11 items-center justify-center rounded-xl bg-primary text-[14px] font-bold text-primary-foreground">
         Publikasikan Sekarang
       </span>
     </div>
@@ -589,7 +589,7 @@ function EskalasiMock() {
             <span className="font-bold text-foreground">Sisa-Saji</span>
             <span>sekarang</span>
           </p>
-          <p className="text-[12px] leading-snug font-bold">Flash Rescue 70% di {DEMO_WARUNG}</p>
+          <p className="text-[12px] leading-snug font-bold">Diskon Kilat 70% di {DEMO_WARUNG}</p>
           <p className="text-[11px] leading-snug text-muted-foreground">Nasi Timbel tinggal 5 porsi. Ambil sebelum 22.30.</p>
         </div>
       </div>
@@ -715,7 +715,7 @@ export type TourMock = {
   Mock: ComponentType;
   /**
    * Artboard y (px from the top of the screen content, under the status bar)
-   * of the highlighted element's lowest edge. PhoneFrame scrolls the screen
+   * of the highlighted element's lowest edge. ScreenPreview scrolls the screen
    * so that it stays above the stage's bottom fade on short phones.
    */
   focusY: number;
@@ -725,7 +725,7 @@ export type TourMock = {
    * on-screen px through --z, so they cannot be part of focusY).
    */
   focusBelow: number;
-  /** Status-bar clock, matched to the moment the screen shows. */
+  /** Time of the evening the scene shows, printed in the preview's label bar. */
   clock: string;
 };
 

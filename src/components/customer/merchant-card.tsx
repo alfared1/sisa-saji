@@ -107,7 +107,7 @@ export function MerchantCard({
           {!soldOut && merchant.closes_at && <CountdownBadge endIso={merchant.closes_at} />}
         </div>
         {!soldOut && (merchant.min_price_idr > 0 || merchant.max_discount_pct > 0) && (
-          // Badge sits here (not on the 72 px thumb) so "Flash Rescue s/d 70%" is never clipped.
+          // Badge sits here (not on the 72 px thumb) so "Diskon Kilat s/d 70%" is never clipped.
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             {merchant.min_price_idr > 0 && (
               <p className="text-xs text-muted-foreground">

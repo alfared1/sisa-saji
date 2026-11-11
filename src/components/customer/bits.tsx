@@ -165,13 +165,13 @@ export function LoginCta({
   return (
     <div className={cn("flex flex-col items-center px-6 py-12 text-center", className)}>
       <div className="relative">
-        <span className="relative inline-flex size-20 items-center justify-center rounded-[1.75rem] bg-card shadow-card ring-1 ring-border">
+        <span className="relative inline-flex size-20 items-center justify-center rounded-3xl bg-card shadow-card ring-1 ring-border">
           {icon ?? <LogoMark className="size-12" />}
         </span>
       </div>
       <h2 className="mt-6 text-xl font-extrabold">{title}</h2>
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">{description}</p>
-      <Button asChild className="mt-6 h-12 rounded-full px-7 text-base font-bold shadow-card">
+      <Button asChild className="mt-6 h-12 rounded-xl px-7 text-base font-bold shadow-card">
         <Link href={`/auth/login?next=${encodeURIComponent(next)}`}>
           <LogInIcon className="size-5" /> Masuk / Daftar
         </Link>

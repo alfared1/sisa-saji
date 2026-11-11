@@ -46,7 +46,7 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
       <div className="relative border-t border-dashed border-border px-4 py-4">
         <span className="absolute -top-2.5 -left-2.5 size-5 rounded-full bg-background ring-1 ring-border" aria-hidden />
         <span className="absolute -top-2.5 -right-2.5 size-5 rounded-full bg-background ring-1 ring-border" aria-hidden />
-        <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Kode pengambilan</p>
+        <p className="text-xs font-semibold text-muted-foreground">Kode pengambilan</p>
         <p className="mt-1 text-4xl font-extrabold tracking-[0.12em] tabular-nums">
           {order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "-"}
         </p>
@@ -103,11 +103,11 @@ export function OfflineView() {
           <Logo />
         </header>
 
-        <section className="flex flex-col items-center pt-6 text-center lg:sticky lg:top-8 lg:mt-6 lg:rounded-[1.75rem] lg:bg-card lg:p-10 lg:shadow-card lg:ring-1 lg:ring-border">
+        <section className="flex flex-col items-center pt-6 text-center lg:sticky lg:top-8 lg:mt-6 lg:rounded-3xl lg:bg-card lg:p-10 lg:shadow-card lg:ring-1 lg:ring-border">
           <div className="relative">
             <span
               className={cn(
-                "relative inline-flex size-20 items-center justify-center rounded-[1.75rem] shadow-card ring-1 ring-border",
+                "relative inline-flex size-20 items-center justify-center rounded-3xl shadow-card ring-1 ring-border",
                 online ? "bg-brand-soft text-primary" : "bg-card text-deal",
               )}
             >
@@ -120,7 +120,7 @@ export function OfflineView() {
               ? "Internet sudah tersambung lagi. Muat ulang untuk melanjutkan."
               : "Sambungan internet terputus. Tiket pengambilan yang sudah tersimpan tetap bisa kamu tunjukkan ke warung."}
           </p>
-          <Button className="mt-5 h-11 rounded-full px-6 font-bold" onClick={() => window.location.reload()}>
+          <Button className="mt-5 h-11 rounded-xl px-6 font-bold" onClick={() => window.location.reload()}>
             <RotateCwIcon /> Coba lagi
           </Button>
         </section>
