@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ClockIcon, CompassIcon, CrownIcon, ExternalLinkIcon, LandmarkIcon, Loader2Icon, LogOutIcon, MapPinIcon, SaveIcon, StoreIcon } from "lucide-react";
+import { ClockIcon, CompassIcon, CrownIcon, ExternalLinkIcon, LandmarkIcon, Loader2Icon, LogOutIcon, MapPinIcon, SaveIcon, StoreIcon, SunMoonIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
+import { ThemeSwitcher } from "@/components/common/theme-switcher";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +86,7 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
   );
 }
 
-/** /merchant/settings — edit profile, location, hours, bank; open/close; logout. */
+/** /merchant/settings — edit profile, location, hours, bank; open/close; appearance; logout. */
 export function MerchantSettingsView() {
   const me = useMerchantMe();
   const update = useUpdateMerchant();
@@ -139,6 +140,13 @@ export function MerchantSettingsView() {
                 <CompassIcon className="size-4" /> Lihat tur mitra
               </Link>
             </section>
+
+            {/* Outside SettingsForm on purpose: a device setting that applies on tap, never part of the save bar.
+                No description: the switcher's helper line says what the choice does (as in Akun).
+                max-w-md: below lg the aside is full width, where three ~220px segments look stretched. */}
+            <SectionCard title="Tampilan" icon={SunMoonIcon}>
+              <ThemeSwitcher className="max-w-md" />
+            </SectionCard>
 
             <Button variant="outline" className="h-12 w-full rounded-full border-urgent/30 text-urgent hover:bg-urgent-soft hover:text-urgent" onClick={() => setConfirmLogout(true)}>
               <LogOutIcon /> Keluar

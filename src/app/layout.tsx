@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
+import { THEME_COLORS, themeColorBootScript } from "@/lib/theme";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -40,9 +41,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Right for "Sistem" (the default). A manual Terang/Gelap choice repoints both tags:
+  // before first paint (themeColorBootScript below) and on every change (ThemeColorSync).
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbf8f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1a14" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
   ],
 };
 
@@ -50,6 +53,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className={jakarta.variable} suppressHydrationWarning>
       <body className="min-h-dvh">
+        {/* Runs before first paint; the theme-color tags are already parsed in <head>. */}
+        <script dangerouslySetInnerHTML={{ __html: themeColorBootScript() }} />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

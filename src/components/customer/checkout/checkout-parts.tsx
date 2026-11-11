@@ -429,11 +429,12 @@ export function VoucherSelectorSheet({
 
 /* ----------------------------- Payment method ----------------------------- */
 
+/** Brand tints, each ≥ 4.5:1 on the card and on the selected (brand-soft) chip in both themes. */
 const METHODS: { key: PaymentMethod; label: string; tint: string }[] = [
   { key: "QRIS", label: "QRIS", tint: "text-foreground" },
-  { key: "GOPAY", label: "GoPay", tint: "text-sky-600" },
-  { key: "OVO", label: "OVO", tint: "text-violet-600" },
-  { key: "DANA", label: "DANA", tint: "text-blue-600" },
+  { key: "GOPAY", label: "GoPay", tint: "text-sky-700 dark:text-sky-400" },
+  { key: "OVO", label: "OVO", tint: "text-violet-600 dark:text-violet-400" },
+  { key: "DANA", label: "DANA", tint: "text-blue-600 dark:text-blue-400" },
 ];
 
 export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod; onChange: (m: PaymentMethod) => void }) {

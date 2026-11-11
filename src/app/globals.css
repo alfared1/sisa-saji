@@ -9,7 +9,12 @@
  * - Fresh green primary (food rescue / sustainability)
  * - Warm orange "deal" + red "urgent" accents for discounts & countdowns
  * - Warm cream neutral background, generous radius, soft layered shadows
- * Light/dark follow prefers-color-scheme (next-themes toggles `.dark` on <html>).
+ * Light/dark is the user's choice: Terang / Gelap / Sistem (default Sistem =
+ * prefers-color-scheme), picked in Akun, Pengaturan mitra or the header
+ * "Ganti tema" menu (src/components/common/theme-switcher.tsx) and stored per
+ * device by next-themes, which toggles `.dark` on <html> before first paint.
+ * Every `dark:` utility keys on that class (custom variant above), never on
+ * the media query, so a manual choice always wins over the OS.
  */
 
 @theme inline {
@@ -605,14 +610,22 @@
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
 
-  /* Leaflet chrome tuned to the brand */
+  /* Leaflet chrome tuned to the brand. leaflet.css is unlayered and beats this layer, so
+     every colour it also sets needs !important (else: a #ddd map and a white strip in dark). */
   .leaflet-container {
     font-family: var(--font-sans);
-    background: var(--muted);
+    background: var(--muted) !important;
   }
   .leaflet-control-attribution {
     font-size: 10px !important;
     border-top-left-radius: 8px;
+  }
+  .dark .leaflet-control-attribution {
+    background: color-mix(in oklab, var(--card) 85%, transparent) !important;
+    color: var(--muted-foreground) !important;
+  }
+  .dark .leaflet-control-attribution a {
+    color: var(--primary) !important;
   }
   .leaflet-bar {
     border: 0 !important;

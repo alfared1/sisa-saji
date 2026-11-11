@@ -10,6 +10,7 @@ import { useShallow } from "zustand/react/shallow";
 import { LogInIcon, ShoppingBagIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { LocationPill } from "@/components/common/location-pill";
+import { ThemeToggle } from "@/components/common/theme-switcher";
 import { useSession } from "@/hooks/use-session";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -49,7 +50,7 @@ export function DesktopTopNav({ pathname, tabs }: { pathname: string; tabs: read
                     href={href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "relative inline-flex h-10 items-center gap-2 rounded-full px-2.5 text-sm font-semibold outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 xl:px-3.5",
+                      "relative inline-flex h-10 items-center gap-2 rounded-full px-2.5 text-sm font-semibold outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 xl:px-3",
                       isActive
                         ? "bg-brand-soft text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -70,10 +71,15 @@ export function DesktopTopNav({ pathname, tabs }: { pathname: string; tabs: read
           </ul>
         </nav>
 
-        <div className="ml-auto flex min-w-0 items-center gap-3">
+        {/* A guest with a cart fills the row (location, cart, "Masuk", toggle): the tight gaps, the
+            xl:px-3 tabs and the icon-less "Masuk" below xl keep the location label untruncated. */}
+        <div className="ml-auto flex min-w-0 items-center gap-2 xl:gap-2.5">
           <LocationPill variant="compact" className="max-w-80" />
           <DesktopCartButton pathname={pathname} />
           <DesktopLoginButton pathname={pathname} />
+          {/* Always rightmost: the cart and (for guests, once the session check is done) "Masuk"
+              appear to its left, so the toggle never moves under the pointer. */}
+          <ThemeToggle className="size-10 max-xl:size-9" />
         </div>
       </div>
     </header>
@@ -117,7 +123,7 @@ function DesktopLoginButton({ pathname }: { pathname: string }) {
       href={loginHrefFor(pathname)}
       className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-bold text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      <LogInIcon className="size-4" aria-hidden /> Masuk
+      <LogInIcon className="size-4 max-xl:hidden" aria-hidden /> Masuk
     </Link>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * /profile — Akun: name & campus edit (PATCH /profile), notifications,
- * shortcuts, "Daftar jadi Mitra Warung", install app, logout.
+ * /profile — Akun: name & campus edit (PATCH /profile), appearance
+ * (Terang / Gelap / Sistem, for guests too), notifications, shortcuts,
+ * "Daftar jadi Mitra Warung", install app, logout.
  */
 import { useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import { CampusPicker } from "@/components/common/campus-picker";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { ThemeSwitcher } from "@/components/common/theme-switcher";
 import { ShellHeader } from "@/components/shell/customer-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,14 +235,15 @@ export function ProfileScreen() {
 
       {/*
         lg+: narrow (896px) two-column settings layout: account (+ inline edit
-        form, logout) on the left, notifications + menu on the right. The right
-        column spans all rows and the last row is 1fr, so the left rows keep
-        their natural height. DOM order is unchanged so phones keep the single
-        column; the "Profil" label is desktop-only (display:none on phones).
+        form), appearance and logout on the left, notifications + menu on the
+        right. The right column spans all rows and the last row is 1fr, so the
+        left rows keep their natural height. Phones keep the single column in
+        DOM order (profile, notifications, menu, appearance, logout); the
+        "Profil" label is desktop-only (display:none on phones).
       */}
       <div
         data-shell-width="narrow"
-        className="flex flex-col gap-4 px-4 pt-4 pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-x-6 lg:gap-y-2 lg:pt-6"
+        className="flex flex-col gap-4 px-4 pt-4 pb-6 lg:grid lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_auto_1fr] lg:items-start lg:gap-x-6 lg:gap-y-2 lg:pt-6"
       >
         <h2 className="hidden px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:col-start-1 lg:row-start-1 lg:block">
           Profil
@@ -296,7 +299,7 @@ export function ProfileScreen() {
           </section>
         )}
 
-        <div className="contents lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
+        <div className="contents lg:col-start-2 lg:row-span-5 lg:row-start-1 lg:flex lg:flex-col lg:gap-4">
         {user && (
           <section aria-label="Notifikasi" className="space-y-2">
             <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Notifikasi</h2>
@@ -333,16 +336,28 @@ export function ProfileScreen() {
         </section>
         </div>
 
+        {/* Device setting, so guests get it too; it applies on tap (no save button). After
+            Notifikasi and Menu on phones (a cosmetic choice should not push them down); on lg
+            it sits in the left column under the profile card. */}
+        <section aria-labelledby="tampilan-title" className="space-y-2 lg:col-start-1 lg:row-start-3 lg:mt-4">
+          <h2 id="tampilan-title" className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Tampilan
+          </h2>
+          <div className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
+            <ThemeSwitcher />
+          </div>
+        </section>
+
         {user && (
           <Button
             variant="ghost"
-            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-3 lg:mt-2 lg:justify-self-start lg:px-6"
+            className="h-12 rounded-full font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-4 lg:mt-2 lg:justify-self-start lg:px-6"
             onClick={() => setConfirmLogout(true)}
           >
             <LogOutIcon className="size-4" /> Keluar
           </Button>
         )}
-        <p className="text-center text-[11px] text-muted-foreground lg:col-span-2 lg:row-start-5 lg:pt-6">Sisa-Saji · Selamatkan makanan, hemat uang</p>
+        <p className="text-center text-[11px] text-muted-foreground lg:col-span-2 lg:row-start-6 lg:pt-6">Sisa-Saji · Selamatkan makanan, hemat uang</p>
       </div>
 
       <ConfirmDialog

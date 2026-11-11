@@ -188,6 +188,51 @@ export function stockSegments(b: Pick<MerchantBatchView, "initial_stock" | "sold
   return { sold: pct(b.sold), reserved: pct(b.reserved_stock), available: pct(b.available_stock), total };
 }
 
+/**
+ * Price-curve labels (publisher "Kurva harga otomatis"). The schedule has one
+ * step per 30 minutes, so an early publish draws 15-24 columns, each narrower
+ * than a "50%" or "14.30" label. At most CURVE_MAX_LABELS labels per row are
+ * drawn, at least `curveLabelStride` columns apart; every step keeps its
+ * screen-reader line.
+ */
+export const CURVE_MAX_LABELS = 6;
+
+export function curveLabelStride(count: number): number {
+  return Math.max(1, Math.ceil(count / CURVE_MAX_LABELS));
+}
+
+/**
+ * Columns that show their discount: the first and the last step, then the
+ * steps where the discount changes (latest first: the Flash Rescue end of the
+ * curve), skipping any too close to one already shown. A run of equal
+ * discounts needs no repeat, the bars have the same height.
+ */
+export function curvePctLabelIndexes(discounts: readonly number[]): Set<number> {
+  const n = discounts.length;
+  const stride = curveLabelStride(n);
+  const changes: number[] = [];
+  for (let i = n - 1; i > 0; i--) if (discounts[i] !== discounts[i - 1]) changes.push(i);
+  const shown: number[] = [];
+  for (const i of [0, n - 1, ...changes]) {
+    if (i >= 0 && i < n && shown.every((j) => Math.abs(i - j) >= stride)) shown.push(i);
+  }
+  return new Set(shown);
+}
+
+/**
+ * Columns that show their clock time: "Kini" (index 0), then every stride-th
+ * step counted back from the closing time (the chart's last column, one step
+ * after the last bar). A short schedule (stride 1) labels every bar; a long
+ * one leaves the last bar unlabelled, since its time would touch the closing
+ * time next to it.
+ */
+export function curveTimeLabelIndexes(count: number): Set<number> {
+  const stride = curveLabelStride(count);
+  const shown = new Set<number>(count > 0 ? [0] : []);
+  for (let i = count - stride; i >= stride; i -= stride) shown.add(i);
+  return shown;
+}
+
 export function escalationLabel(next: MerchantBatchView["next_escalation"]): string | null {
   if (!next) return null;
   return `Naik ke ${Math.round(next.discount_pct)}% pukul ${formatClockId(next.at)}`;

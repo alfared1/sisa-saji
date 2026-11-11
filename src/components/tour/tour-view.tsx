@@ -32,6 +32,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, MotionConfig, motion, useIsPresent, useReducedMotion, type PanInfo, type Variants } from "motion/react";
 import { ArrowLeftIcon, ArrowRightIcon, ShoppingBagIcon, StoreIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
+import { ThemeToggle } from "@/components/common/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { SESSION_QUERY_KEY, useSession } from "@/hooks/use-session";
 import type { AuthMeResponse } from "@/lib/contracts";
@@ -268,14 +269,17 @@ export function TourView() {
         <header className="safe-top mx-auto w-full max-w-md px-4 md:max-w-5xl md:px-8 lg:max-w-6xl">
           <div className="flex h-14 items-center justify-between gap-3 md:h-16">
             <Logo />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={skip}
-              className="h-11 cursor-pointer rounded-full px-4 text-sm font-semibold text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Lewati tur
-            </Button>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={skip}
+                className="h-11 cursor-pointer rounded-full px-4 text-sm font-semibold text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                Lewati tur
+              </Button>
+            </div>
           </div>
         </header>
 

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { EscalationStep, QuoteAiResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { maxDiscountForFloor, priceForDiscount } from "../lib/logic";
+import { curveLabelStride, curvePctLabelIndexes, curveTimeLabelIndexes, maxDiscountForFloor, priceForDiscount } from "../lib/logic";
 import { ModelBadge } from "../ui";
 
 /** Semicircle sell-out probability gauge. */
@@ -44,6 +44,12 @@ export function SelloutGauge({ probability, size = 148 }: { probability: number;
 export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[]; endIso: string }) {
   if (!steps.length) return null;
   const maxPct = Math.max(70, ...steps.map((s) => s.discount_pct));
+  // An early publish has many narrow columns: only some carry a label (the rest stay
+  // `invisible`, keeping the rows aligned). The sr-only line below covers every step.
+  const pctLabels = curvePctLabelIndexes(steps.map((s) => s.discount_pct));
+  const timeLabels = curveTimeLabelIndexes(steps.length);
+  // Narrow columns: the first labels start at the chart's left edge instead of hanging past it.
+  const anchorFirst = curveLabelStride(steps.length) > 1;
   return (
     <figure>
       <figcaption className="mb-2 text-xs font-bold text-muted-foreground">Kurva harga otomatis</figcaption>
@@ -54,7 +60,16 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
           const h = 28 + (s.discount_pct / maxPct) * 56;
           return (
             <li key={s.time} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-              <span className="text-[11px] font-extrabold tabular-nums">{s.discount_pct}%</span>
+              <span
+                className={cn(
+                  "text-[11px] font-extrabold whitespace-nowrap tabular-nums",
+                  !pctLabels.has(i) && "invisible",
+                  i === 0 && anchorFirst && "self-start",
+                )}
+                aria-hidden
+              >
+                {s.discount_pct}%
+              </span>
               <span
                 className={cn(
                   "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-bold text-white tabular-nums transition-[height] duration-500",
@@ -66,7 +81,16 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
               >
                 {s.expected_remaining_stock > 0 ? s.expected_remaining_stock : ""}
               </span>
-              <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">{i === 0 ? "Kini" : formatClockId(s.time)}</span>
+              <span
+                className={cn(
+                  "text-[10px] font-semibold whitespace-nowrap text-muted-foreground tabular-nums",
+                  !timeLabels.has(i) && "invisible",
+                  i === 0 && anchorFirst && "self-start",
+                )}
+                aria-hidden
+              >
+                {i === 0 ? "Kini" : formatClockId(s.time)}
+              </span>
               <span className="sr-only">
                 Pukul {formatClockId(s.time)}: diskon {s.discount_pct}%, harga {formatIdr(s.selling_price_idr)}, perkiraan sisa {s.expected_remaining_stock} porsi
               </span>

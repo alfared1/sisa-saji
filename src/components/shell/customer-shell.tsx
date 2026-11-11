@@ -11,7 +11,7 @@
  * where shopping happens (discover, map, warung).
  *
  * Laptops / desktops (lg+, ≥ 1024px): <DesktopTopNav /> (sticky, full viewport
- * width: logo, tabs, location, cart, login) on every customer page; the bottom
+ * width: logo, tabs, location, cart, theme, login) on every customer page; the bottom
  * tab bar and FloatingCartBar are display:none. The phone column becomes a
  * full-width page on the brand backdrop and <main> is a centred container:
  *

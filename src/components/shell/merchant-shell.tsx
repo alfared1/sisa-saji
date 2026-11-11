@@ -2,9 +2,10 @@
 
 /**
  * Merchant (Mitra Warung) frame.
- *  - Mobile/tablet portrait: sticky top bar (warung + Buka/Tutup badge) and a
- *    6-item bottom nav with Scan emphasised.
- *  - Desktop/cashier (lg+): left sidebar + wide content area.
+ *  - Mobile/tablet portrait: sticky top bar (warung + Buka/Tutup badge, theme
+ *    toggle, account) and a 6-item bottom nav with Scan emphasised.
+ *  - Desktop/cashier (lg+): left sidebar (theme toggle beside the logo) + wide
+ *    content area.
  */
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -22,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/common/logo";
+import { ThemeToggle } from "@/components/common/theme-switcher";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import {
   DropdownMenu,
@@ -163,6 +165,7 @@ export function MerchantShell({
           <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-deal uppercase">
             Mitra
           </span>
+          <ThemeToggle align="start" className="-mr-2 ml-auto size-10" />
         </div>
         <div className="mx-3 mb-3 rounded-2xl bg-card p-3 ring-1 ring-border">
           <div className="flex items-center gap-2">
@@ -235,6 +238,7 @@ export function MerchantShell({
             <p className="truncate text-sm leading-tight font-bold">{storeName}</p>
             <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
           </div>
+          <ThemeToggle className="-mr-1 size-10" />
           {user ? (
             <AccountMenu user={user}>
               <button

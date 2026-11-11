@@ -5,6 +5,10 @@ import {
   ceilTo5Minutes,
   checkPickupEnd,
   clampInt,
+  CURVE_MAX_LABELS,
+  curveLabelStride,
+  curvePctLabelIndexes,
+  curveTimeLabelIndexes,
   defaultPickupEnd,
   endFromClock,
   escalationLabel,
@@ -16,6 +20,7 @@ import {
   parseIntLoose,
   parsePickupCode,
   priceForDiscount,
+  PUBLISH_MAX_WINDOW_HOURS,
   sanitizePhone,
   sanitizePinInput,
   stockSegments,
@@ -222,5 +227,52 @@ describe("contract schemas with Indonesian messages", () => {
       opts,
     );
     expect(r.error?.issues.find((i) => i.path[0] === "lat")?.message).toBe("Taruh pin lokasi warung di peta");
+  });
+});
+
+describe("price-curve labels (publisher)", () => {
+  const sorted = (s: Set<number>) => [...s].sort((a, b) => a - b);
+
+  it("labels every column of a short schedule (the 20:00 demo publish)", () => {
+    expect(curveLabelStride(4)).toBe(1);
+    expect(curveLabelStride(CURVE_MAX_LABELS)).toBe(1);
+    expect(sorted(curvePctLabelIndexes([50, 50, 60, 70]))).toEqual([0, 2, 3]);
+    expect(sorted(curveTimeLabelIndexes(4))).toEqual([0, 1, 2, 3]);
+  });
+
+  it("thins an early publish (17 half-hour steps) to labels at least a stride apart", () => {
+    const pcts = [...Array(16).fill(50), 64];
+    const stride = curveLabelStride(pcts.length);
+    expect(stride).toBe(3);
+    expect(sorted(curvePctLabelIndexes(pcts))).toEqual([0, 16]);
+    const times = sorted(curveTimeLabelIndexes(pcts.length));
+    // Counted back from the closing time (virtual column 17): the last bar (21.30) stays
+    // unlabelled so its time never touches the "22.00" closing label beside it.
+    expect(times).toEqual([0, 5, 8, 11, 14]);
+    for (let k = 1; k < times.length; k++) expect(times[k] - times[k - 1]).toBeGreaterThanOrEqual(stride);
+    expect(pcts.length - times[times.length - 1]).toBe(stride);
+  });
+
+  it("keeps the first and last discount and drops change points that would collide", () => {
+    // Tier boundaries near closing change the discount on consecutive steps.
+    const pcts = [...Array(13).fill(50), 55, 60, 65, 70];
+    const shown = sorted(curvePctLabelIndexes(pcts));
+    expect(shown).toEqual([0, 13, 16]);
+    for (let k = 1; k < shown.length; k++) expect(shown[k] - shown[k - 1]).toBeGreaterThanOrEqual(3);
+  });
+
+  it("never shows more than CURVE_MAX_LABELS per row, up to the 12-hour maximum window", () => {
+    for (let n = 1; n <= PUBLISH_MAX_WINDOW_HOURS * 2 + 1; n++) {
+      const pcts = Array.from({ length: n }, (_, i) => 30 + i * 2);
+      expect(curvePctLabelIndexes(pcts).size).toBeLessThanOrEqual(CURVE_MAX_LABELS);
+      expect(curveTimeLabelIndexes(n).size).toBeLessThanOrEqual(CURVE_MAX_LABELS);
+      expect(curvePctLabelIndexes(pcts).has(0)).toBe(true);
+      expect(curveTimeLabelIndexes(n).has(0)).toBe(true);
+    }
+  });
+
+  it("is empty without steps", () => {
+    expect(curvePctLabelIndexes([]).size).toBe(0);
+    expect(curveTimeLabelIndexes(0).size).toBe(0);
   });
 });

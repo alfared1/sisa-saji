@@ -19,6 +19,7 @@ import {
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
+import { ThemeToggle } from "@/components/common/theme-switcher";
 import { InstallBanner } from "@/components/pwa/install-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -210,9 +211,12 @@ export function WelcomeView() {
       <div className="mx-auto w-full max-w-md px-4 pb-12 lg:max-w-6xl lg:px-8">
         <header className="safe-top flex h-16 items-center justify-between">
           <Logo />
-          <Button asChild variant="ghost" className="h-10 rounded-full px-4 font-semibold">
-            <Link href="/auth/login">Masuk</Link>
-          </Button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button asChild variant="ghost" className="h-11 rounded-full px-4 font-semibold">
+              <Link href="/auth/login">Masuk</Link>
+            </Button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:pt-12">
