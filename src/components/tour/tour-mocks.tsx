@@ -129,7 +129,7 @@ function SambutMock() {
       </div>
 
       {/* Stays dark green in both themes, so white text keeps its contrast. */}
-      <section className="flex min-h-[86px] flex-col justify-center rounded-2xl bg-gradient-to-br from-[oklch(0.45_0.115_153)] to-[oklch(0.35_0.08_158)] p-3 text-white">
+      <section className="flex min-h-[86px] flex-col justify-center rounded-2xl bg-impact p-3 text-white">
         <p className="text-[12px] font-bold">Dampak bersama{live?.is_demo_data ? " (data demo)" : ""}</p>
         {live ? (
           <div className="mt-1.5 grid grid-cols-3 gap-1.5">

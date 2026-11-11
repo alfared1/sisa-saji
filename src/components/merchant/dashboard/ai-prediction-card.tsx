@@ -66,7 +66,7 @@ export function AiPredictionAlertCard({
     <section
       aria-label="Perkiraan surplus malam ini"
       // Fixed deep green in both themes so the white text keeps its contrast.
-      className={cn("rounded-3xl bg-[oklch(0.42_0.11_154)] p-4 text-white shadow-card sm:p-5", className)}
+      className={cn("rounded-3xl bg-impact p-4 text-white shadow-card sm:p-5", className)}
     >
       <p className="text-sm font-semibold text-white/85">Perkiraan malam ini</p>
       <h2 className="mt-1 text-lg leading-snug font-extrabold sm:text-xl">
@@ -102,7 +102,7 @@ export function AiPredictionAlertCard({
                       tayang
                     </span>
                   ) : left > 0 ? (
-                    <span className="shrink-0 font-extrabold text-[oklch(0.42_0.11_154)] tabular-nums">±{left}</span>
+                    <span className="shrink-0 font-extrabold text-impact tabular-nums">±{left}</span>
                   ) : null}
                 </Link>
               </li>
@@ -113,7 +113,7 @@ export function AiPredictionAlertCard({
 
       <Link
         href={top ? `/merchant/surplus/new?menu=${top.menu_id}` : "/merchant/surplus/new"}
-        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-extrabold text-[oklch(0.42_0.11_154)] outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
+        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-extrabold text-impact outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
       >
         <MegaphoneIcon className="size-4" aria-hidden />
         Publikasikan sekarang

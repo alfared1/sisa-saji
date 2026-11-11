@@ -41,8 +41,7 @@ function formatDateId(iso: string): string {
 function RevenueRecoveredCard({ a }: { a: AnalyticsResponse }) {
   const share = a.potential_revenue_idr > 0 ? a.revenue_recovered_idr / a.potential_revenue_idr : 0;
   return (
-    <section aria-label="Pendapatan yang dipulihkan" className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-strong via-primary to-emerald-600 p-5 text-white shadow-float dark:from-emerald-800 dark:via-emerald-700 dark:to-emerald-900">
-      <div className="pointer-events-none absolute -top-16 -right-10 size-52 rounded-full bg-white/10 blur-2xl" aria-hidden />
+    <section aria-label="Pendapatan yang dipulihkan" className="relative overflow-hidden rounded-3xl bg-impact p-5 text-white shadow-card">
       <p className="relative text-sm font-semibold text-white/80">Pendapatan dipulihkan · {a.range_days} hari</p>
       <p className="relative mt-1 text-4xl leading-none font-extrabold tracking-tight tabular-nums">{formatIdr(a.revenue_recovered_idr)}</p>
       <p className="relative mt-2 text-sm text-white/85">

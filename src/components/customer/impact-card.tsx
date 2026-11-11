@@ -46,12 +46,10 @@ export function ImpactCard({ name }: { name: string }) {
   return (
     <Link
       href="/impact"
-      className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-brand-strong p-4 text-primary-foreground shadow-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="group relative block overflow-hidden rounded-3xl bg-impact p-4 text-white shadow-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      <span className="absolute -top-10 -right-8 size-36 rounded-full bg-white/10" aria-hidden />
-      <span className="absolute -bottom-14 left-1/3 size-32 rounded-full bg-white/5" aria-hidden />
       <div className="relative flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-primary-foreground/85">
+        <p className="text-xs font-semibold text-white/85">
           Dampak {firstName(name) || "kamu"} · <span className="font-extrabold">{badgeLabel(d.badge_tier)}</span>
         </p>
         <ChevronRightIcon className="size-4 opacity-80 transition-transform group-hover:translate-x-0.5" />
@@ -78,7 +76,7 @@ export function ImpactCard({ name }: { name: string }) {
             <p className="mt-1 truncate text-sm font-extrabold tabular-nums" title={"full" in s ? s.full : undefined}>
               {s.value}
             </p>
-            <p className="text-[10px] text-primary-foreground/80">{s.label}</p>
+            <p className="text-[10px] text-white/80">{s.label}</p>
           </div>
         ))}
       </div>

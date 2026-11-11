@@ -5,7 +5,7 @@ import { loginContextAs } from "../helpers";
 
 const MENU = "Paket Kejutan Teh Euis";
 
-test("merchant publishes surplus with the AI quote; it appears on dashboard and for customers", async ({ page, context, browser }) => {
+test("merchant publishes surplus with the suggested price; it appears on dashboard and for customers", async ({ page, context, browser }) => {
   await loginContextAs(context, DEMO_MERCHANT_EMAIL);
 
   await page.goto("/merchant/dashboard");
@@ -17,16 +17,20 @@ test("merchant publishes surplus with the AI quote; it appears on dashboard and 
   await menus.getByRole("radio", { name: new RegExp(MENU) }).click();
   await firstQuote;
 
-  // Stepper changes trigger a fresh AI quote with the new stock.
-  const stock = page.getByRole("group", { name: "Jumlah porsi" });
-  const before = Number(await stock.getByRole("spinbutton").or(stock.getByRole("textbox")).first().inputValue());
-  const requoted = page.waitForResponse(
-    (r) =>
-      r.url().includes("/merchant/surplus/quote-ai") &&
-      r.ok() &&
-      (JSON.parse(r.request().postData() ?? "{}") as { available_stock?: number }).available_stock === before + 1,
-  );
-  await stock.getByRole("button", { name: "Tambah Jumlah porsi" }).click();
+  // Stock changes trigger a fresh quote. Pick an explicit amount first: the field is prefilled
+  // from tonight's forecast once it loads, so reading it straight away races that prefill.
+  const quotedFor = (n: number) =>
+    page.waitForResponse(
+      (r) =>
+        r.url().includes("/merchant/surplus/quote-ai") &&
+        r.ok() &&
+        (JSON.parse(r.request().postData() ?? "{}") as { available_stock?: number }).available_stock === n,
+    );
+  const picked = quotedFor(10);
+  await page.getByRole("group", { name: "Pilih cepat jumlah porsi" }).getByRole("button", { name: "10", exact: true }).click();
+  await picked;
+  const requoted = quotedFor(11);
+  await page.getByRole("group", { name: "Jumlah porsi" }).getByRole("button", { name: "Tambah Jumlah porsi" }).click();
   await requoted;
   await expect(page.getByRole("img", { name: /^Peluang habis terjual \d+ persen/ })).toBeVisible();
   await expect(page.getByRole("list", { name: "Jadwal diskon" })).toBeVisible();

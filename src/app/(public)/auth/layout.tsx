@@ -7,9 +7,7 @@ import { ThemeToggle } from "@/components/common/theme-switcher";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-backdrop min-h-dvh lg:grid lg:grid-cols-[1fr_minmax(28rem,36rem)]">
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[oklch(0.5_0.13_153)] to-[oklch(0.34_0.08_160)] p-12 text-white lg:flex lg:flex-col">
-        <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-white/10 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-32 -left-20 size-96 rounded-full bg-[oklch(0.75_0.16_55)]/25 blur-3xl" aria-hidden />
+      <aside className="relative hidden bg-impact p-12 text-white lg:flex lg:flex-col">
         {/* The chip follows the theme: on a white chip the dark theme's light "Sisa" text would vanish. */}
         <Link
           href="/welcome"

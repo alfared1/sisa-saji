@@ -168,7 +168,6 @@ export function LoginCta({
   return (
     <div className={cn("flex flex-col items-center px-6 py-12 text-center", className)}>
       <div className="relative">
-        <div className="absolute inset-0 scale-150 rounded-full bg-brand-soft blur-xl" aria-hidden />
         <span className="relative inline-flex size-20 items-center justify-center rounded-[1.75rem] bg-card shadow-card ring-1 ring-border">
           {icon ?? <LogoMark className="size-12" />}
         </span>

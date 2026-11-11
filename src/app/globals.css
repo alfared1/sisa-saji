@@ -78,6 +78,8 @@
   --color-hemat-accent: #10b981;
   --color-flash: #c2410c;
   --color-flash-accent: #f97316;
+  /* Deep green for full-bleed impact surfaces (white text about 8:1), same in both themes. */
+  --color-impact: oklch(0.42 0.11 154);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -216,8 +218,7 @@
   --elev-2: 0 1px 2px oklch(0.3 0.03 80 / 0.05), 0 10px 28px -12px oklch(0.3 0.04 80 / 0.18);
   --elev-3: 0 4px 10px -2px oklch(0.25 0.04 150 / 0.12), 0 22px 44px -16px oklch(0.25 0.05 150 / 0.32);
 
-  --app-backdrop: radial-gradient(1200px 600px at 10% -10%, oklch(0.93 0.06 150 / 0.7), transparent 60%),
-    radial-gradient(900px 500px at 110% 10%, oklch(0.94 0.06 60 / 0.6), transparent 60%), oklch(0.965 0.012 85);
+  --app-backdrop: oklch(0.965 0.012 85);
 
   color-scheme: light;
 }
@@ -278,8 +279,7 @@
   --elev-2: 0 1px 2px oklch(0 0 0 / 0.3), 0 12px 28px -12px oklch(0 0 0 / 0.55);
   --elev-3: 0 4px 12px -2px oklch(0 0 0 / 0.4), 0 24px 48px -16px oklch(0 0 0 / 0.65);
 
-  --app-backdrop: radial-gradient(1200px 600px at 10% -10%, oklch(0.3 0.06 152 / 0.45), transparent 60%),
-    radial-gradient(900px 500px at 110% 10%, oklch(0.3 0.06 50 / 0.35), transparent 60%), oklch(0.14 0.01 160);
+  --app-backdrop: oklch(0.14 0.01 160);
 
   color-scheme: dark;
 }
@@ -337,7 +337,6 @@
   /* Page backdrop used around the centered mobile container on larger screens. */
   .app-backdrop {
     background: var(--app-backdrop);
-    background-attachment: fixed;
   }
 
   .safe-top {

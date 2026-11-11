@@ -83,9 +83,7 @@ function ImpactInfographic({ order }: { order: OrderDetail }) {
     { icon: TreesIcon, value: `${formatDecimal(trees * 12, 1)} bln`, label: "kerja 1 pohon menyerap CO₂" },
   ];
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-primary via-brand-strong to-emerald-900 p-5 text-white shadow-float dark:from-emerald-800 dark:via-emerald-700 dark:to-emerald-900">
-      <span className="absolute -top-12 -right-10 size-44 rounded-full bg-white/10" aria-hidden />
-      <span className="absolute -bottom-16 -left-10 size-40 rounded-full bg-white/5" aria-hidden />
+    <section className="relative overflow-hidden rounded-[1.75rem] bg-impact p-5 text-white shadow-card">
       <div className="relative flex items-center gap-2">
         <LogoMark className="size-8" />
         <p className="text-xs font-bold text-white/85">Dampak pesanan {order.order_number}</p>

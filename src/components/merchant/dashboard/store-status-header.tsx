@@ -51,7 +51,6 @@ export function StoreStatusHeader({
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border" aria-label="Status warung">
-      <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-brand-soft blur-3xl" aria-hidden />
       <div className="relative flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-start gap-3 lg:flex-1">
           <span className="hidden size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-soft sm:inline-flex">

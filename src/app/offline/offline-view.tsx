@@ -105,7 +105,6 @@ export function OfflineView() {
 
         <section className="flex flex-col items-center pt-6 text-center lg:sticky lg:top-8 lg:mt-6 lg:rounded-[1.75rem] lg:bg-card lg:p-10 lg:shadow-card lg:ring-1 lg:ring-border">
           <div className="relative">
-            <div className="absolute inset-0 scale-150 rounded-full bg-deal-soft blur-2xl" aria-hidden />
             <span
               className={cn(
                 "relative inline-flex size-20 items-center justify-center rounded-[1.75rem] shadow-card ring-1 ring-border",

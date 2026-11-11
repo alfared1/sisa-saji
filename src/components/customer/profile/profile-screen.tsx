@@ -263,7 +263,7 @@ export function ProfileScreen() {
         ) : (
           <section className="overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border lg:col-start-1 lg:row-start-2">
             <div className="flex items-center gap-3 p-4">
-              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-brand-strong text-lg font-extrabold text-primary-foreground">
+              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground">
                 {initials(user.full_name) || "S"}
               </span>
               <div className="min-w-0 flex-1">

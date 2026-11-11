@@ -33,12 +33,11 @@ export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
         over
           ? "bg-muted-foreground dark:bg-stone-600"
           : c.isUrgent
-            ? "bg-gradient-to-br from-urgent to-deal dark:from-red-700 dark:to-orange-700"
-            : "bg-gradient-to-br from-deal to-urgent dark:from-orange-700 dark:to-red-700",
+            ? "bg-red-700"
+            : "bg-flash",
       )}
       role="status"
     >
-      <span className="absolute -top-8 -right-6 size-28 rounded-full bg-white/12" aria-hidden />
       <div className="relative flex items-center gap-3">
         <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/20">
           <AlarmClockIcon className={cn("size-5", c.isUrgent && "animate-soft-pulse")} />

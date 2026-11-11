@@ -19,7 +19,6 @@ export default function NotFound() {
         </header>
         <section className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="relative">
-            <div className="absolute inset-0 scale-150 rounded-full bg-deal-soft blur-2xl" aria-hidden />
             <span className="relative inline-flex size-24 items-center justify-center rounded-[2rem] bg-card text-deal shadow-card ring-1 ring-border">
               <SoupIcon className="size-11" />
             </span>
