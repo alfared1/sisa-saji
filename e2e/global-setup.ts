@@ -5,9 +5,12 @@
  *   3. `next build` into .next-e2e (skip with E2E_SKIP_BUILD=1 if a build exists)
  *   4. `next start -p E2E_WEB_PORT` (NODE_ENV=production, ALLOW_DEV_SECRETS=true)
  * Uses `node <bin>` instead of npx/shell so it behaves the same on Windows.
+ *
+ * E2E_SERVER_LOG=<file> appends the database and web server output to that file,
+ * which is the only way to see server-side errors behind a failing request.
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, rmSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import {
@@ -32,6 +35,10 @@ export const serverEnv = (): NodeJS.ProcessEnv => ({
   PAYMENT_PROVIDER: "simulator",
   APP_URL: E2E_BASE_URL,
   NEXT_TELEMETRY_DISABLED: "1",
+  // PGlite runs every socket connection through one Postgres session, so concurrent
+  // connections interleave statements ("portal does not exist", empty results, foreign
+  // statements inside an open transaction). One pooled connection queues them instead.
+  DB_POOL_MAX: "1",
 });
 
 function log(msg: string) {
@@ -78,8 +85,10 @@ function startProcess(args: string[], env: NodeJS.ProcessEnv, readyText: string 
   });
   let output = "";
   const ready = new Promise<void>((resolve, reject) => {
+    const logFile = process.env.E2E_SERVER_LOG;
     const onData = (buf: Buffer) => {
       output += buf.toString();
+      if (logFile) appendFileSync(logFile, buf.toString().replace(/\r\n/g, "\n").replace(/^(?=.)/gm, `[${label}] `));
       if (output.length > 20_000) output = output.slice(-10_000);
       if (readyText && output.includes(readyText)) resolve();
     };

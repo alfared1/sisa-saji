@@ -36,7 +36,7 @@ async function main() {
   ]);
 
   const databaseUrl = getDatabaseUrl();
-  const { db, pool } = createDb(databaseUrl, { max: 4 });
+  const { db, pool } = createDb(databaseUrl, { max: Number(process.env.DB_POOL_MAX) || 4 });
   const hasVenv = ml.findVenvPython() !== null;
   const scheduler = jobs.createScheduler({
     db,

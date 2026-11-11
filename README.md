@@ -236,7 +236,7 @@ Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan sto
 npm run test:e2e            # Playwright: 35 test dalam 14 file, di build produksi
 ```
 
-`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada.
+`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada, dan `E2E_SERVER_LOG=<file>` untuk menyimpan log database + server (berguna saat test gagal karena error di server).
 
 ---
 
@@ -254,6 +254,7 @@ Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
 | `OTP_DEV_MODE` | – | `true` = kode OTP tampil di layar (demo) |
 | `PAYMENT_PROVIDER` | – | `simulator` (satu-satunya provider saat ini) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push; push nonaktif bila kosong |
+| `DB_POOL_MAX` | – | Ukuran pool koneksi per proses (default 10 web, 4 worker). Isi `1` untuk PGlite, yang hanya punya satu sesi Postgres |
 | `REDIS_URL` | – | Tidak dipakai saat ini (cadangan untuk scaling) |
 | `DEMO_*`, `NEXT_DIST_DIR` | – | Pengaturan `npm run demo` (lihat di atas) |
 

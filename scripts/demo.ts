@@ -332,6 +332,9 @@ function prepareEnvironment() {
   process.env.OTP_DEV_MODE ??= "true";
   process.env.PAYMENT_PROVIDER ??= "simulator";
   process.env.DATABASE_URL = DATABASE_URL;
+  // Local PGlite has a single Postgres session: one pooled connection per process keeps
+  // concurrent requests from interleaving statements (see docs/ARCHITECTURE.md, Alur kerja).
+  if (!EXTERNAL_DB) process.env.DB_POOL_MAX ??= "1";
   process.env.APP_URL = process.env.DEMO_APP_URL?.trim() || `http://localhost:${PORT}`;
   process.env.NEXT_TELEMETRY_DISABLED ??= "1";
 }
