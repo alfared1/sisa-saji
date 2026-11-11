@@ -300,7 +300,7 @@ function QuickOrderBody({
         </div>
 
         {batch.is_mystery_bag ? (
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-deal">
             <GiftIcon className="size-3.5" aria-hidden /> Paket kejutan, isinya dipilihkan warung
           </p>
         ) : (

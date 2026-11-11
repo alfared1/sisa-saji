@@ -74,16 +74,16 @@ export function MerchantDashboardView() {
       <section aria-label="Ringkasan hari ini">
         <h2 className="sr-only">Ringkasan hari ini</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile icon={BanknoteIcon} label="Pendapatan hari ini" value={formatIdr(t.revenue_idr)} hint={`${t.orders_completed} pesanan selesai`} />
-          <StatTile icon={UtensilsIcon} label="Porsi terjual" value={t.portions_sold} hint="porsi surplus terselamatkan" tint="deal" />
+          <StatTile icon={BanknoteIcon} label="Pendapatan hari ini" value={formatIdr(t.revenue_idr)} hint={`${t.orders_completed} pesanan selesai`} tint="deal" />
+          <StatTile icon={UtensilsIcon} label="Porsi terjual" value={t.portions_sold} hint="porsi surplus terselamatkan" />
           <StatTile
             icon={ClockIcon}
             label="Menunggu diambil"
             value={t.orders_pending_pickup}
             hint={t.orders_pending_pickup ? "Siapkan bungkusnya" : "Antrean kosong"}
-            tint={t.orders_pending_pickup ? "urgent" : "amber"}
+            tint={t.orders_pending_pickup ? "urgent" : "neutral"}
           />
-          <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(t.food_saved_grams)} hint={`${formatKg(t.co2_avoided_grams)} CO₂e dicegah`} tint="sky" />
+          <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(t.food_saved_grams)} hint={`${formatKg(t.co2_avoided_grams)} CO₂e dicegah`} tint="brand" />
         </div>
       </section>
 

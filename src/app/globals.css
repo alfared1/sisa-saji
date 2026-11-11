@@ -69,17 +69,23 @@
   --color-surface: var(--surface);
 
   /*
-   * Discount badges (docs/ARCHITECTURE.md, Konvensi UI). Spec hues #10B981 / #F97316 are the accents
-   * (ring + pulse glow); white label text sits on the 700 shades so it passes
-   * WCAG AA for normal text: #047857 = 5.48:1, #C2410C = 5.18:1
-   * (see src/components/common/discount-logic.ts).
+   * Palette roles (docs/ARCHITECTURE.md, Konvensi UI):
+   *   green  = brand and impact (primary, brand-soft, impact/brand-strong)
+   *   orange = price and discount (deal, deal-soft, flash)
+   *   red    = errors and time running out; amber = demo labels and warnings
+   *   everything else is neutral. No other hues in components.
+   * Badge fills stay fixed in both themes so white text keeps AA contrast:
+   * flash #C2410C about 5.2:1.
    */
+  --color-impact: oklch(0.42 0.11 154);
+  /* Hemat badge keeps the spec emerald (#10B981 accent, #047857 fill, 5.5:1). */
   --color-hemat: #047857;
   --color-hemat-accent: #10b981;
   --color-flash: #c2410c;
   --color-flash-accent: #f97316;
-  /* Deep green for full-bleed impact surfaces (white text about 8:1), same in both themes. */
-  --color-impact: oklch(0.42 0.11 154);
+  /* Menu thumbnails without a photo: one warm tint for every category. */
+  --color-food: var(--food);
+  --color-food-ink: var(--food-ink);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -166,6 +172,8 @@
   --background: oklch(0.982 0.008 85);
   --foreground: oklch(0.23 0.02 155);
   --surface: oklch(0.965 0.012 85);
+  --food: oklch(0.95 0.025 75);
+  --food-ink: oklch(0.5 0.08 55);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.23 0.02 155);
   --popover: oklch(1 0 0);
@@ -183,7 +191,7 @@
   --accent: oklch(0.95 0.03 150);
   --accent-foreground: oklch(0.36 0.09 152);
 
-  --deal: oklch(0.64 0.19 45);
+  --deal: oklch(0.54 0.18 45);
   --deal-foreground: oklch(0.99 0.01 60);
   --deal-soft: oklch(0.95 0.045 60);
   --urgent: oklch(0.58 0.21 26);
@@ -227,6 +235,8 @@
   --background: oklch(0.17 0.012 160);
   --foreground: oklch(0.96 0.01 90);
   --surface: oklch(0.2 0.014 160);
+  --food: oklch(0.27 0.025 70);
+  --food-ink: oklch(0.82 0.07 70);
   --card: oklch(0.215 0.015 160);
   --card-foreground: oklch(0.96 0.01 90);
   --popover: oklch(0.23 0.016 160);

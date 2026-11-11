@@ -268,7 +268,7 @@ export function AiDiscountRecommendationCard({
 
             {endIso && <EscalationTimeline steps={quote.escalation_schedule} endIso={endIso} />}
 
-            <div className="flex items-center gap-2 rounded-2xl bg-sky-50 px-3 py-2.5 text-sm text-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+            <div className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2.5 text-sm text-foreground/85">
               <UsersIcon className="size-4 shrink-0" aria-hidden />
               <span>
                 <b className="tabular-nums">{quote.active_users_in_radius}</b> mahasiswa aktif dalam radius 2 km

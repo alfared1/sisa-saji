@@ -74,7 +74,7 @@ export function MerchantCard({
             (variant === "sheet" ? (
               // Static icon, not the tooltip badge: the preview sheet focuses its first control on open.
               <BadgeCheckIcon
-                className="size-4 shrink-0 text-sky-600 dark:text-sky-400"
+                className="size-4 shrink-0 text-brand-strong"
                 aria-label="Mitra Terverifikasi"
                 role="img"
               />

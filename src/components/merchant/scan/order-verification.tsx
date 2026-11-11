@@ -182,7 +182,7 @@ export function VerificationSuccess({ order, onNext }: { order: OrderDetail; onN
           <p className="text-[11px] text-muted-foreground">pangan</p>
         </div>
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
-          <CloudIcon className="size-4 text-sky-600" aria-hidden />
+          <CloudIcon className="size-4 text-brand-strong" aria-hidden />
           <p className="mt-1 text-sm font-extrabold tabular-nums">{formatKg(order.co2_avoided_grams)}</p>
           <p className="text-[11px] text-muted-foreground">CO₂e dicegah</p>
         </div>

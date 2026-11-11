@@ -265,7 +265,7 @@ export function ReviewFormSheet({
                 </button>
               ))}
             </div>
-            <p className="mt-1 h-5 text-sm font-bold text-amber-600">{RATING_COPY[rating]}</p>
+            <p className="mt-1 h-5 text-sm font-bold text-foreground/80">{RATING_COPY[rating]}</p>
           </div>
 
           <fieldset>

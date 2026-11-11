@@ -213,7 +213,7 @@ export function OnboardingWizard() {
                 {current.key === "bank" && (
                   <div className="space-y-4">
                     <BankSection form={form} idPrefix="onb" />
-                    <p className="rounded-2xl bg-sky-50 p-3 text-xs leading-relaxed text-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+                    <p className="rounded-2xl bg-muted p-3 text-xs leading-relaxed text-foreground/85">
                       Hasil penjualan masuk ke saldo warung setiap pesanan selesai diambil, lalu dicairkan ke rekening ini.
                     </p>
                   </div>

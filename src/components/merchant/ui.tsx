@@ -218,21 +218,20 @@ export function StatTile({
   label,
   value,
   hint,
-  tint = "brand",
+  tint = "neutral",
   className,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  tint?: "brand" | "deal" | "sky" | "amber" | "urgent";
+  tint?: "brand" | "deal" | "neutral" | "urgent";
   className?: string;
 }) {
   const tints = {
-    brand: "bg-brand-soft text-primary",
+    brand: "bg-brand-soft text-brand-strong",
     deal: "bg-deal-soft text-deal",
-    sky: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
-    amber: "bg-warning-soft text-amber-700 dark:text-amber-300",
+    neutral: "bg-muted text-foreground/80",
     urgent: "bg-urgent-soft text-urgent",
   } as const;
   return (

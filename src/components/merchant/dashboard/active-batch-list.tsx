@@ -92,7 +92,7 @@ function StatusPill({ status, startIso }: { status: MerchantBatchView["status"];
   const map: Record<MerchantBatchView["status"], { label: string; cls: string }> = {
     ACTIVE: { label: "Tayang", cls: "bg-success-soft text-primary" },
     SOLD_OUT: { label: "Habis terjual", cls: "bg-deal-soft text-deal" },
-    SCHEDULED: { label: `Mulai ${formatClockId(startIso)}`, cls: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300" },
+    SCHEDULED: { label: `Mulai ${formatClockId(startIso)}`, cls: "bg-muted text-foreground/80" },
     EXPIRED: { label: "Berakhir", cls: "bg-muted text-muted-foreground" },
     CANCELLED: { label: "Dibatalkan", cls: "bg-muted text-muted-foreground" },
   };

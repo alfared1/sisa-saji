@@ -8,8 +8,8 @@ import {
   BarChart3Icon,
   CalendarRangeIcon,
   ChartColumnIcon,
+  CloudIcon,
   CrownIcon,
-  FlameIcon,
   LeafIcon,
   LightbulbIcon,
   ListOrderedIcon,
@@ -117,7 +117,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
         {isPremium ? (
           <div className="space-y-3">
             <p className="flex items-center gap-2 text-sm">
-              <BadgeCheckIcon className="size-5 text-sky-600" aria-hidden />
+              <BadgeCheckIcon className="size-5 text-brand-strong" aria-hidden />
               <span>
                 Aktif s/d <b>{a.subscription.expires_at ? formatDateId(a.subscription.expires_at) : "-"}</b>
               </span>
@@ -239,7 +239,7 @@ export function MerchantAnalyticsView() {
               <StatTile icon={TargetIcon} label="Sell-through" value={percent(a.sell_through_rate)} hint={`${a.portions_sold} dari ${a.portions_published} porsi`} />
               <StatTile icon={Trash2Icon} label="Porsi terbuang" value={a.portions_wasted} hint="tidak laku sampai tutup" tint="urgent" />
               <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(a.food_saved_grams)} hint="dari pesanan selesai" tint="brand" />
-              <StatTile icon={FlameIcon} label="CO₂e dicegah" value={formatKg(a.co2_avoided_grams)} hint="faktor IPCC 2,5×" tint="sky" />
+              <StatTile icon={CloudIcon} label="CO₂e dicegah" value={formatKg(a.co2_avoided_grams)} hint="faktor IPCC 2,5×" tint="brand" />
             </div>
           </div>
 
@@ -281,7 +281,7 @@ export function MerchantAnalyticsView() {
               <ul className="space-y-2">
                 {insights.data.advisories.map((t) => (
                   <li key={t} className="flex gap-2.5 rounded-2xl bg-warning-soft/60 p-3 text-sm leading-snug">
-                    <LightbulbIcon className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                    <LightbulbIcon className="mt-0.5 size-4 shrink-0 text-brand-strong" aria-hidden />
                     <span>{t}</span>
                   </li>
                 ))}

@@ -20,7 +20,7 @@ export function VerifiedBadge({
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            className={cn("inline-flex shrink-0 text-sky-600 dark:text-sky-400", className)}
+            className={cn("inline-flex shrink-0 text-brand-strong", className)}
             aria-label={label}
             tabIndex={0}
           >
@@ -34,7 +34,7 @@ export function VerifiedBadge({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold leading-none text-sky-700 dark:bg-sky-950/60 dark:text-sky-300",
+        "inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-soft px-2 py-1 text-xs font-semibold leading-none text-brand-strong",
         className,
       )}
     >

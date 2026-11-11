@@ -148,7 +148,7 @@ function GeoPrompt() {
   return (
     <div className="animate-float-up rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
       <div className="flex items-start gap-3">
-        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand-strong">
           <LocateFixedIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">

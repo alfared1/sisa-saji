@@ -88,7 +88,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
           aria-label={next ? `Progres menuju ${badgeLabel(next.tier)}` : "Level tertinggi tercapai"}
         >
           <div
-            className="h-full rounded-full bg-lime-300 transition-[width] duration-700"
+            className="h-full rounded-full bg-white transition-[width] duration-700"
             style={{ width: `${next ? Math.min(100, Math.max(3, next.progress_pct)) : 100}%` }}
           />
         </div>
@@ -104,19 +104,19 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
 
 function Totals({ d }: { d: ImpactSummary }) {
   const tiles = [
-    { icon: LeafIcon, value: formatKg(d.total_food_saved_grams), label: "pangan diselamatkan", tint: "bg-brand-soft text-primary" },
+    { icon: LeafIcon, value: formatKg(d.total_food_saved_grams), label: "pangan diselamatkan", tint: "bg-brand-soft text-brand-strong" },
     {
       icon: CloudIcon,
       value: formatKg(d.total_co2_avoided_grams),
       label: "emisi CO₂e dicegah",
-      tint: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+      tint: "bg-brand-soft text-brand-strong",
     },
     { icon: WalletIcon, value: formatIdr(d.total_money_saved_idr), label: "uang dihemat", tint: "bg-deal-soft text-deal" },
     {
       icon: TreesIcon,
       value: `${formatDecimal(d.tree_equivalent, 2)} pohon`,
       label: "setara serapan setahun",
-      tint: "bg-warning-soft text-amber-700 dark:text-amber-300",
+      tint: "bg-brand-soft text-brand-strong",
     },
   ];
   return (
@@ -226,7 +226,7 @@ function SubscriptionRow({ s }: { s: SubscriptionItem }) {
           </Link>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {s.has_live_batches && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-0.5 text-[11px] font-bold text-urgent">
+              <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-0.5 text-[11px] font-bold text-deal">
                 <RadioIcon className="size-3" aria-hidden /> Surplus live sekarang
               </span>
             )}

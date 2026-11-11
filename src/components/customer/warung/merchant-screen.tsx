@@ -328,7 +328,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <MessageCircleIcon className="size-4 text-emerald-600" /> WhatsApp
+                    <MessageCircleIcon className="size-4 text-primary" aria-hidden /> WhatsApp
                   </a>
                 </Button>
               </div>

@@ -24,7 +24,7 @@ export function ImpactStat({
           <LeafIcon className="size-3.5" aria-hidden />
           <span className="tabular-nums">+{formatKg(foodGrams)}</span> pangan
         </span>
-        <span className="inline-flex items-center gap-1 text-sky-700 dark:text-sky-300">
+        <span className="inline-flex items-center gap-1 text-brand-strong">
           <CloudIcon className="size-3.5" aria-hidden />
           <span className="tabular-nums">{formatKg(co2Grams)}</span> CO₂e dicegah
         </span>
@@ -39,14 +39,14 @@ export function ImpactStat({
       icon: LeafIcon,
       value: formatKg(foodGrams),
       label: "pangan diselamatkan",
-      tint: hero ? "bg-white/15 text-white" : "bg-brand-soft text-primary",
+      tint: hero ? "bg-white/15 text-white" : "bg-brand-soft text-brand-strong",
     },
     {
       key: "co2",
       icon: CloudIcon,
       value: formatKg(co2Grams),
       label: "CO₂e dicegah",
-      tint: hero ? "bg-white/15 text-white" : "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+      tint: hero ? "bg-white/15 text-white" : "bg-brand-soft text-brand-strong",
     },
     ...(showTrees
       ? [
@@ -55,7 +55,7 @@ export function ImpactStat({
             icon: TreesIcon,
             value: treeYearsFromCo2Grams(co2Grams).toLocaleString("id-ID", { maximumFractionDigits: 1 }),
             label: "pohon / tahun",
-            tint: hero ? "bg-white/15 text-white" : "bg-warning-soft text-amber-700 dark:text-amber-300",
+            tint: hero ? "bg-white/15 text-white" : "bg-brand-soft text-brand-strong",
           },
         ]
       : []),

@@ -12,7 +12,7 @@ type Metric = "food" | "co2" | "money";
 
 const METRICS: { key: Metric; label: string; color: string; pick: (m: MonthlyImpact) => number; fmt: (n: number) => string }[] = [
   { key: "food", label: "Pangan", color: "var(--primary)", pick: (m) => m.food_saved_grams, fmt: formatKg },
-  { key: "co2", label: "CO₂e", color: "var(--chart-3)", pick: (m) => m.co2_avoided_grams, fmt: formatKg },
+  { key: "co2", label: "CO₂e", color: "var(--brand-strong)", pick: (m) => m.co2_avoided_grams, fmt: formatKg },
   {
     key: "money",
     label: "Hemat",

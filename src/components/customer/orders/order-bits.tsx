@@ -86,7 +86,7 @@ export function DirectionsAndWhatsAppButtons({ order }: { order: OrderDetail }) 
       </Button>
       <Button asChild variant="outline" className="h-12 rounded-full font-bold">
         <a href={whatsappUrl(order.merchant.whatsapp_number, text)} target="_blank" rel="noreferrer">
-          <MessageCircleIcon className="size-4 text-emerald-600" /> Hubungi Warung
+          <MessageCircleIcon className="size-4 text-primary" aria-hidden /> Hubungi Warung
         </a>
       </Button>
     </div>

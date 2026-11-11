@@ -64,7 +64,7 @@ export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
 function LiveBand() {
   const now = useNow(1000);
   return (
-    <div className="relative mt-4 h-9 overflow-hidden rounded-xl bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-800">
+    <div className="relative mt-4 h-9 overflow-hidden rounded-xl bg-impact">
       <div className="ss-pass-shine absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/60 to-transparent" aria-hidden />
       <div className="relative flex h-full items-center justify-center gap-2 text-xs font-extrabold text-white">
         <ShieldCheckIcon className="size-4" />

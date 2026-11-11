@@ -223,15 +223,15 @@ export function PaymentView({ order }: { order: OrderDetail }) {
       {/* lg+: sticky details column. */}
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       {/* Demo simulator */}
-      <section className="rounded-3xl border-2 border-dashed border-violet-300 bg-violet-50/70 p-4 dark:border-violet-800 dark:bg-violet-950/30">
-        <p className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-violet-700 uppercase dark:text-violet-300">
+      <section className="rounded-3xl border-2 border-dashed border-amber-300 bg-warning-soft p-4 dark:border-amber-800">
+        <p className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide text-amber-900 uppercase dark:text-amber-100">
           <FlaskConicalIcon className="size-4" /> Mode demo
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-violet-900/80 dark:text-violet-200/80">
+        <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-100/85">
           Tidak perlu uang sungguhan. Tombol ini mengirim webhook pembayaran bertanda tangan seperti payment gateway asli.
         </p>
         <Button
-          className="mt-3 h-12 w-full rounded-full bg-violet-600 text-base font-extrabold text-white hover:bg-violet-600/90"
+          className="mt-3 h-12 w-full rounded-full bg-foreground text-base font-extrabold text-background hover:bg-foreground/90"
           onClick={() => pay.mutate()}
           disabled={pay.isPending || timesUp}
         >

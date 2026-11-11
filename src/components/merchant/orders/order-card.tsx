@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const STATUS_CLS: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "bg-warning-soft text-amber-800 dark:text-amber-200",
-  PAID: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+  PAID: "bg-brand-soft text-brand-strong",
   READY_FOR_PICKUP: "bg-success-soft text-primary",
   COMPLETED: "bg-muted text-foreground/70",
   CANCELLED: "bg-urgent-soft text-urgent",

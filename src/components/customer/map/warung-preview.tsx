@@ -85,7 +85,7 @@ export function IdleWarungPreview({ warung }: { warung: WarungMapPin }) {
           <h3 className="truncate text-[15px] font-bold">{warung.merchant_name}</h3>
           {warung.is_verified && (
             // Static icon, not the tooltip badge: the sheet focuses its first control on open.
-            <BadgeCheckIcon className="size-4 shrink-0 text-sky-600 dark:text-sky-400" aria-label="Mitra Terverifikasi" role="img" />
+            <BadgeCheckIcon className="size-4 shrink-0 text-brand-strong" aria-label="Mitra Terverifikasi" role="img" />
           )}
         </div>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">

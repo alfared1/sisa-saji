@@ -21,7 +21,7 @@ export function ImpactLine({
   const f = foodGrams !== undefined ? impactFiguresFromGrams(foodGrams) : impactFigures(portionWeightGrams, quantity);
   if (f.foodGrams <= 0) return null;
   return (
-    <p className={cn("flex items-start gap-1 text-[11px] leading-snug font-semibold text-emerald-800 dark:text-emerald-300", className)}>
+    <p className={cn("flex items-start gap-1 text-[11px] leading-snug font-semibold text-brand-strong", className)}>
       <SproutIcon className="mt-[0.1em] size-[1.2em] shrink-0" aria-hidden />
       {/*
         Two phrases that wrap as whole units. The "•" sits in each phrase's left

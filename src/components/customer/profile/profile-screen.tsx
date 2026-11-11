@@ -110,7 +110,6 @@ function InstallRow() {
         icon={SmartphoneIcon}
         label="Aplikasi sudah terpasang"
         hint="Kamu memakai Sisa-Saji versi aplikasi"
-        tint="bg-brand-soft text-primary"
         trailing={<CheckIcon className="size-5 text-primary" />}
       />
     );
@@ -121,7 +120,6 @@ function InstallRow() {
         icon={DownloadIcon}
         label="Pasang aplikasi"
         hint={canInstall ? "Buka lebih cepat dari layar utama, tiket tetap bisa offline" : "Tambahkan ke layar utama HP-mu"}
-        tint="bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
         onClick={async () => {
           if (canInstall) {
             const r = await promptInstall();
@@ -311,17 +309,16 @@ export function ProfileScreen() {
           <h2 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Menu</h2>
           <div className="divide-y divide-border overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
             <LinkRow href="/orders" icon={ReceiptTextIcon} label="Pesanan saya" hint="Tiket pengambilan & riwayat" />
-            <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" tint="bg-brand-soft text-primary" />
-            <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & perkiraan porsi sisa" tint="bg-urgent-soft text-urgent" />
+            <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" />
+            <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & perkiraan porsi sisa" />
             {user?.merchant_id ? (
-              <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" tint="bg-deal-soft text-deal" />
+              <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" />
             ) : (
               <LinkRow
                 href={user ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}
                 icon={StoreIcon}
                 label="Daftar jadi Mitra Warung"
                 hint="Jual porsi surplus, kurangi makanan terbuang"
-                tint="bg-deal-soft text-deal"
               />
             )}
             <LinkRow
@@ -329,7 +326,6 @@ export function ProfileScreen() {
               icon={CompassIcon}
               label="Tur aplikasi"
               hint="Cara pakai Sisa-Saji dalam 1 menit"
-              tint="bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
             />
             <InstallRow />
           </div>

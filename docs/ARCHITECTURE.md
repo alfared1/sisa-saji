@@ -126,7 +126,13 @@ Harga dibulatkan ke atas ke kelipatan Rp 500 dengan aritmetika integer, lalu `ma
 - **Kartu menu:** badge "Hemat 50%" hijau (`--color-hemat`), atau "Flash Rescue 70%" oranye (`--color-flash`) yang berdenyut bila kurang dari 45 menit sebelum tutup; sisa porsi; hitung mundur; dan estimasi dampak ("Selamatkan 200 g pangan • −0,5 kg CO₂e").
 - **Target kecepatan:** pembeli dari /discover sampai QRIS dalam maksimal 3 layar; mitra dari /merchant/surplus/new sampai "Publikasikan Sekarang" dalam kurang dari 60 detik.
 - **Tema:** Terang, Gelap, atau Sistem lewat next-themes (localStorage `theme`). Gaya gelap selalu lewat varian `dark:` (kelas `.dark` di `<html>`), bukan `prefers-color-scheme`. Setiap layar dicek di kedua tema.
-- **Warna:** permukaan dampak memakai `bg-impact` (hijau tua, teks putih). Hindari gradien dekoratif, orb blur, dan animasi denyut kecuali untuk status yang memang mendesak.
+- **Warna punya peran, bukan hiasan.** Komponen hanya memakai token di `src/app/globals.css`:
+  - hijau = merek dan dampak (`primary`, `brand-soft`, `brand-strong`/`impact`); badge Hemat memakai emerald dari spesifikasi;
+  - oranye = harga, diskon, dan uang (`deal`, `deal-soft`, `flash`);
+  - merah = error dan waktu habis (`urgent`); kuning = label demo dan peringatan (`warning-soft`);
+  - selain itu netral (`muted`, `surface`, `food` untuk thumbnail tanpa foto).
+
+  Jangan memberi ikon, tile, atau baris menu warna berbeda hanya supaya bervariasi. Pengecualian: bintang rating (kuning), warna merek e-wallet, dan overlay kamera pemindai. Hindari juga gradien dekoratif, orb blur, dan animasi denyut kecuali untuk status yang mendesak.
 - **Kunjungan pertama:** "/" mengirim tamu baru ke /tour (`?peran=mitra` untuk mitra). Selesai atau lewati tur menyimpan `ss-tour-seen`, sehingga kunjungan berikutnya ke /welcome. Pembeli yang login langsung ke /discover, mitra ke /merchant/dashboard.
 
 ## Alur kerja
