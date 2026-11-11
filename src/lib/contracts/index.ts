@@ -228,6 +228,11 @@ export type GlobalStats = {
   total_orders_completed: number;
   active_merchants: number;
   live_batches: number;
+  /**
+   * True when the totals come from demo data (DEMO_MODE or the payment simulator):
+   * the UI must label them as such instead of presenting them as real rescues.
+   */
+  is_demo_data: boolean;
 };
 
 /* ================================================================== */

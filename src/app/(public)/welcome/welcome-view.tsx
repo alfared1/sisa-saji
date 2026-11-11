@@ -1,98 +1,72 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowRightIcon,
-  CirclePlayIcon,
-  Clock3Icon,
-  CloudIcon,
-  LeafIcon,
-  MapPinnedIcon,
-  QrCodeIcon,
-  ReceiptTextIcon,
-  ShoppingBagIcon,
-  StoreIcon,
-  WalletIcon,
-} from "lucide-react";
+import { CirclePlayIcon, Clock3Icon, CloudIcon, LeafIcon, ReceiptTextIcon, ShoppingBagIcon, StoreIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
 import { ThemeToggle } from "@/components/common/theme-switcher";
+import { FoodThumb } from "@/components/customer/food-thumb";
 import { InstallBanner } from "@/components/pwa/install-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
-import { SURPLUS_WINDOW_END, SURPLUS_WINDOW_START } from "@/lib/constants";
+import { PAYMENT_TTL_SECONDS, SURPLUS_WINDOW_END, SURPLUS_WINDOW_START } from "@/lib/constants";
 import type { GlobalStats } from "@/lib/contracts";
+import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
+import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
 export const GLOBAL_STATS_QUERY_KEY = ["stats", "global"] as const;
 
-/** Eased count-up from the previous value to `target` (respects reduced motion). */
-function useCountUp(target: number, durationMs = 1200): number {
-  const [value, setValue] = useState(0);
-  const from = useRef(0);
+const WINDOW_LABEL = `${SURPLUS_WINDOW_START.replace(":", ".")}–${SURPLUS_WINDOW_END.replace(":", ".")} WIB`;
+const LOCK_MINUTES = Math.round(PAYMENT_TTL_SECONDS / 60);
 
-  useEffect(() => {
-    const start = from.current;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    let raf = 0;
-    if (reduce || start === target) {
-      raf = requestAnimationFrame(() => setValue(target));
-      from.current = target;
-      return () => cancelAnimationFrame(raf);
-    }
-    const t0 = performance.now();
-    const tick = (t: number) => {
-      const p = Math.min(1, (t - t0) / durationMs);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setValue(start + (target - start) * eased);
-      if (p < 1) raf = requestAnimationFrame(tick);
-      else from.current = target;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      from.current = target;
-    };
-  }, [target, durationMs]);
+/** Example menu for the hero card and the evening timeline. */
+const EXAMPLE = { name: "Nasi Timbel Ayam Goreng", priceIdr: 18000, floorIdr: 5000 } as const;
 
-  return value;
+/** Price the real optimizer gives the example menu at a given point in the evening. */
+function examplePrice(minutesToClose: number, availableStock: number) {
+  return calculateOptimalRecoveryPrice({
+    originalPriceIdr: EXAMPLE.priceIdr,
+    minRecoveryPriceIdr: EXAMPLE.floorIdr,
+    availableStock,
+    minutesToClose,
+    activeUsersIn2km: 20,
+  });
 }
+
+const TIMELINE = [
+  { when: SURPLUS_WINDOW_START.replace(":", "."), text: "Warung memasang porsi sisa. Harga mulai dari diskon dasar.", quote: examplePrice(150, 10) },
+  { when: "1 jam lagi tutup", text: "Masih banyak yang belum laku? Diskon naik sendiri.", quote: examplePrice(60, 6) },
+  {
+    when: "30 menit lagi",
+    text: "Flash Rescue: diskon terbesar, dan pembeli di sekitar warung dapat notifikasi.",
+    quote: examplePrice(30, 5),
+    flash: true,
+  },
+] as const;
 
 function fmt(n: number, digits = 0): string {
   return n.toLocaleString("id-ID", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
 
-function CounterTile({
-  icon: Icon,
-  value,
-  digits = 0,
-  unit,
-  label,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  value: number;
-  digits?: number;
-  unit?: string;
-  label: string;
-}) {
-  const shown = useCountUp(value);
+function StatTile({ icon: Icon, value, unit, label }: { icon: ComponentType<{ className?: string }>; value: string; unit?: string; label: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-white/10 p-3 ring-1 ring-white/15">
-      <Icon className="size-4 text-white/80" aria-hidden />
+    <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-surface p-3">
+      <Icon className="size-4 text-primary" aria-hidden />
       <p className="truncate text-xl leading-tight font-extrabold tabular-nums sm:text-2xl">
-        {fmt(shown, digits)}
-        {unit && <span className="ml-1 text-sm font-bold text-white/80">{unit}</span>}
+        {value}
+        {unit && <span className="ml-1 text-sm font-bold text-muted-foreground">{unit}</span>}
       </p>
-      <p className="text-[11px] leading-tight text-white/75">{label}</p>
+      <p className="text-xs leading-tight text-muted-foreground">{label}</p>
     </div>
   );
 }
 
-function HeroImpactCounter() {
+function ImpactStats() {
   const stats = useQuery({
     queryKey: GLOBAL_STATS_QUERY_KEY,
     queryFn: () => api.get<GlobalStats>("/stats/global"),
@@ -101,64 +75,61 @@ function HeroImpactCounter() {
   const s = stats.data;
 
   return (
-    <section
-      aria-label="Dampak Sisa-Saji"
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[oklch(0.56_0.14_152)] to-[oklch(0.4_0.1_158)] p-4 text-white shadow-float"
-    >
-      <div className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-white/10 blur-2xl" aria-hidden />
-      <div className="pointer-events-none absolute -bottom-16 -left-8 size-44 rounded-full bg-[oklch(0.75_0.16_60)]/25 blur-2xl" aria-hidden />
-      <div className="relative flex items-center justify-between gap-2">
-        <p className="text-sm font-bold">Dampak bersama</p>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2 py-1 text-[11px] font-semibold">
-          <span className="size-1.5 animate-soft-pulse rounded-full bg-[oklch(0.85_0.17_140)]" />
-          {s ? `${fmt(s.live_batches)} menu live malam ini` : "Live"}
-        </span>
+    <section aria-labelledby="dampak-title" className="rounded-3xl bg-card p-4 ring-1 ring-border">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="dampak-title" className="text-sm font-bold">
+          Dampak bersama
+        </h2>
+        {s?.is_demo_data && (
+          <span className="rounded-full bg-warning-soft px-2 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-200">Data demo</span>
+        )}
       </div>
       {stats.isPending ? (
-        <div className="relative mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[5.25rem] rounded-2xl bg-white/15" />
+            <Skeleton key={i} className="h-[5.25rem] rounded-2xl" />
           ))}
         </div>
       ) : stats.isError || !s ? (
-        <p className="relative mt-3 rounded-2xl bg-white/10 p-3 text-sm text-white/85">
-          Statistik dampak belum bisa dimuat. Yang pasti: setiap porsi yang kamu selamatkan mencegah ±0,5 kg emisi
-          CO₂e.
+        <p className="mt-3 rounded-2xl bg-surface p-3 text-sm text-muted-foreground">
+          Statistik belum bisa dimuat. Patokannya tetap: satu porsi yang diselamatkan mencegah sekitar 0,5 kg emisi CO₂e.
         </p>
       ) : (
-        <div className="relative mt-3 grid grid-cols-2 gap-2">
-          <CounterTile icon={LeafIcon} value={s.total_food_saved_grams / 1000} digits={1} unit="kg" label="pangan diselamatkan" />
-          <CounterTile icon={CloudIcon} value={s.total_co2_avoided_grams / 1000} digits={1} unit="kg" label="emisi CO₂e dicegah" />
-          <CounterTile icon={ReceiptTextIcon} value={s.total_orders_completed} label="pesanan diambil" />
-          <CounterTile icon={StoreIcon} value={s.active_merchants} label="warung mitra aktif" />
-        </div>
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <StatTile icon={LeafIcon} value={fmt(s.total_food_saved_grams / 1000, 1)} unit="kg" label="pangan diselamatkan" />
+            <StatTile icon={CloudIcon} value={fmt(s.total_co2_avoided_grams / 1000, 1)} unit="kg" label="emisi CO₂e dicegah" />
+            <StatTile icon={ReceiptTextIcon} value={fmt(s.total_orders_completed)} label="pesanan diambil" />
+            <StatTile icon={StoreIcon} value={fmt(s.active_merchants)} label="warung buka" />
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            {s.is_demo_data
+              ? "Angka ini dihitung dari warung dan pesanan contoh, belum dari transaksi sungguhan."
+              : `${fmt(s.live_batches)} menu surplus masih tersedia malam ini.`}
+          </p>
+        </>
       )}
     </section>
   );
 }
 
-/** Static "what you'll see" preview card for the hero. */
+/** What a deal card looks like in the app (illustration, hidden from screen readers). */
 function DealPreview() {
+  const flash = TIMELINE[2].quote;
   return (
-    <div className="relative mx-auto w-full max-w-sm" aria-hidden>
-      <div className="absolute inset-x-6 -bottom-3 h-full rotate-2 rounded-3xl bg-deal-soft ring-1 ring-deal/15" />
-      <div className="relative rounded-3xl bg-card p-3 shadow-float ring-1 ring-border">
-        <div className="flex gap-3">
-          <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[oklch(0.9_0.08_70)] to-[oklch(0.8_0.12_45)]">
-            <ShoppingBagIcon className="size-8 text-white drop-shadow" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold">Nasi Timbel Ayam Goreng</p>
-            <p className="truncate text-xs text-muted-foreground">Warung Nasi Teh Euis · 240 m</p>
-            {/* Badge beside the price: inside the 80 px photo it was clipped ("Hemat 60…"). */}
-            <PriceTag original={18000} selling={7000} discountPct={60} className="mt-1.5" />
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <StockBadge available={3} />
-              <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-1 text-xs leading-none font-semibold text-urgent tabular-nums">
-                <Clock3Icon className="size-3.5 shrink-0" aria-hidden />
-                Tutup 00:38:12
-              </span>
-            </div>
+    <div className="rounded-3xl bg-card p-3 shadow-card ring-1 ring-border" aria-hidden>
+      <div className="flex gap-3">
+        <FoodThumb category="MAKANAN_BERAT" alt="" className="size-20 shrink-0 rounded-2xl" iconClassName="size-8" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">{EXAMPLE.name}</p>
+          <p className="truncate text-xs text-muted-foreground">Warung contoh · 240 m</p>
+          <PriceTag original={EXAMPLE.priceIdr} selling={flash.recommendedSellingPriceIdr} discountPct={flash.recommendedDiscountPct} className="mt-1.5" />
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <StockBadge available={3} />
+            <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-1 text-xs leading-none font-semibold text-urgent tabular-nums">
+              <Clock3Icon className="size-3.5 shrink-0" aria-hidden />
+              Tutup 00:28:12
+            </span>
           </div>
         </div>
       </div>
@@ -166,42 +137,63 @@ function DealPreview() {
   );
 }
 
+/** The evening, step by step, priced by the same optimizer the warung uses. */
+function EveningTimeline() {
+  return (
+    <section aria-labelledby="malam-title" className="mt-12 lg:mt-16">
+      <h2 id="malam-title" className="text-xl font-extrabold">
+        Harga turun mendekati jam tutup
+      </h2>
+      <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+        Contoh {EXAMPLE.name} seharga {formatIdr(EXAMPLE.priceIdr)}. Harga tidak pernah turun di bawah batas minimum yang
+        dipasang warung.
+      </p>
+
+      <ol className="mt-5 grid grid-cols-1 gap-x-6 lg:grid-cols-[1fr_1fr_1fr_1.15fr]">
+        {TIMELINE.map((step) => (
+          <li key={step.when} className="grid grid-cols-[5.5rem_1fr] gap-3 border-t border-border py-4 lg:grid-cols-1 lg:gap-2">
+            <p className={cn("text-sm font-extrabold tabular-nums", "flash" in step ? "text-flash dark:text-flash-accent" : "text-foreground")}>
+              {step.when}
+            </p>
+            <div>
+              <p className="flex items-baseline gap-2">
+                <span className="text-2xl leading-none font-extrabold tabular-nums">{formatIdr(step.quote.recommendedSellingPriceIdr)}</span>
+                <span className="text-sm font-bold text-muted-foreground tabular-nums">−{step.quote.recommendedDiscountPct}%</span>
+              </p>
+              <p className="mt-1.5 text-sm leading-snug text-muted-foreground">{step.text}</p>
+            </div>
+          </li>
+        ))}
+        <li className="grid grid-cols-[5.5rem_1fr] gap-3 border-t border-border py-4 lg:grid-cols-1 lg:gap-2">
+          <p className="text-sm font-extrabold">Kamu pesan</p>
+          <p className="text-sm leading-snug text-muted-foreground">
+            Porsimu dikunci {LOCK_MINUTES} menit selama bayar lewat QRIS. Setelah itu datang ke warung dan tunjukkan QR atau kode
+            SJ-XXXX. Tidak ada pengantaran.
+          </p>
+        </li>
+      </ol>
+    </section>
+  );
+}
+
 const ROLE_CARDS = [
   {
     href: "/discover",
-    title: "Cari Makanan Hemat",
-    body: "Lihat surplus warung dalam radius 2 km, diskon 50–70%.",
+    title: "Cari makanan hemat",
+    body: "Lihat porsi surplus warung dalam radius 2 km dari kampusmu.",
     icon: ShoppingBagIcon,
     tone: "bg-primary text-primary-foreground",
     iconTone: "bg-white/15 text-white",
-    cta: "Mulai cari",
+    cta: "Lihat menu malam ini",
   },
   {
     href: "/auth/login?role=MERCHANT",
-    title: "Daftar Mitra Warung",
-    body: "Ubah porsi sisa jadi pemasukan dalam 60 detik, dibantu AI.",
+    title: "Daftarkan warungmu",
+    body: "Pasang porsi sisa dalam 60 detik. Harga diskonnya dihitung otomatis dan naik sendiri menjelang tutup.",
     icon: StoreIcon,
     tone: "bg-card text-card-foreground ring-1 ring-border",
     iconTone: "bg-deal-soft text-deal",
-    cta: "Gabung gratis",
-  },
-] as const;
-
-const STEPS = [
-  {
-    icon: MapPinnedIcon,
-    title: "Temukan",
-    body: "Cek peta surplus di sekitar kampus. Harga turun otomatis mendekati jam tutup.",
-  },
-  {
-    icon: WalletIcon,
-    title: "Bayar QRIS",
-    body: "Porsi dikunci 10 menit untukmu. Bayar pakai QRIS, GoPay, OVO, atau DANA.",
-  },
-  {
-    icon: QrCodeIcon,
-    title: "Ambil sendiri",
-    body: "Tunjukkan QR atau kode SJ-XXXX di warung. Dampakmu langsung tercatat.",
+    cta: "Daftar sebagai mitra",
   },
 ] as const;
 
@@ -219,29 +211,14 @@ export function WelcomeView() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-14 lg:pt-12">
+        <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-14 lg:pt-12">
           <section className="space-y-5">
-            <span className="inline-flex items-center gap-2 rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-soft ring-1 ring-border">
-              <span className="size-2 animate-soft-pulse rounded-full bg-deal" />
-              Jam selamatkan makanan {SURPLUS_WINDOW_START.replace(":", ".")}–{SURPLUS_WINDOW_END.replace(":", ".")} WIB
-            </span>
             <h1 className="text-[2rem] leading-[1.1] font-extrabold sm:text-5xl">
-              Makanan enak tetap <span className="text-primary">termakan</span>,{" "}
-              <span className="relative whitespace-nowrap text-deal">
-                dompet tetap aman.
-                <svg
-                  viewBox="0 0 200 12"
-                  className="absolute -bottom-1.5 left-0 h-2.5 w-full text-deal/40"
-                  preserveAspectRatio="none"
-                  aria-hidden
-                >
-                  <path d="M2 9C50 3 150 1 198 7" stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round" />
-                </svg>
-              </span>
+              Makanan enak tetap <span className="text-primary">termakan</span>, dompet tetap aman.
             </h1>
             <p className="max-w-prose text-base leading-relaxed text-muted-foreground">
-              Sisa-Saji mempertemukan warung di sekitar kampus dengan mahasiswa untuk menyelamatkan porsi surplus
-              menjelang tutup. Hemat hingga 70%, ambil sendiri dalam 3 menit.
+              Setiap malam pukul {WINDOW_LABEL}, warung di sekitar kampus menjual porsi yang belum laku dengan potongan
+              harga. Kamu pesan dan bayar di aplikasi, lalu ambil sendiri sebelum warung tutup.
             </p>
             <Link
               href="/tour"
@@ -259,60 +236,32 @@ export function WelcomeView() {
                   key={href}
                   href={href}
                   className={cn(
-                    "group flex flex-col gap-3 rounded-3xl p-4 shadow-card outline-none transition-transform hover:-translate-y-0.5 active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "flex flex-col gap-3 rounded-3xl p-4 shadow-card outline-none transition-[filter] hover:brightness-[0.97] active:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50",
                     tone,
                   )}
                 >
                   <span className={cn("inline-flex size-11 items-center justify-center rounded-2xl", iconTone)}>
-                    <Icon className="size-5" />
+                    <Icon className="size-5" aria-hidden />
                   </span>
                   <span>
                     <span className="block text-base font-extrabold">{title}</span>
                     <span className="mt-1 block text-sm leading-snug opacity-80">{body}</span>
                   </span>
-                  <span className="mt-auto inline-flex items-center gap-1 text-sm font-bold">
-                    {cta}
-                    <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
-                  </span>
+                  <span className="mt-auto text-sm font-bold underline decoration-2 underline-offset-4">{cta}</span>
                 </Link>
               ))}
             </div>
           </section>
 
-          <section className="space-y-6">
+          <section className="space-y-4" aria-label="Contoh dan dampak">
             <DealPreview />
-            <HeroImpactCounter />
+            <ImpactStats />
           </section>
         </div>
 
-        <section aria-labelledby="cara-kerja" className="mt-12">
-          <h2 id="cara-kerja" className="text-xl font-extrabold">
-            Cara kerjanya
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">Tiga langkah, kurang dari 3 menit.</p>
-          <ol className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, body }, i) => (
-              <li key={title} className="flex gap-3 rounded-3xl bg-card p-4 ring-1 ring-border">
-                <span className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-primary">
-                  <Icon className="size-5" />
-                  <span className="absolute -top-1.5 -left-1.5 inline-flex size-5 items-center justify-center rounded-full bg-foreground text-[11px] font-extrabold text-background">
-                    {i + 1}
-                  </span>
-                </span>
-                <span>
-                  <span className="block text-sm font-bold">{title}</span>
-                  <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <EveningTimeline />
 
         <InstallBanner className="mt-8 lg:max-w-md" />
-
-        <footer className="mt-10 text-center text-xs text-muted-foreground">
-          Setiap porsi yang diselamatkan ≈ 0,5 kg CO₂e lebih sedikit di udara.
-        </footer>
       </div>
     </div>
   );

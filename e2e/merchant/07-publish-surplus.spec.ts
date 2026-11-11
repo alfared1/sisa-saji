@@ -9,7 +9,7 @@ test("merchant publishes surplus with the AI quote; it appears on dashboard and 
   await loginContextAs(context, DEMO_MERCHANT_EMAIL);
 
   await page.goto("/merchant/dashboard");
-  await expect(page.getByRole("region", { name: /^Prediksi surplus/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Perkiraan surplus malam ini" })).toBeVisible();
 
   await page.goto("/merchant/surplus/new");
   const menus = page.getByRole("radiogroup", { name: "Pilih menu" });

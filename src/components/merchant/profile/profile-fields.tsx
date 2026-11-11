@@ -298,7 +298,7 @@ export function BankSection({
             <FieldError>{e.bank_account_number.message}</FieldError>
           ) : savedNumberMasked ? (
             <p id={id("acc-hint")} className="text-[11px] text-muted-foreground">
-              Tersimpan: <span className="tabular-nums">{savedNumberMasked}</span> — isi untuk mengganti
+              Tersimpan: <span className="tabular-nums">{savedNumberMasked}</span>. Isi untuk mengganti
             </p>
           ) : null}
         </div>

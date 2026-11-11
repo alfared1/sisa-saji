@@ -10,7 +10,7 @@ const TINTS: Record<MenuCategory, string> = {
   MINUMAN: "from-sky-100 via-cyan-100 to-sky-200 text-sky-700 dark:via-sky-900/70 dark:from-sky-950 dark:to-cyan-900 dark:text-sky-300",
   ROTI_PASTRY: "from-rose-100 via-orange-50 to-amber-200 text-rose-700 dark:via-rose-900/70 dark:from-rose-950 dark:to-amber-900 dark:text-rose-300",
   BAHAN_MAKANAN: "from-lime-100 via-green-50 to-lime-200 text-lime-700 dark:via-lime-900/70 dark:from-lime-950 dark:to-green-900 dark:text-lime-300",
-  MYSTERY_BAG: "from-violet-100 via-fuchsia-100 to-purple-200 text-violet-700 dark:via-violet-900/70 dark:from-violet-950 dark:to-fuchsia-900 dark:text-violet-300",
+  MYSTERY_BAG: "from-orange-100 via-rose-100 to-orange-200 text-orange-800 dark:via-rose-950/80 dark:from-orange-950 dark:to-rose-900 dark:text-orange-300",
 };
 
 /** Menu photo, or a category-tinted placeholder with its icon. */

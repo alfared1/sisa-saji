@@ -381,7 +381,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-extrabold text-balance">Beri ulasan untuk {order.merchant.name}</span>
-            <span className="block text-xs text-pretty text-muted-foreground">Cuma 10 detik — bantu warung makin dipercaya.</span>
+            <span className="block text-xs text-pretty text-muted-foreground">Cuma 10 detik, dan membantu warung makin dipercaya.</span>
           </span>
           <StarIcon className="size-5 fill-amber-400 text-amber-400" />
         </button>

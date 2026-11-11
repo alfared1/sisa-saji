@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRightIcon, CloudIcon, LeafIcon, SparklesIcon, WalletIcon } from "lucide-react";
+import { ChevronRightIcon, CloudIcon, LeafIcon, ShoppingBagIcon, WalletIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
 import type { GlobalStats, ImpactSummary } from "@/lib/contracts";
 import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 
-/** "Rp 616,5 rb" — fits the narrow stat tile; the full amount is in the title. */
+/** "Rp 616,5 rb": fits the narrow stat tile; the full amount is in the title. */
 export function formatIdrCompact(amount: number): string {
   if (Math.abs(amount) < 100_000) return formatIdr(amount);
   return `Rp ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(amount)}`;
@@ -58,7 +58,7 @@ export function ImpactCard({ name }: { name: string }) {
       </div>
       {fresh ? (
         <p className="relative mt-2 text-[15px] leading-snug font-bold">
-          Selamatkan porsi pertamamu malam ini — tiap porsi mencegah ±0,5 kg emisi CO₂e.
+          Selamatkan porsi pertamamu malam ini. Tiap porsi mencegah ±0,5 kg emisi CO₂e.
         </p>
       ) : (
         <p className="relative mt-2 text-[15px] leading-snug font-bold">
@@ -91,20 +91,19 @@ export function GuestImpactBanner() {
   const stats = useGlobalStats();
   const s = stats.data;
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-deal to-urgent p-4 text-deal-foreground shadow-card">
-      <span className="absolute -top-8 -right-6 size-32 rounded-full bg-white/12" aria-hidden />
-      <div className="relative flex items-start gap-3">
+    <div className="rounded-3xl bg-flash p-4 text-white shadow-card">
+      <div className="flex items-start gap-3">
         <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white/20">
-          <SparklesIcon className="size-5" />
+          <ShoppingBagIcon className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
           <p className="text-[15px] leading-snug font-extrabold">Selamatkan makanan, hemat uang</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-deal-foreground/90">
-            Porsi surplus warung sekitar kampus, diskon 50–70% menjelang tutup.
+          <p className="mt-0.5 text-xs leading-relaxed text-white/90">
+            Porsi surplus warung sekitar kampus, diskon <span className="whitespace-nowrap">50–70%</span> menjelang tutup.
           </p>
         </div>
       </div>
-      <div className="relative mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold">
         {s ? (
           <>
             <span>
@@ -114,6 +113,7 @@ export function GuestImpactBanner() {
             <span>
               <b className="text-sm font-extrabold tabular-nums">{s.active_merchants}</b> warung mitra
             </span>
+            {s.is_demo_data && <span className="font-bold">(data demo)</span>}
           </>
         ) : (
           <Skeleton className="h-4 w-48 bg-white/25" />

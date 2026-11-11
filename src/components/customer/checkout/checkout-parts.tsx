@@ -126,7 +126,7 @@ export function SelfPickupInfoCard({
         </div>
         <div className="flex items-start gap-2 bg-deal-soft/70 px-3 py-2 text-xs font-semibold text-deal">
           <TriangleAlertIcon className="mt-px size-3.5 shrink-0" />
-          Khusus Ambil Sendiri di Warung — tidak ada pengantaran.
+          Khusus Ambil Sendiri di Warung. Tidak ada pengantaran.
         </div>
       </div>
       {merchant && (
@@ -214,7 +214,7 @@ export function PickupTimeSlotSelector({
         </div>
       )}
       {!loading && slots.length === 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">Batas ambil sudah dekat — segera ambil setelah bayar.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Batas ambil sudah dekat. Segera ambil setelah bayar.</p>
       )}
     </CheckoutCard>
   );
@@ -278,7 +278,7 @@ export function BringOwnContainerToggle({
             <div className="flex items-center gap-3 rounded-2xl bg-deal-soft p-3 text-left">
               <TicketPercentIcon className="size-5 shrink-0 text-deal" />
               <p className="text-xs leading-snug">
-                Pakai voucher <b className="font-extrabold">BAWABEKAL</b> — potongan{" "}
+                Pakai voucher <b className="font-extrabold">BAWABEKAL</b>: potongan{" "}
                 <span className="whitespace-nowrap">Rp 1.500</span> (min. belanja{" "}
                 <span className="whitespace-nowrap">Rp 8.000</span>).
               </p>
@@ -382,7 +382,7 @@ export function VoucherSelectorSheet({
       <ResponsiveSheetContent className="mx-auto max-w-md rounded-t-3xl">
         <ResponsiveSheetHeader className="text-left">
           <ResponsiveSheetTitle className="text-lg font-bold">Voucher Sisa-Saji</ResponsiveSheetTitle>
-          <ResponsiveSheetDescription>Potongan ditanggung platform — warung tetap menerima penuh.</ResponsiveSheetDescription>
+          <ResponsiveSheetDescription>Potongan ditanggung platform, warung tetap menerima penuh.</ResponsiveSheetDescription>
         </ResponsiveSheetHeader>
         {/* pt-1: room for the first card's ring / focus ring inside the scroller. */}
         <div className="min-h-0 space-y-2.5 overflow-y-auto px-4 pt-1 pb-6">

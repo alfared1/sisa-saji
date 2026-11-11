@@ -12,11 +12,11 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 const DESCRIPTION =
-  "Selamatkan makanan surplus dari warung di sekitar kampus dengan harga hemat hingga 70%. Pesan, bayar QRIS, ambil sendiri — kurang dari 3 menit.";
+  "Selamatkan makanan surplus dari warung di sekitar kampus dengan harga hemat hingga 70%. Pesan, bayar QRIS, lalu ambil sendiri dalam kurang dari 3 menit.";
 
 export const metadata: Metadata = {
   title: {
-    default: "Sisa-Saji — Selamatkan Makanan, Hemat Uang",
+    default: "Sisa-Saji: Selamatkan Makanan, Hemat Uang",
     template: "%s · Sisa-Saji",
   },
   description: DESCRIPTION,
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     siteName: "Sisa-Saji",
-    title: "Sisa-Saji — Selamatkan Makanan, Hemat Uang",
+    title: "Sisa-Saji: Selamatkan Makanan, Hemat Uang",
     description: DESCRIPTION,
   },
 };

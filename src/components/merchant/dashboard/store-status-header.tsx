@@ -147,7 +147,7 @@ export function StoreStatusHeader({
       </div>
       {!isOpen && (
         <p className="relative border-t border-border bg-warning-soft/70 px-4 py-2.5 text-xs font-medium text-amber-800 sm:px-5 dark:text-amber-200">
-          Warung sedang tutup — surplus tidak tampil di aplikasi pembeli sampai kamu buka lagi.
+          Warung sedang tutup. Surplus tidak tampil di aplikasi pembeli sampai kamu buka lagi.
         </p>
       )}
     </section>

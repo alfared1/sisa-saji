@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { mapsDirectionsUrl, whatsappUrl } from "../lib/format";
 
 export function pickupCodeLabel(order: Pick<OrderDetail, "pickup_code">): string {
-  return order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "—";
+  return order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "-";
 }
 
 /** Items + money summary of an order. */
@@ -65,7 +65,7 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
       </dl>
       {order.uses_own_lunchbox && (
         <p className="mt-3 flex items-center gap-2 rounded-2xl bg-brand-soft p-2.5 text-xs font-semibold text-secondary-foreground">
-          <RecycleIcon className="size-4 shrink-0" /> Bawa wadah sendiri — tunjukkan wadahmu ke warung.
+          <RecycleIcon className="size-4 shrink-0" /> Bawa wadah sendiri. Tunjukkan wadahmu ke warung.
         </p>
       )}
     </section>

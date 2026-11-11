@@ -10,7 +10,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BrainCircuitIcon,
+  BadgePercentIcon,
   CheckIcon,
   ChevronDownIcon,
   CircleCheckIcon,
@@ -130,7 +130,7 @@ function SambutMock() {
 
       {/* Stays dark green in both themes, so white text keeps its contrast. */}
       <section className="flex min-h-[86px] flex-col justify-center rounded-2xl bg-gradient-to-br from-[oklch(0.45_0.115_153)] to-[oklch(0.35_0.08_158)] p-3 text-white">
-        <p className="text-[12px] font-bold">Dampak bersama</p>
+        <p className="text-[12px] font-bold">Dampak bersama{live?.is_demo_data ? " (data demo)" : ""}</p>
         {live ? (
           <div className="mt-1.5 grid grid-cols-3 gap-1.5">
             <LiveStat value={fmtMass(live.total_food_saved_grams)} label="pangan" />
@@ -498,12 +498,12 @@ function PublikasiMock() {
         <Stepper value={8} />
       </div>
       <div className={cn(CARD, "mb-[calc(70px/var(--z))] p-3 shadow-soft")}>
-        {/* Same header as the publisher's "Rekomendasi AI" card: violet AI tile, muted guard row. */}
+        {/* Same header as the publisher's "Saran harga" card. */}
         <p className="flex items-center gap-2 text-[13px] font-bold">
-          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-            <BrainCircuitIcon className="size-4" />
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-brand-soft text-primary">
+            <BadgePercentIcon className="size-4" aria-hidden />
           </span>
-          Rekomendasi AI
+          Saran harga
         </p>
         <p className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-muted px-2.5 py-2 text-[11px] leading-snug font-medium text-muted-foreground">
           <ShieldCheckIcon className="mt-px size-3.5 shrink-0" />
@@ -511,7 +511,7 @@ function PublikasiMock() {
             Tidak pernah di bawah harga minimum <span className="whitespace-nowrap">{formatIdr(TIMBEL_FLOOR)}</span>.
           </span>
         </p>
-        <Coachmark label="Saran harga AI, bisa kamu ubah" align="start" radius="rounded-xl" className="mt-3">
+        <Coachmark label="Saran harga, bisa kamu ubah" align="start" radius="rounded-xl" className="mt-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 py-0.5">
             <span className="text-[26px] leading-none font-extrabold tabular-nums">{formatIdr(TIMBEL_RECOVERY)}</span>
             <span className="text-[12px] text-muted-foreground tabular-nums line-through">{formatIdr(TIMBEL_PRICE)}</span>

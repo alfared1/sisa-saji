@@ -1,15 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("welcome + PWA", () => {
-  test("welcome page shows the shared impact counter", async ({ page }) => {
+  test("welcome page shows the shared impact stats, labelled as demo data under the payment simulator", async ({ page }) => {
     const stats = page.waitForResponse((r) => r.url().includes("/api/v1/stats/global") && r.ok());
     await page.goto("/welcome");
     await stats;
-    const impact = page.getByRole("region", { name: "Dampak Sisa-Saji" });
+    const impact = page.getByRole("region", { name: "Dampak bersama" });
     await expect(impact).toBeVisible();
     await expect(impact.getByText("pangan diselamatkan")).toBeVisible();
     await expect(impact.getByText("pesanan diambil")).toBeVisible();
-    await expect(impact.getByText(/menu live malam ini/)).toBeVisible();
+    await expect(impact.getByText("Data demo", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Harga turun mendekati jam tutup" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Masuk" }).first()).toBeVisible();
   });
 

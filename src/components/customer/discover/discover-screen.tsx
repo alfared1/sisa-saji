@@ -279,7 +279,7 @@ function OfflineTicketBanner({ offline }: { offline: boolean }) {
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-extrabold">Kamu sedang offline</span>
         <span className="block text-xs text-muted-foreground">
-          {ticketCount === 1 ? "1 tiket pengambilan tersimpan" : `${ticketCount} tiket pengambilan tersimpan`} — tetap
+          {ticketCount === 1 ? "1 tiket pengambilan tersimpan" : `${ticketCount} tiket pengambilan tersimpan`} dan tetap
           bisa ditunjukkan ke warung.
         </span>
       </span>

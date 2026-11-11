@@ -15,7 +15,7 @@ import { ApiError } from "@/server/http";
 import { abandonPendingOrder, commitReservation } from "@/server/services/stock";
 import { isPushEnabled, sendPushToUsers } from "@/server/services/push";
 
-export const LATE_PAYMENT_REASON = "Pembayaran diterima setelah kedaluwarsa — perlu refund";
+export const LATE_PAYMENT_REASON = "Pembayaran diterima setelah kedaluwarsa, perlu refund";
 
 export function signWebhookBody(rawBody: string, secret: string): string {
   return createHmac("sha512", secret).update(rawBody, "utf8").digest("hex");

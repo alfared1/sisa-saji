@@ -18,7 +18,7 @@ export type UseGeolocationOptions = {
 };
 
 const ERROR_COPY: Record<Exclude<GeoStatus, "idle" | "locating" | "granted">, string> = {
-  denied: "Izin lokasi ditolak. Kami pakai lokasi kampus — kamu bisa ganti kapan saja.",
+  denied: "Izin lokasi ditolak. Kami pakai lokasi kampus, kamu bisa ganti kapan saja.",
   unavailable: "Perangkat ini tidak mendukung GPS. Pilih lokasi kampus secara manual.",
   error: "Lokasi belum bisa didapat. Coba lagi atau pilih kampus terdekat.",
 };

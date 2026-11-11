@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Sisa-Saji — Selamatkan Makanan, Hemat Uang",
+    name: "Sisa-Saji: Selamatkan Makanan, Hemat Uang",
     short_name: "Sisa-Saji",
     description:
       "Selamatkan makanan surplus dari warung di sekitar kampus dengan harga hemat hingga 70%. Pesan, bayar QRIS, ambil sendiri.",

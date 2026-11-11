@@ -119,7 +119,7 @@ export function OrderVerificationPanel({
 
       {order.uses_own_lunchbox && (
         <p className="flex items-center gap-2 rounded-2xl bg-brand-soft px-3 py-2.5 text-sm font-bold text-primary">
-          <RecycleIcon className="size-5 shrink-0" aria-hidden /> Bawa wadah sendiri — tak perlu kemasan sekali pakai
+          <RecycleIcon className="size-5 shrink-0" aria-hidden /> Bawa wadah sendiri, tak perlu kemasan sekali pakai
         </p>
       )}
 

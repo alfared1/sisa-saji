@@ -136,7 +136,7 @@ export async function getImpactSummary(db: Db, userId: string, now: Date = new D
   };
 }
 
-export async function getGlobalStats(db: Db, now: Date = new Date()): Promise<GlobalStats> {
+export async function getGlobalStats(db: Db, now: Date = new Date()): Promise<Omit<GlobalStats, "is_demo_data">> {
   const [o] = await db
     .select({
       food: sql<number>`COALESCE(SUM(${orders.totalFoodSavedGrams}), 0)::bigint`,

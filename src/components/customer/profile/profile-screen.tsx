@@ -312,7 +312,7 @@ export function ProfileScreen() {
           <div className="divide-y divide-border overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border">
             <LinkRow href="/orders" icon={ReceiptTextIcon} label="Pesanan saya" hint="Tiket pengambilan & riwayat" />
             <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" tint="bg-brand-soft text-primary" />
-            <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & prediksi AI" tint="bg-urgent-soft text-urgent" />
+            <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & perkiraan porsi sisa" tint="bg-urgent-soft text-urgent" />
             {user?.merchant_id ? (
               <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" tint="bg-deal-soft text-deal" />
             ) : (

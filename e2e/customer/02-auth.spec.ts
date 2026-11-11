@@ -6,7 +6,7 @@ async function requestCode(page: Page, phone: string) {
   await page.getByLabel("Nomor WhatsApp").fill(phone);
   await page.getByRole("button", { name: "Kirim kode OTP" }).click();
   await expect(page).toHaveURL(/\/auth\/verify\?/);
-  const banner = page.getByText(/Mode demo — kode OTP: \d{6}/);
+  const banner = page.getByText(/Mode demo\. Kode OTP: \d{6}/);
   await expect(banner).toBeVisible();
   const code = (await banner.textContent())?.match(/\d{6}/)?.[0];
   expect(code).toBeTruthy();

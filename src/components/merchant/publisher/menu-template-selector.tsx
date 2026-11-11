@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckIcon, GiftIcon, PlusIcon, SparklesIcon } from "lucide-react";
+import { CheckIcon, GiftIcon, PlusIcon } from "lucide-react";
 import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import type { MenuView } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
@@ -69,8 +69,8 @@ export function MenuTemplateSelector({
                     <span className="rounded-full bg-deal px-1.5 py-0.5 text-[10px] leading-none font-bold text-deal-foreground">Paket Kejutan</span>
                   )}
                   {pred !== undefined && pred > 0 && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] leading-none font-bold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-                      <SparklesIcon className="size-2.5" aria-hidden /> AI: ~{roundPortions(pred)} sisa
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] leading-none font-bold text-primary">
+                      Perkiraan ±{roundPortions(pred)} sisa
                     </span>
                   )}
                   {liveMenuIds.has(m.id) && (

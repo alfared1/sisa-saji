@@ -7,7 +7,7 @@ test("fresh merchant: OTP login → 5-step onboarding wizard → dashboard", asy
   await expect(page.getByRole("heading", { name: "Masuk sebagai Mitra Warung" })).toBeVisible();
   await page.getByLabel("Nomor WhatsApp").fill(phone);
   await page.getByRole("button", { name: "Kirim kode OTP" }).click();
-  const banner = page.getByText(/Mode demo — kode OTP: \d{6}/);
+  const banner = page.getByText(/Mode demo\. Kode OTP: \d{6}/);
   await expect(banner).toBeVisible();
   const code = ((await banner.textContent()) ?? "").match(/\d{6}/)?.[0] as string;
 

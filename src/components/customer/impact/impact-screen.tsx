@@ -12,7 +12,7 @@ import {
   AwardIcon,
   BellOffIcon,
   BellRingIcon,
-  BrainCircuitIcon,
+  ChartColumnIcon,
   CloudIcon,
   HeartIcon,
   LeafIcon,
@@ -96,7 +96,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
         <p className="mt-2 text-xs font-semibold text-white/90">
           {next
             ? `Selamatkan ${formatKg(remaining)} lagi untuk jadi ${badgeLabel(next.tier)}`
-            : "Kamu sudah Surplus Hero — terima kasih sudah jadi pahlawan pangan!"}
+            : "Kamu sudah Surplus Hero. Terima kasih sudah jadi pahlawan pangan!"}
         </p>
       </div>
     </section>
@@ -159,7 +159,7 @@ export function PushOptIn() {
             ? "Notifikasi diblokir. Izinkan lewat pengaturan browser."
             : on
               ? "Kami kabari saat warung favoritmu membuka surplus."
-              : "Dapat kabar saat ada surplus atau prediksi AI di warung favoritmu."}
+              : "Dapat kabar saat ada surplus atau perkiraan porsi sisa di warung favoritmu."}
         </p>
       </div>
       {!on && push.permission !== "denied" && (
@@ -232,8 +232,8 @@ function SubscriptionRow({ s }: { s: SubscriptionItem }) {
               </span>
             )}
             {s.predicted_surplus_portions !== null && s.predicted_surplus_portions > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
-                <BrainCircuitIcon className="size-3" /> Malam ini diprediksi ~{s.predicted_surplus_portions} porsi
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-primary">
+                <ChartColumnIcon className="size-3" aria-hidden /> Perkiraan malam ini ±{s.predicted_surplus_portions} porsi
               </span>
             )}
           </div>
@@ -262,13 +262,13 @@ function SubscriptionRow({ s }: { s: SubscriptionItem }) {
         </label>
         <label className="flex min-h-12 items-center justify-between gap-3 px-3 py-2 text-sm">
           <span>
-            <span className="block font-semibold">Ingatkan dari prediksi AI</span>
+            <span className="block font-semibold">Ingatkan dari perkiraan surplus</span>
             <span className="block text-xs text-muted-foreground">Mis. “malam Jumat biasanya sisa ~8 porsi”</span>
           </span>
           <Switch
             checked={s.notify_on_ai_prediction}
             onCheckedChange={(v) => update({ notify_on_ai_prediction: v })}
-            aria-label={`Notifikasi prediksi AI ${s.merchant_name}`}
+            aria-label={`Notifikasi perkiraan surplus ${s.merchant_name}`}
           />
         </label>
       </div>

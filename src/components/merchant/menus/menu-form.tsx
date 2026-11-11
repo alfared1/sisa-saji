@@ -4,7 +4,7 @@ import { useId, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { GiftIcon, Loader2Icon, SparklesIcon } from "lucide-react";
+import { GiftIcon, Loader2Icon } from "lucide-react";
 import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +114,7 @@ export function MenuForm({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold">Paket Kejutan (Mystery Bag)</span>
-              <span className="block text-xs text-muted-foreground">Isi campuran sisa hari itu — paling cepat habis.</span>
+              <span className="block text-xs text-muted-foreground">Isi campuran sisa hari itu. Biasanya paling cepat habis.</span>
             </span>
             <Switch
               checked={Boolean(field.value)}
@@ -212,7 +212,7 @@ export function MenuForm({
             <FieldError id={id("floor-err")}>{errors.min_recovery_price_idr.message}</FieldError>
           ) : (
             <p id={id("floor-hint")} className="text-xs text-pretty text-muted-foreground">
-              Diskon AI tidak akan menembus harga ini{floorPct !== null ? ` (${floorPct}% dari normal)` : ""}.
+              Diskon otomatis tidak akan menembus harga ini{floorPct !== null ? ` (${floorPct}% dari normal)` : ""}.
             </p>
           )}
         </div>
@@ -222,9 +222,9 @@ export function MenuForm({
         <button
           type="button"
           onClick={() => setValue("min_recovery_price_idr", suggested, { shouldDirty: true, shouldValidate: true })}
-          className="-mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-violet-100 px-3 text-xs font-semibold text-violet-700 dark:bg-violet-950/60 dark:text-violet-300"
+          className="-mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-soft px-3 text-xs font-semibold text-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <SparklesIcon className="size-3.5" /> Pakai saran 30%: {formatIdr(suggested)}
+          Pakai saran 30%: {formatIdr(suggested)}
         </button>
       )}
 

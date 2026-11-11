@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { BrainCircuitIcon, Loader2Icon, ShieldCheckIcon, SlidersHorizontalIcon, UsersIcon, XIcon } from "lucide-react";
+import { BadgePercentIcon, Loader2Icon, ShieldCheckIcon, SlidersHorizontalIcon, UsersIcon, XIcon } from "lucide-react";
 import { DISCOUNT_VARIANT_CLASS, DiscountBadge, discountBadgeState } from "@/components/common/discount-badge";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +9,6 @@ import type { EscalationStep, QuoteAiResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { curveLabelStride, curvePctLabelIndexes, curveTimeLabelIndexes, maxDiscountForFloor, priceForDiscount } from "../lib/logic";
-import { ModelBadge } from "../ui";
 
 /** Semicircle sell-out probability gauge. */
 export function SelloutGauge({ probability, size = 148 }: { probability: number; size?: number }) {
@@ -142,7 +141,7 @@ export function ManualOverride({
           onClick={() => onChange(null)}
           className="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
         >
-          <XIcon className="size-3.5" /> Pakai rekomendasi AI
+          <XIcon className="size-3.5" aria-hidden /> Pakai saran harga
         </button>
       </div>
       <div className="mt-2 flex items-center gap-3">
@@ -211,14 +210,13 @@ export function AiDiscountRecommendationCard({
 
   return (
     <section aria-labelledby="ai-card-title" aria-busy={isFetching} className="relative overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
-      <div className="h-1 w-full bg-gradient-to-r from-primary via-emerald-400 to-deal" aria-hidden />
       <header className="flex items-center justify-between gap-2 px-4 pt-4 sm:px-5">
         <div className="flex items-center gap-2">
-          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300">
-            <BrainCircuitIcon className="size-4" aria-hidden />
+          <span className="inline-flex size-8 items-center justify-center rounded-xl bg-brand-soft text-primary">
+            <BadgePercentIcon className="size-4" aria-hidden />
           </span>
           <h2 id="ai-card-title" className="text-base font-bold">
-            Rekomendasi AI
+            Saran harga
           </h2>
         </div>
         <div className="flex items-center gap-1.5">
@@ -227,7 +225,6 @@ export function AiDiscountRecommendationCard({
               <Loader2Icon className="size-3.5 animate-spin" /> Menghitung…
             </span>
           )}
-          {quote && <ModelBadge version={quote.model_version} />}
         </div>
       </header>
 
@@ -265,7 +262,7 @@ export function AiDiscountRecommendationCard({
             >
               <ShieldCheckIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               {quote.floor_applied
-                ? `Harga lantai ${formatIdr(quote.min_recovery_price_idr)} diterapkan — diskon tidak turun di bawah modal kamu.`
+                ? `Harga lantai ${formatIdr(quote.min_recovery_price_idr)} diterapkan, jadi harga tidak turun di bawah modal kamu.`
                 : `Tidak pernah di bawah harga minimum ${formatIdr(quote.min_recovery_price_idr)}.`}
             </p>
 

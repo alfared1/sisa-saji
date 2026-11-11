@@ -233,7 +233,7 @@ export function MerchantMenusView() {
         >
           <SheetHeader className="px-5 pt-5 pb-0">
             <SheetTitle className="text-xl font-extrabold">{editing?.mode === "edit" ? "Ubah menu" : "Menu baru"}</SheetTitle>
-            <SheetDescription>{editing?.mode === "edit" ? editing.menu.menu_name : "Cukup sekali — setelah ini publikasi surplus tinggal 3 ketukan."}</SheetDescription>
+            <SheetDescription>{editing?.mode === "edit" ? editing.menu.menu_name : "Cukup sekali. Setelah ini publikasi surplus tinggal 3 ketukan."}</SheetDescription>
           </SheetHeader>
           {/* Only the form scrolls, so the title and the close button stay in view. */}
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">

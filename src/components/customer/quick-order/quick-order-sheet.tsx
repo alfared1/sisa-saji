@@ -17,11 +17,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   FootprintsIcon,
+  GiftIcon,
   HandPlatterIcon,
   Loader2Icon,
   QrCodeIcon,
   ShoppingBagIcon,
-  SparklesIcon,
   StoreIcon,
 } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
@@ -300,8 +300,8 @@ function QuickOrderBody({
         </div>
 
         {batch.is_mystery_bag ? (
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-violet-700 dark:text-violet-300">
-            <SparklesIcon className="size-3.5" aria-hidden /> Paket kejutan — isi pilihan warung
+          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
+            <GiftIcon className="size-3.5" aria-hidden /> Paket kejutan, isinya dipilihkan warung
           </p>
         ) : (
           batch.description && <p className="mt-3 text-sm leading-relaxed text-foreground/80">{batch.description}</p>

@@ -33,7 +33,7 @@ const STEPS = [
   { key: "profile", label: "Profil", title: "Kenalkan warungmu", subtitle: "Nama dan kontak yang dilihat mahasiswa.", icon: StoreIcon },
   { key: "location", label: "Lokasi", title: "Di mana warungmu?", subtitle: "Geser pin tepat di depan warung agar pembeli mudah menemukan.", icon: MapPinIcon },
   { key: "hours", label: "Jam", title: "Jam operasional", subtitle: "Jam tutup jadi batas ambil default saat publikasi surplus.", icon: ClockIcon },
-  { key: "bank", label: "Pencairan", title: "Pencairan dana", subtitle: "Opsional — bisa dilengkapi nanti di Pengaturan.", icon: LandmarkIcon },
+  { key: "bank", label: "Pencairan", title: "Pencairan dana", subtitle: "Opsional, bisa dilengkapi nanti di Pengaturan.", icon: LandmarkIcon },
   { key: "menu", label: "Menu", title: "Menu pertama", subtitle: "Menu yang paling sering tersisa. Harga minimum melindungi modalmu.", icon: UtensilsIcon },
 ] as const;
 

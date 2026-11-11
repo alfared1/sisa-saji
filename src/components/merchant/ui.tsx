@@ -6,10 +6,10 @@
  */
 import { useId, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeftIcon, CpuIcon, MinusIcon, PlusIcon, SparklesIcon } from "lucide-react";
+import { ChevronLeftIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { clampInt, modelLabel, parseIntLoose } from "./lib/logic";
+import { clampInt, parseIntLoose } from "./lib/logic";
 
 export function MerchantPage({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("px-4 pt-4 pb-8 sm:px-6 lg:px-8 lg:pt-8", className)}>{children}</div>;
@@ -100,25 +100,6 @@ export function SectionCard({
       )}
       <div className={cn("p-4 sm:p-5", title && "pt-3 sm:pt-4", bodyClassName)}>{children}</div>
     </section>
-  );
-}
-
-/** "LightGBM" / "Heuristik" model chip. */
-export function ModelBadge({ version, className, tone = "default" }: { version: string; className?: string; tone?: "default" | "onDark" }) {
-  const label = modelLabel(version);
-  const Icon = label === "LightGBM" ? CpuIcon : SparklesIcon;
-  return (
-    <span
-      title={`Model: ${version}`}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-none font-bold",
-        tone === "onDark" ? "bg-white/15 text-white ring-1 ring-white/20" : label === "LightGBM" ? "bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300" : "bg-muted text-foreground/75",
-        className,
-      )}
-    >
-      <Icon className="size-3" aria-hidden />
-      {label}
-    </span>
   );
 }
 

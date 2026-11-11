@@ -283,7 +283,7 @@ export function ActiveSurplusBatchList({ batches }: { batches: MerchantBatchView
           <EmptyState
             icon={MegaphoneIcon}
             title="Belum ada surplus yang tayang"
-            description="Ada porsi tersisa malam ini? Publikasikan dalam 60 detik — AI menentukan harga terbaiknya."
+            description="Ada porsi tersisa malam ini? Publikasikan dalam 60 detik, harga diskonnya dihitung otomatis."
           />
         </div>
       ) : (

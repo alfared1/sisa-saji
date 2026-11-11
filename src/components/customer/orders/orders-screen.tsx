@@ -106,7 +106,7 @@ const EMPTY_COPY: Record<OrderTabKey, { title: string; description: string; icon
   unpaid: { title: "Tidak ada tagihan", description: "Semua pesananmu sudah dibayar. Mantap!", icon: WalletIcon },
   ready: {
     title: "Belum ada tiket aktif",
-    description: "Pesan porsi surplus malam ini — tiket pengambilanmu akan muncul di sini.",
+    description: "Pesan porsi surplus malam ini, nanti tiket pengambilanmu akan muncul di sini.",
     icon: QrCodeIcon,
   },
   done: {
@@ -242,7 +242,7 @@ export function OrdersScreen() {
                 <ErrorState
                   compact
                   error={q.error}
-                  message="Offline — menampilkan tiket yang tersimpan di perangkat."
+                  message="Offline. Menampilkan tiket yang tersimpan di perangkat."
                   onRetry={() => void q.refetch()}
                 />
               </div>

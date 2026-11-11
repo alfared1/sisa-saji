@@ -48,7 +48,7 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
         <span className="absolute -top-2.5 -right-2.5 size-5 rounded-full bg-background ring-1 ring-border" aria-hidden />
         <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Kode pengambilan</p>
         <p className="mt-1 text-4xl font-extrabold tracking-[0.12em] tabular-nums">
-          {order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "—"}
+          {order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "-"}
         </p>
         <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{items}</p>
         <p className="mt-1 text-xs text-muted-foreground">

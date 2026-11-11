@@ -5,7 +5,7 @@ import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
   title: "Masuk",
-  description: "Masuk ke Sisa-Saji dengan nomor WhatsApp atau email — tanpa kata sandi.",
+  description: "Masuk ke Sisa-Saji dengan nomor WhatsApp atau email, tanpa kata sandi.",
 };
 
 function LoginFallback() {

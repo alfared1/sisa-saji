@@ -44,7 +44,7 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
           if (toastOnPaid) {
             toast.success(`Pesanan baru dibayar: ${ev.order_number}`, {
               id: `paid-${ev.order_id}`,
-              description: "Siapkan pesanannya — pembeli segera datang mengambil.",
+              description: "Siapkan pesanannya, pembeli segera datang mengambil.",
               duration: 8000,
               action: { label: "Lihat antrean", onClick: () => router.push("/merchant/orders") },
             });

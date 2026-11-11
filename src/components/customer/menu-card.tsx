@@ -1,6 +1,6 @@
 "use client";
 
-import { SparklesIcon, TrendingDownIcon } from "lucide-react";
+import { GiftIcon, TrendingDownIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { ImpactLine } from "@/components/common/impact-line";
@@ -88,8 +88,8 @@ export function DynamicPriceMenuCard({
           <h3 className="line-clamp-2 min-w-0 flex-1 text-[15px] leading-snug font-bold">{batch.menu_name}</h3>
         </div>
         {batch.is_mystery_bag ? (
-          <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
-            <SparklesIcon className="size-3.5" /> Paket kejutan — isi pilihan warung
+          <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-orange-700 dark:text-orange-300">
+            <GiftIcon className="size-3.5" aria-hidden /> Paket kejutan, isinya dipilihkan warung
           </p>
         ) : (
           batch.description && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{batch.description}</p>

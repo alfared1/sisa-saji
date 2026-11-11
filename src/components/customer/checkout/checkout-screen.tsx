@@ -177,7 +177,7 @@ export function CheckoutScreen() {
             toast.error(
               action.available <= 0
                 ? `${line?.menu_name ?? "Menu"} sudah habis dan dihapus dari keranjang.`
-                : `Stok ${line?.menu_name ?? "menu"} tinggal ${action.available} porsi — jumlah sudah disesuaikan.`,
+                : `Stok ${line?.menu_name ?? "menu"} tinggal ${action.available} porsi. Jumlahnya sudah disesuaikan.`,
             );
           } else toast.error(err.message);
           void detail.refetch();
@@ -262,7 +262,7 @@ export function CheckoutScreen() {
         <EmptyState
           icon={ShoppingBagIcon}
           title="Keranjang masih kosong"
-          description="Pilih porsi surplus dari warung terdekat — hemat sampai 70% dan bantu kurangi makanan terbuang."
+          description="Pilih porsi surplus dari warung terdekat. Hemat sampai 70% dan bantu kurangi makanan terbuang."
           action={
             <Button asChild className="h-11 rounded-full px-6 font-bold">
               <Link href="/discover">Cari makanan</Link>
@@ -398,7 +398,7 @@ export function CheckoutScreen() {
           <CheckoutCard title="Metode Pembayaran" icon={WalletIcon}>
             <PaymentMethodPicker value={method} onChange={setMethod} />
             <p className="mt-2 text-xs text-muted-foreground">
-              Bayar lewat QRIS dinamis — bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
+              Bayar lewat QRIS dinamis, bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
             </p>
           </CheckoutCard>
         </div>

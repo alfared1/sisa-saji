@@ -180,7 +180,7 @@ export function LoginCta({
           <LogInIcon className="size-5" /> Masuk / Daftar
         </Link>
       </Button>
-      <p className="mt-3 text-xs text-muted-foreground">Cukup nomor WhatsApp atau email — tanpa kata sandi.</p>
+      <p className="mt-3 text-xs text-muted-foreground">Cukup nomor WhatsApp atau email, tanpa kata sandi.</p>
     </div>
   );
 }

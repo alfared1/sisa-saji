@@ -267,7 +267,7 @@ export function SurplusPublisherView() {
           <EmptyState
             icon={UtensilsCrossedIcon}
             title="Belum ada menu aktif"
-            description="Tambahkan menu (atau Paket Kejutan) dulu — setelah itu publikasi surplus cukup 3 ketukan."
+            description="Tambahkan menu (atau Paket Kejutan) dulu. Setelah itu publikasi surplus cukup 3 ketukan."
             action={
               <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground">
                 <PlusIcon className="size-4" /> Tambah menu
@@ -279,7 +279,7 @@ export function SurplusPublisherView() {
     );
   }
 
-  const disabledReason = !menuId ? "Pilih menu dulu." : windowCheck && !windowCheck.ok ? `${windowCheck.message} — atur batas ambil untuk melihat rekomendasi.` : null;
+  const disabledReason = !menuId ? "Pilih menu dulu." : windowCheck && !windowCheck.ok ? `${windowCheck.message} Atur batas ambil untuk melihat saran harga.` : null;
   const effectivePrice =
     shownQuote && override !== null
       ? priceForDiscount(shownQuote.original_price_idr, shownQuote.min_recovery_price_idr, override).sellingPriceIdr
@@ -324,7 +324,7 @@ export function SurplusPublisherView() {
       <MerchantPageHeader
         backHref="/merchant/dashboard"
         title="Publikasi surplus"
-        subtitle="Pilih menu, isi porsi, cek harga AI — selesai dalam 60 detik."
+        subtitle="Pilih menu, isi jumlah porsi, cek saran harga. Selesai dalam 60 detik."
       />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
@@ -347,7 +347,7 @@ export function SurplusPublisherView() {
             title={<StepLabel n={2}>Berapa porsi?</StepLabel>}
             description={
               predictedForMenu && stockChoice === null
-                ? `Diisi otomatis dari prediksi AI (~${roundPortions(predictedForMenu)} porsi). Ubah bila perlu.`
+                ? `Diisi dari perkiraan porsi sisa malam ini (±${roundPortions(predictedForMenu)} porsi). Ubah bila perlu.`
                 : "Jumlah porsi siap dijual malam ini."
             }
           >

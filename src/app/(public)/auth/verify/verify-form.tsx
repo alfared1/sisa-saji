@@ -153,7 +153,7 @@ export function VerifyForm() {
             <FlaskConicalIcon className="size-4" />
           </span>
           <p className="min-w-0 flex-1 text-xs leading-snug">
-            <span className="block font-bold text-foreground">Mode demo — kode OTP: {flow.dev_code}</span>
+            <span className="block font-bold text-foreground">Mode demo. Kode OTP: {flow.dev_code}</span>
             <span className="text-muted-foreground">Server belum terhubung ke WhatsApp/email.</span>
           </p>
           <Button
@@ -175,7 +175,7 @@ export function VerifyForm() {
         {needsName && (
           <div className="animate-float-up space-y-2 rounded-2xl bg-card p-4 ring-1 ring-border">
             <Label htmlFor="full_name" className="text-sm font-semibold">
-              <UserRoundIcon className="size-4 text-primary" /> Kamu pengguna baru — siapa namamu?
+              <UserRoundIcon className="size-4 text-primary" /> Kamu pengguna baru. Siapa namamu?
             </Label>
             <Input
               id="full_name"

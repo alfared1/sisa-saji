@@ -217,7 +217,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
       {showingOffline && (
         <div className="mx-4 mt-3 flex items-center gap-2 rounded-2xl bg-warning-soft px-3 py-2.5 text-xs font-semibold ring-1 ring-warning/30" role="status">
           <WifiOffIcon className="size-4 shrink-0 text-amber-700 dark:text-amber-300" />
-          Kamu sedang offline — tiket tersimpan di perangkat ini tetap bisa ditunjukkan ke warung.
+          Kamu sedang offline. Tiket yang tersimpan di perangkat ini tetap bisa ditunjukkan ke warung.
         </div>
       )}
 

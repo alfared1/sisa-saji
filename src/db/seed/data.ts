@@ -497,7 +497,7 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.6,
     description: "Sayur dan lalapan segar dari petani Ciawi dan Caringin.",
     menus: [
-      { name: "Paket Sayur Asem Mentah", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Labu siam, kacang panjang, jagung, melinjo, asam — cukup 4 porsi.", baseSurplus: 4 },
+      { name: "Paket Sayur Asem Mentah", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Labu siam, kacang panjang, jagung, melinjo, asam. Cukup untuk 4 porsi.", baseSurplus: 4 },
       { name: "Paket Lalapan Segar", category: "BAHAN_MAKANAN", priceIdr: 10000, portionWeightGrams: 600, description: "Selada air, kemangi, timun, terong bulat, leunca.", baseSurplus: 5 },
       { name: "Paket Kejutan Sayur & Buah", category: "MYSTERY_BAG", priceIdr: 15000, portionWeightGrams: 1200, description: "Isi acak sayur dan buah lokal yang masih layak hari ini.", isMysteryBag: true, baseSurplus: 3 },
     ],
@@ -705,7 +705,7 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Ketoprak dan gado-gado ulek dadakan, bisa tanpa telur.",
     menus: [
-      { name: "Gado-Gado Lontong Vegan", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Sayur rebus, tahu, tempe, lontong, saus kacang — tanpa telur & kerupuk udang.", baseSurplus: 5 },
+      { name: "Gado-Gado Lontong Vegan", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Sayur rebus, tahu, tempe, lontong, saus kacang, tanpa telur & kerupuk udang.", baseSurplus: 5 },
       { name: "Ketoprak Bihun Tahu", category: "MAKANAN_VEGAN", priceIdr: 15000, portionWeightGrams: 280, description: "Ketupat, bihun, tahu goreng, tauge, bumbu kacang bawang putih.", baseSurplus: 4 },
     ],
   },
@@ -1116,7 +1116,7 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     description: "Nasi kucing, sate-satean, wedang jahe.",
     menus: [
       { name: "Paket 3 Nasi Kucing + 2 Sate", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 250, description: "3 bungkus nasi kucing + 2 tusuk sate usus/telur puyuh.", baseSurplus: 8 },
-      { name: "Paket Gorengan Isi 6", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 180, description: "Tempe, tahu isi, bakwan — 6 potong.", baseSurplus: 6 },
+      { name: "Paket Gorengan Isi 6", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 180, description: "Tempe, tahu isi, bakwan, 6 potong.", baseSurplus: 6 },
     ],
   },
   {

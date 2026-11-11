@@ -176,7 +176,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
     {
       id: "mitra-publikasi",
       title: "Publikasikan surplus dalam 60 detik",
-      body: "Pilih menu dan jumlah porsi, lalu AI menyarankan harga pemulihan. Satu ketukan, porsimu tampil ke pembeli terdekat.",
+      body: "Pilih menu dan jumlah porsi, lalu aplikasi menyarankan harga pemulihan. Satu ketukan, porsimu tampil ke pembeli terdekat.",
       bullets: [
         { icon: CalculatorIcon, text: `Harga dihitung dari sisa porsi, jam tutup, dan pembeli aktif dalam ${RADIUS_KM} km` },
         { icon: ShieldCheckIcon, text: "Tidak pernah di bawah harga minimum yang kamu tetapkan" },
@@ -211,7 +211,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
     {
       id: "mitra-analitik",
       title: "Pantau pendapatan & dampak",
-      body: "Lihat porsi terjual, pendapatan yang dipulihkan, dan jam surplus paling ramai. Prediksi AI membantumu menyiapkan porsi esok hari.",
+      body: "Lihat porsi terjual, pendapatan yang dipulihkan, dan jam surplus paling ramai. Perkiraan porsi sisa membantumu menyiapkan masakan esok hari.",
       bullets: [
         { icon: ChartColumnIcon, text: "Grafik harian porsi terjual dan terbuang" },
         { icon: CalendarClockIcon, text: "Prediksi surplus untuk 7 hari ke depan" },

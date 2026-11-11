@@ -3,7 +3,16 @@
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowRightIcon, Loader2Icon, MailIcon, MessageCircleIcon, PhoneIcon, ShoppingBagIcon, SparklesIcon, StoreIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  Loader2Icon,
+  MailIcon,
+  MessageCircleIcon,
+  PhoneIcon,
+  ShoppingBagIcon,
+  StoreIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,7 +208,7 @@ export function LoginForm() {
         className="flex items-center gap-3 rounded-2xl border border-dashed border-deal/40 bg-deal-soft/60 p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-deal text-deal-foreground">
-          <SparklesIcon className="size-4" />
+          <UserRoundIcon className="size-4" aria-hidden />
         </span>
         <span className="min-w-0 text-xs leading-snug">
           <span className="block font-bold text-foreground">Coba akun demo {role === "MERCHANT" ? "mitra" : "pembeli"}</span>

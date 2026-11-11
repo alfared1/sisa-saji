@@ -6,14 +6,14 @@ import { toast } from "sonner";
 import {
   BadgeCheckIcon,
   BarChart3Icon,
-  BrainCircuitIcon,
   CalendarRangeIcon,
+  ChartColumnIcon,
   CrownIcon,
   FlameIcon,
   LeafIcon,
   LightbulbIcon,
+  ListOrderedIcon,
   Loader2Icon,
-  RocketIcon,
   TargetIcon,
   Trash2Icon,
   TrophyIcon,
@@ -29,7 +29,7 @@ import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { percent } from "../lib/logic";
 import { merchantKeys, primeMerchantProfile, MERCHANT_ME_QUERY_KEY, useMerchantReady } from "../lib/queries";
-import { MerchantPage, MerchantPageHeader, ModelBadge, SectionCard, StatTile } from "../ui";
+import { MerchantPage, MerchantPageHeader, SectionCard, StatTile } from "../ui";
 import { DailyPortionsChart, PredictionOutlook, TopMenusBars, WeeklySurplusHeatmap } from "./charts";
 
 const RANGES = [7, 30, 90] as const;
@@ -81,9 +81,9 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
   });
 
   const benefits = [
-    { icon: RocketIcon, text: "Prioritas posisi listing di radius 2 km" },
+    { icon: ListOrderedIcon, text: "Tampil lebih dulu di daftar pembeli dalam radius 2 km" },
     { icon: BadgeCheckIcon, text: "Badge “Mitra Terverifikasi” di peta & halaman warung" },
-    { icon: BrainCircuitIcon, text: "Prediksi AI & notifikasi ke pelanggan setia" },
+    { icon: ChartColumnIcon, text: "Perkiraan porsi sisa & notifikasi ke pelanggan setia" },
   ];
 
   return (
@@ -120,7 +120,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
             <p className="flex items-center gap-2 text-sm">
               <BadgeCheckIcon className="size-5 text-sky-600" aria-hidden />
               <span>
-                Aktif s/d <b>{a.subscription.expires_at ? formatDateId(a.subscription.expires_at) : "—"}</b>
+                Aktif s/d <b>{a.subscription.expires_at ? formatDateId(a.subscription.expires_at) : "-"}</b>
               </span>
             </p>
             <button
@@ -150,7 +150,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
           <>
             Biaya {formatIdr(price)} untuk 30 hari.
             <span className="mt-2 block rounded-xl bg-warning-soft px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-200">
-              Mode demo: pembayaran disimulasikan — tidak ada uang yang ditagih.
+              Mode demo: pembayaran disimulasikan, tidak ada uang yang ditagih.
             </span>
           </>
         }
@@ -261,7 +261,6 @@ export function MerchantAnalyticsView() {
             title="Peta panas surplus mingguan"
             icon={CalendarRangeIcon}
             description="Rata-rata porsi berlebih per hari & menu, 4 minggu terakhir."
-            action={insights.data && <ModelBadge version={insights.data.model_version} />}
           >
             {insights.isPending ? (
               <Skeleton className="h-48 w-full rounded-2xl" />
@@ -271,12 +270,12 @@ export function MerchantAnalyticsView() {
               <WeeklySurplusHeatmap cells={insights.data.heatmap} />
             )}
           </SectionCard>
-          <SectionCard title="Prediksi 7 hari ke depan" icon={BrainCircuitIcon} description="Perkiraan porsi berpotensi sisa · persentase = keyakinan model.">
+          <SectionCard title="Perkiraan 7 hari ke depan" icon={ChartColumnIcon} description="Porsi yang kemungkinan tersisa per malam. Persentase menunjukkan seberapa yakin perkiraannya.">
             {insights.isPending ? <Skeleton className="h-32 w-full rounded-2xl" /> : insights.data ? <PredictionOutlook week={insights.data.week} /> : null}
           </SectionCard>
         </div>
         <div className="min-w-0 space-y-4 lg:space-y-6">
-          <SectionCard title="Saran AI untuk produksi" icon={LightbulbIcon}>
+          <SectionCard title="Saran produksi" icon={LightbulbIcon}>
             {insights.isPending ? (
               <Skeleton className="h-24 w-full rounded-2xl" />
             ) : insights.data && insights.data.advisories.length ? (
@@ -289,7 +288,7 @@ export function MerchantAnalyticsView() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">Produksi sudah pas — belum ada saran pengurangan.</p>
+              <p className="text-sm text-muted-foreground">Produksi sudah pas, belum ada saran pengurangan.</p>
             )}
           </SectionCard>
           {a && <PremiumPlanUpgradeCard a={a} />}
