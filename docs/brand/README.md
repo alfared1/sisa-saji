@@ -2,11 +2,11 @@
 
 ## Arti logo
 
-Logo Sisa-Saji adalah **tudung saji**: penutup anyaman yang dipakai di warung dan rumah di seluruh Indonesia untuk menjaga makanan yang sudah disajikan.
+Logo Sisa-Saji adalah **tudung saji yang menumbuhkan daun**, digambar sebagai satu siluet utuh. Tudung saji adalah penutup anyaman yang dipakai di warung dan rumah di seluruh Indonesia untuk menjaga makanan yang sudah disajikan.
 
 - **Tudung saji** berarti menjaga makanan yang sudah dimasak supaya tetap layak dimakan. Itu tugas Sisa-Saji: memulihkan porsi surplus sebelum terbuang, bukan sekadar memberi diskon. Bentuknya juga langsung terhubung ke nama "Sa*ji*".
-- **Anyaman belah ketupat** mengambil pola anyaman bambu atau pandan tudung saji asli. Ketupat adalah bentuk yang akrab di dapur Indonesia.
-- **Daun sebagai pegangan** melambangkan dampak lingkungan: setiap porsi yang diselamatkan mencegah sekitar 0,5 kg emisi CO₂e.
+- **Daun yang tumbuh dari puncaknya** dalam satu garis bentuk: makanan yang diselamatkan berubah menjadi dampak lingkungan. Setiap porsi mencegah sekitar 0,5 kg emisi CO₂e.
+- **Deretan belah ketupat** adalah isyarat anyaman bambu atau pandan pada tudung saji asli, dengan bentuk ketupat yang akrab di dapur Indonesia.
 - **Piring oranye** adalah makanan yang disajikan, sekaligus warna harga dan diskon di aplikasi.
 
 ## Berkas
@@ -27,15 +27,14 @@ PNG berlatar transparan. Logo di aplikasi (komponen `LogoMark` dan ikon PWA) mem
 
 | Warna | Hex | Peran |
 | :--- | :--- | :--- |
-| Hijau Sisa-Saji | `#138A47` | Latar ikon, merek, dampak |
-| Krem | `#FBF8F3` | Tudung saji |
-| Hijau daun | `#B7F0CD` | Daun |
-| Oranye | `#F5832A` | Piring, harga dan diskon |
+| Hijau tua Sisa-Saji | `#005E2F` | Latar ikon, sama dengan warna permukaan dampak di aplikasi |
+| Krem | `#FBF8F3` | Tudung saji dan daun |
+| Oranye lembut | `#F5A04A` | Piring, makanan yang disajikan |
 
-Huruf: **Plus Jakarta Sans ExtraBold**. Kata "Sisa" berwarna gelap (`#1D2B22`), "-Saji" hijau (`#138A47`; di latar gelap `#4ADE80`).
+Huruf: **Plus Jakarta Sans ExtraBold**. Kata "Sisa" berwarna gelap (`#1D2B22`), "-Saji" hijau tua (`#005E2F`); di latar gelap "Sisa" krem (`#F4F1EA`) dan "-Saji" hijau terang (`#4ADE80`).
 
 ## Aturan pakai
 
-- Beri ruang kosong di sekeliling logo minimal setinggi daun.
+- Beri ruang kosong di sekeliling logo minimal setinggi daun di puncak tudung.
 - Ukuran terkecil ikon 16 px di layar; logo horizontal minimal 120 px lebarnya.
 - Jangan mengganti warna, memutar, memberi bayangan, atau menaruh logo berwarna di atas foto yang ramai. Untuk itu pakai versi putih.

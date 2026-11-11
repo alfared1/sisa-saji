@@ -2,7 +2,7 @@
  * Shared renderer for the generated PNG app icons (next/og ImageResponse).
  * Same mark as <LogoMark /> (src/components/common/logo.tsx).
  *
- *  - "any":      rounded green tile with the tudung saji mark
+ *  - "any":      rounded deep-green tile with the tudung saji mark
  *  - "maskable": full-bleed green square, mark inside the 80 % safe zone
  *  - "badge":    white mark on transparent (Android status-bar badge)
  */
@@ -44,7 +44,7 @@ export function renderAppIcon(size: number, variant: IconVariant = "any"): Image
           alignItems: "center",
           justifyContent: "center",
           background: LOGO_COLORS.green,
-          borderRadius: maskable ? 0 : Math.round(size * 0.25),
+          borderRadius: maskable ? 0 : Math.round((size * 15) / 64),
         }}
       >
         <Glyph size={glyph} />
