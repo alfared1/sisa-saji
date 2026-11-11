@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures";
 import { registerCustomer } from "../helpers";
 
-/** Dev guide: ≤3-step quick order — discover → menu card → "Pesan & Ambil Sendiri" → QRIS. */
+/** ≤ 3-step quick order (docs/ARCHITECTURE.md): discover → menu card → "Pesan & Ambil Sendiri" → QRIS. */
 test("quick order reaches QRIS within 3 screens, then pays to a pickup ticket", async ({ page }) => {
   await registerCustomer(page.request, "Raka Cepat");
 

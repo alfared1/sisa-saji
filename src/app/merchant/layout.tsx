@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DemoNotice } from "@/components/common/demo-notice";
 import { MerchantGuard } from "@/components/shell/merchant-guard";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 
 /** Merchant area: client auth/onboarding guard + responsive MerchantShell. */
 export default function MerchantLayout({ children }: { children: React.ReactNode }) {
-  return <MerchantGuard>{children}</MerchantGuard>;
+  return (
+    <MerchantGuard>
+      <DemoNotice audience="mitra" className="lg:mx-6 lg:mt-4 lg:rounded-xl" />
+      {children}
+    </MerchantGuard>
+  );
 }

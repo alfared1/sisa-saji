@@ -1,5 +1,5 @@
 /**
- * Per-item impact copy (dev guide §7): "🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e".
+ * Per-item impact copy (docs/ARCHITECTURE.md, Konvensi UI): "🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e".
  * Pure, unit-tested in tests/unit/pol-impact.test.ts.
  */
 import { DEFAULT_PORTION_WEIGHT_GRAMS } from "@/lib/constants";

@@ -99,7 +99,7 @@ function StatusPill({ status, startIso }: { status: MerchantBatchView["status"];
   const s = map[status];
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-none font-bold", s.cls)}>
-      {status === "ACTIVE" && <span className="size-1.5 animate-soft-pulse rounded-full bg-primary" aria-hidden />}
+      {status === "ACTIVE" && <span className="size-1.5 rounded-full bg-primary" aria-hidden />}
       {s.label}
     </span>
   );

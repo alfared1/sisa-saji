@@ -370,10 +370,7 @@ export function DiscoverScreen() {
             {offline ? (
               <WifiOffIcon className="size-3.5 shrink-0 text-urgent" aria-hidden />
             ) : (
-              <span className="relative flex size-2.5 shrink-0" aria-hidden>
-                <span className="absolute inset-0 animate-ping rounded-full bg-primary/60" />
-                <span className="relative size-2.5 rounded-full bg-primary" />
-              </span>
+              <span className="size-2.5 shrink-0 rounded-full bg-primary" aria-hidden />
             )}
             <span className="truncate">
               {offline

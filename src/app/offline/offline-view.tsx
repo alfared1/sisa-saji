@@ -114,7 +114,7 @@ export function OfflineView() {
               {online ? <WifiIcon className="size-9" /> : <WifiOffIcon className="size-9" />}
             </span>
           </div>
-          <h1 className="mt-6 text-2xl font-extrabold">{online ? "Koneksi kembali!" : "Kamu sedang offline"}</h1>
+          <h1 className="mt-6 text-2xl font-extrabold">{online ? "Kamu kembali online" : "Kamu sedang offline"}</h1>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
             {online
               ? "Internet sudah tersambung lagi. Muat ulang untuk melanjutkan."

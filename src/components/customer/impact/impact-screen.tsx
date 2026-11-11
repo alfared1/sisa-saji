@@ -95,7 +95,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
         <p className="mt-2 text-xs font-semibold text-white/90">
           {next
             ? `Selamatkan ${formatKg(remaining)} lagi untuk jadi ${badgeLabel(next.tier)}`
-            : "Kamu sudah Surplus Hero. Terima kasih sudah jadi pahlawan pangan!"}
+            : "Kamu sudah di level tertinggi, Surplus Hero. Terima kasih sudah ikut menyelamatkan makanan."}
         </p>
       </div>
     </section>
@@ -227,7 +227,7 @@ function SubscriptionRow({ s }: { s: SubscriptionItem }) {
           <div className="mt-1 flex flex-wrap gap-1.5">
             {s.has_live_batches && (
               <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-0.5 text-[11px] font-bold text-urgent">
-                <RadioIcon className="size-3 animate-soft-pulse" /> Surplus live sekarang
+                <RadioIcon className="size-3" aria-hidden /> Surplus live sekarang
               </span>
             )}
             {s.predicted_surplus_portions !== null && s.predicted_surplus_portions > 0 && (

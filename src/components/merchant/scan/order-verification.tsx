@@ -160,7 +160,7 @@ export function VerificationSuccess({ order, onNext }: { order: OrderDetail; onN
         initial={{ scale: 0.3, rotate: -20 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 15 }}
-        className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-float"
+        className="mx-auto inline-flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground"
       >
         <CheckCircle2Icon className="size-9" />
       </motion.span>

@@ -54,7 +54,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
       <figcaption className="mb-2 text-xs font-bold text-muted-foreground">Kurva harga otomatis</figcaption>
       <ol className="flex items-end gap-1.5" aria-label="Jadwal diskon">
         {steps.map((s, i) => {
-          // Same Hemat / Flash Rescue colours as the customer-facing badge (dev guide §7).
+          // Same Hemat / Flash Rescue colours as the customer-facing badge.
           const variant = discountBadgeState(s.discount_pct, s.minutes_to_close).variant;
           const h = 28 + (s.discount_pct / maxPct) * 56;
           return (

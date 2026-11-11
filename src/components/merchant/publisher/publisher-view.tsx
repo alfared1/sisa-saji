@@ -69,12 +69,12 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
             initial={{ scale: 0.4 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 16 }}
-            className="relative inline-flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-float"
+            className="relative inline-flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >
             <CheckIcon className="size-10" strokeWidth={3} />
           </motion.span>
         </div>
-        <h1 className="mt-6 text-2xl font-extrabold tracking-tight">Listing aktif!</h1>
+        <h1 className="mt-6 text-2xl font-extrabold tracking-tight">Surplus sudah tayang</h1>
         <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <BellRingIcon className="size-4 text-deal" aria-hidden />
           {result.notified_devices > 0 ? (
@@ -303,7 +303,7 @@ export function SurplusPublisherView() {
       type="button"
       onClick={submit}
       disabled={!canPublish}
-      className="flex h-16 w-full items-center justify-between gap-3 rounded-2xl bg-primary pr-3 pl-5 text-left text-primary-foreground shadow-float transition-transform outline-none active:scale-[0.99] focus-visible:ring-4 focus-visible:ring-ring/50 disabled:opacity-60"
+      className="flex h-16 w-full items-center justify-between gap-3 rounded-2xl bg-primary pr-3 pl-5 text-left text-primary-foreground shadow-card transition-transform outline-none active:scale-[0.99] focus-visible:ring-4 focus-visible:ring-ring/50 disabled:opacity-60"
     >
       <span className="min-w-0">
         <span className="block text-base leading-tight font-extrabold">{publish.isPending ? "Mempublikasikan…" : "Publikasikan Sekarang"}</span>

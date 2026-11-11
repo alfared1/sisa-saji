@@ -105,3 +105,11 @@ export function isInlineJobsEnabled(): boolean {
 export function isDemoMode(): boolean {
   return raw("DEMO_MODE") === "true";
 }
+
+/**
+ * True when what users see is sample data: a demo deployment, or any setup where
+ * payments are simulated (so no order, rating or "verified" badge is real).
+ */
+export function isDemoData(): boolean {
+  return isDemoMode() || getPaymentProvider() === "simulator";
+}

@@ -125,7 +125,7 @@ function InstallRow() {
         onClick={async () => {
           if (canInstall) {
             const r = await promptInstall();
-            if (r === "accepted") toast.success("Sisa-Saji dipasang!");
+            if (r === "accepted") toast.success("Sisa-Saji sudah terpasang di perangkatmu");
           } else setShowHint((v) => !v);
         }}
       />

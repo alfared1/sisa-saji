@@ -1,12 +1,14 @@
-# Sisa-Saji — PWA Pemulihan Makanan Surplus Berbasis AI
+# Sisa-Saji
 
-Sisa-Saji menghubungkan warung makan / UMKM kuliner dengan pembeli (terutama mahasiswa) dalam radius **2 km** untuk menyelamatkan porsi makanan surplus menjelang jam tutup (**20.00–23.00 WIB**). Warung memasang sisa porsi dengan harga pemulihan yang diatur AI, pembeli memesan dan membayar lewat QRIS, lalu **mengambil sendiri** makanannya di warung dengan tiket QR / kode `SJ-XXXX`. Setiap porsi yang diambil dihitung dampaknya: gram pangan yang terselamatkan, kg CO₂e yang dihindari, dan rupiah yang dihemat.
+Aplikasi web (PWA) untuk menyelamatkan porsi makanan surplus dari warung di sekitar kampus.
+
+Sisa-Saji menghubungkan warung makan / UMKM kuliner dengan pembeli (terutama mahasiswa) dalam radius **2 km** untuk menyelamatkan porsi makanan surplus menjelang jam tutup (**20.00–23.00 WIB**). Warung memasang sisa porsi dengan harga pemulihan yang turun otomatis menjelang tutup, pembeli memesan dan membayar lewat QRIS, lalu **mengambil sendiri** makanannya di warung dengan tiket QR / kode `SJ-XXXX`. Setiap porsi yang diambil dihitung dampaknya: gram pangan yang terselamatkan, kg CO₂e yang dihindari, dan rupiah yang dihemat.
 
 - **100% ambil sendiri.** Tidak ada kurir, jadi margin warung tetap utuh dan tidak ada emisi logistik.
-- **Dua modul AI:** *Dynamic Discount Optimizer* (harga turun bertahap 50% → 70% menjelang tutup, tidak pernah di bawah harga lantai) dan *Surplus Prediction Engine* (LightGBM, memprediksi porsi sisa per warung/menu).
+- **Dua modul inti:** *Dynamic Discount Optimizer*, aturan harga yang menaikkan diskon bertahap dari 50% ke 70% menjelang tutup tanpa pernah turun di bawah harga lantai, dan *Surplus Prediction Engine*, model LightGBM yang memperkirakan porsi sisa per warung dan menu dari histori penjualan.
 - **Bisnis:** pembeli membayar biaya layanan Rp 1.500 per transaksi; warung menerima harga pemulihan penuh.
 
-Spesifikasi lengkap ada di [blueprint_sisa_saji.md](blueprint_sisa_saji.md). Aturan kerja untuk developer ada di catatan developer.
+Spesifikasi lengkap ada di [blueprint_sisa_saji.md](blueprint_sisa_saji.md). Aturan bisnis, struktur folder, dan konvensi kode ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -97,8 +99,8 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 **Mitra (±2 menit)**
 
 5. Di jendela incognito buka `/auth/login?role=MERCHANT` → login sebagai `demo.mitra@sisasaji.test` / `+6281300000001` (OTP tampil di layar).
-6. **Dasbor**: batch aktif, pesanan masuk secara langsung (SSE), dan **prediksi AI** porsi sisa malam ini.
-7. `/merchant/surplus/new`: pilih menu, atur jumlah porsi, lihat **rekomendasi harga AI**, lalu **"Publikasikan Sekarang"** (< 60 detik).
+6. **Dasbor**: batch aktif, pesanan masuk secara langsung (SSE), dan **perkiraan porsi sisa** malam ini dari model LightGBM.
+7. `/merchant/surplus/new`: pilih menu, atur jumlah porsi, lihat **saran harga** dari Dynamic Discount Optimizer, lalu **"Publikasikan Sekarang"** (< 60 detik).
 8. `/merchant/orders/scan`: pindai QR tiket pembeli, atau ketik PIN 4 digit dari `SJ-XXXX` → **Verifikasi**.
 
 **Penutup (±1 menit)**
@@ -112,23 +114,23 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 
 ## Fitur per fase
 
-**Fase 1 — Fondasi data**
+**Fase 1: fondasi data**
 - Skema PostgreSQL + PostGIS (Drizzle), migrasi SQL, dan constraint integritas (stok, harga lantai, kode pickup unik).
 - Seeder 95 warung fiktif di 21 kampus/kota di seluruh Indonesia dengan Bogor sebagai pusat, histori 28 hari (±14.800 pesanan), prediksi 7 hari; `db:verify` dengan 19 pemeriksaan.
 
-**Fase 2 — Mesin AI & API**
+**Fase 2: mesin harga, prediksi, dan API**
 - *Dynamic Discount Optimizer*: baseline 50%, mid-window 55–60%, critical window 70% + push "Flash Rescue" sekali per batch; pembulatan ke atas kelipatan Rp 500 dengan aritmetika integer; harga lantai dijaga; setiap perubahan tercatat di `discount_adjustment_logs`.
 - Worker eskalasi tiap 5 menit, kedaluwarsa pesanan tak dibayar, penutupan batch, notifikasi 17:30, refresh prediksi harian, training ML mingguan.
 - *Surplus Prediction Engine*: LightGBM batch (`ml/train_predict.py`) + heuristik cold-start (`heuristic-v0`); `quote-ai` dan publish batch.
 - Geo-discovery `ST_DWithin` radius 2 km (ekspansi 5/10 km), presensi pengguna aktif di Postgres.
 - Checkout dengan kunci stok atomik (tanpa overselling), QRIS tersimulasi (EMVCo + CRC16), webhook HMAC-SHA512, verifikasi pickup + kalkulasi dampak dalam satu transaksi.
 
-**Fase 3 — PWA pembeli**
+**Fase 3: PWA pembeli**
 - Login OTP, `/discover`, `/map` (Leaflet + OpenStreetMap), `/warung/[slug]`, pesan cepat, keranjang satu-warung (dialog konfirmasi ganti warung), checkout, QRIS, tiket QR offline, riwayat pesanan, `/impact`, profil.
 - Pembaruan harga/stok langsung lewat SSE, Web Push, dapat di-*install* sebagai aplikasi.
 
-**Fase 4 — PWA mitra**
-- Onboarding warung (termasuk rekening pencairan), dasbor dengan prediksi AI, publikasi surplus dengan rekomendasi harga, pemindai QR/PIN, daftar pesanan, kelola menu, analitik, pengaturan.
+**Fase 4: PWA mitra**
+- Onboarding warung (termasuk rekening pencairan), dasbor dengan perkiraan porsi sisa, publikasi surplus dengan saran harga, pemindai QR/PIN, daftar pesanan, kelola menu, analitik, pengaturan.
 
 ---
 
@@ -168,7 +170,7 @@ Poin penting:
 - **ML tanpa latensi**: training dan inferensi LightGBM berjalan batch; dasbor dan `quote-ai` hanya membaca tabel prediksi.
 - **Realtime** lewat Server-Sent Events; **offline** lewat service worker yang meng-cache tiket; **notifikasi** lewat Web Push (VAPID).
 
-Struktur folder lengkap ada di catatan developer.
+Struktur folder lengkap ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#struktur-folder).
 
 ---
 
@@ -187,12 +189,12 @@ Struktur folder lengkap ada di catatan developer.
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest sekali jalan (unit + integration) |
 | `npm run test:watch` | Vitest mode watch |
-| `npm run test:e2e` | Playwright end-to-end: 18 test di build produksi (DB dan server sendiri) |
+| `npm run test:e2e` | Playwright end-to-end: 35 test di build produksi (DB dan server sendiri) |
 | `npm run db:local` | PostgreSQL + PostGIS lokal (PGlite) di port 5433 |
 | `npm run db:generate` | Membuat migrasi SQL dari `src/db/schema.ts` |
 | `npm run db:migrate` | Menerapkan migrasi di `./drizzle` |
 | `npm run db:seed` | Menghapus semua data lalu mengisi ulang data demo |
-| `npm run db:verify` | 17 pemeriksaan integritas data |
+| `npm run db:verify` | 19 pemeriksaan integritas data |
 | `npm run db:reset` | `db:migrate` + `db:seed` + `db:verify` |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run ml:train` | Training + prediksi LightGBM (butuh Python di `.venv`) |
@@ -231,10 +233,10 @@ npm run typecheck && npm run lint
 Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan stok paralel (tanpa overselling), eskalasi diskon, alur pembayaran + webhook, dan verifikasi pickup.
 
 ```bash
-npm run test:e2e            # Playwright: 18 test, 11 skenario, di build produksi
+npm run test:e2e            # Playwright: 35 test dalam 14 file, di build produksi
 ```
 
-`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan AI, onboarding mitra, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada.
+`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada.
 
 ---
 
@@ -263,7 +265,7 @@ Mengganti secret membuat semua sesi logout dan QR tiket lama tidak berlaku; seed
 
 1. **UUID memakai `gen_random_uuid()`** bawaan Postgres, jadi ekstensi `uuid-ossp` tidak diperlukan.
 2. **`merchants.geom` adalah kolom GENERATED** dari `latitude`/`longitude`, sehingga koordinat dan kolom spasial tidak mungkin berbeda. Aplikasi cukup menulis lat/lng.
-3. **`users.phone_number` boleh kosong**, karena pengguna yang login dengan Google OAuth belum tentu punya nomor. Sebagai gantinya ada CHECK yang mewajibkan minimal salah satu dari email atau nomor HP. Supaya tombol "Hubungi Warung (WhatsApp)" selalu berfungsi, tabel `merchants` punya kolom baru **`whatsapp_number` (NOT NULL)** yang diisi saat onboarding mitra.
+3. **`users.phone_number` boleh kosong**, karena pengguna bisa login dengan email saja (login Google dari blueprint belum dibuat). Sebagai gantinya ada CHECK yang mewajibkan minimal salah satu dari email atau nomor HP. Supaya tombol "Hubungi Warung (WhatsApp)" selalu berfungsi, tabel `merchants` punya kolom baru **`whatsapp_number` (NOT NULL)** yang diisi saat onboarding mitra.
 4. **`surplus_batches.current_discount_pct` berkisar 0–90**, bukan 10–90. Harga lantai `min_recovery_price_idr` bisa membuat diskon efektif di bawah 10%.
 5. **Constraint tambahan:**
    - harga lantai tidak boleh melebihi harga normal;

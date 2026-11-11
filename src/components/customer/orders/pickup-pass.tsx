@@ -82,7 +82,7 @@ function LiveBand() {
 export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
   const [big, setBig] = useState(false);
   return (
-    <article className="overflow-hidden rounded-[1.75rem] bg-card shadow-float ring-1 ring-border">
+    <article className="overflow-hidden rounded-[1.75rem] bg-card shadow-card ring-1 ring-border">
       <div className="flex items-center gap-2.5 bg-brand-soft px-4 py-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-soft">
           <StoreIcon className="size-4" />
@@ -168,7 +168,7 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
           {[
             "Datang ke warung sebelum batas waktu.",
             `Tunjukkan QR atau sebutkan kode ${pickupCodeLabel(order)} ke kasir.`,
-            "Warung memverifikasi dan menyerahkan pesananmu. Selesai!",
+            "Warung sudah memverifikasi dan menyerahkan pesananmu.",
           ].map((s, i) => (
             <li key={s} className="flex items-start gap-3 text-sm">
               <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground">

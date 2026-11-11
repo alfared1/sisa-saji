@@ -139,10 +139,7 @@ export function OrderStatusChip({ status, className }: { status: OrderStatus; cl
       )}
     >
       <span
-        className={cn(
-          "size-1.5 rounded-full bg-current",
-          (status === "READY_FOR_PICKUP" || status === "PENDING_PAYMENT") && "animate-soft-pulse",
-        )}
+        className="size-1.5 rounded-full bg-current"
         aria-hidden
       />
       {meta.label}

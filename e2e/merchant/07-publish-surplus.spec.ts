@@ -38,7 +38,7 @@ test("merchant publishes surplus with the suggested price; it appears on dashboa
   const publish = page.waitForResponse((r) => r.url().includes("/merchant/surplus/publish"));
   await page.getByRole("button", { name: /Publikasikan Sekarang/ }).click();
   expect((await publish).status()).toBe(201);
-  await expect(page.getByRole("heading", { name: "Listing aktif!" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Surplus sudah tayang" })).toBeVisible();
 
   await page.goto("/merchant/dashboard");
   await expect(page.getByRole("heading", { name: MENU, level: 3 }).first()).toBeVisible();

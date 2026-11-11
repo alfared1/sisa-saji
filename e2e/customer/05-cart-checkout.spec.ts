@@ -42,7 +42,7 @@ test("cart: two items, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay
 
   // Bring own lunchbox.
   await page.getByRole("switch", { name: "Bawa wadah sendiri" }).click();
-  const thanks = page.getByRole("dialog", { name: "Terima kasih sudah bawa wadah!" });
+  const thanks = page.getByRole("dialog", { name: "Terima kasih sudah bawa wadah sendiri" });
   await expect(thanks).toBeVisible();
   await thanks.getByRole("button", { name: "Oke, mengerti" }).click();
 

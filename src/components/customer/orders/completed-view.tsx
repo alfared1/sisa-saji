@@ -157,7 +157,7 @@ export function ImpactCelebrationModal({
             initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 14 }}
-            className="relative mx-auto inline-flex size-20 items-center justify-center rounded-[1.75rem] bg-primary text-primary-foreground shadow-float"
+            className="relative mx-auto inline-flex size-20 items-center justify-center rounded-[1.75rem] bg-primary text-primary-foreground"
           >
             <PartyPopperIcon className="size-10" />
           </motion.span>
@@ -227,7 +227,7 @@ export function ReviewFormSheet({
       void qc.invalidateQueries({ queryKey: customerKeys.ordersAll });
       void qc.invalidateQueries({ queryKey: customerKeys.warung(o.merchant.slug) });
       onOpenChange(false);
-      toast.success("Terima kasih atas ulasanmu!", { description: "Ulasanmu membantu warung dan pembeli lain." });
+      toast.success("Ulasanmu terkirim", { description: "Ulasanmu membantu warung dan pembeli lain." });
     },
     onError: (err) => toast.error(err instanceof ApiClientError ? err.message : "Gagal mengirim ulasan."),
   });

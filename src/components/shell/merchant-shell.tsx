@@ -88,7 +88,7 @@ function StoreStatusBadge({
         className,
       )}
     >
-      <span className={cn("size-1.5 rounded-full", isOpen ? "animate-soft-pulse bg-primary" : "bg-muted-foreground")} />
+      <span className={cn("size-1.5 rounded-full", isOpen ? "bg-primary" : "bg-muted-foreground")} />
       {isOpen ? "Buka" : "Tutup"}
     </span>
   );

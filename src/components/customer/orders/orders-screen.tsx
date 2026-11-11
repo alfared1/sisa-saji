@@ -103,7 +103,7 @@ function OrderCard({ order }: { order: OrderDetail }) {
 }
 
 const EMPTY_COPY: Record<OrderTabKey, { title: string; description: string; icon: typeof ReceiptTextIcon }> = {
-  unpaid: { title: "Tidak ada tagihan", description: "Semua pesananmu sudah dibayar. Mantap!", icon: WalletIcon },
+  unpaid: { title: "Tidak ada tagihan", description: "Semua pesananmu sudah dibayar.", icon: WalletIcon },
   ready: {
     title: "Belum ada tiket aktif",
     description: "Pesan porsi surplus malam ini, nanti tiket pengambilanmu akan muncul di sini.",

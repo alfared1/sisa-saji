@@ -1,5 +1,5 @@
 /**
- * Discount badge rules (dev guide §7) — pure, unit-tested, shared by
+ * Discount badge rules (docs/ARCHITECTURE.md, Konvensi UI): pure, unit-tested, shared by
  * <DiscountBadge />, the map pins and every card that shows a discount.
  *
  *  - "Hemat N%"         emerald, the normal case.
@@ -19,11 +19,11 @@ export const FLASH_RESCUE_MIN_PCT = 70;
 export const FLASH_RESCUE_URGENT_MINUTES = 45;
 
 export const DISCOUNT_COLORS = {
-  /** dev guide §7 emerald (accent: ring, glow). */
+  /** Hemat: emerald (accent: ring, glow). */
   hematAccent: "#10B981",
   /** Fill behind white text — emerald-700, 5,48:1. */
   hemat: "#047857",
-  /** dev guide §7 amber/orange (accent: ring, pulse). */
+  /** Flash Rescue: amber/orange (accent: ring, pulse). */
   flashAccent: "#F97316",
   /** Fill behind white text — orange-700, 5,18:1. */
   flash: "#C2410C",

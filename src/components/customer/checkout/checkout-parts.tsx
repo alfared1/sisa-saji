@@ -268,7 +268,7 @@ export function BringOwnContainerToggle({
             <span className="mb-1 inline-flex size-16 items-center justify-center rounded-3xl bg-brand-soft text-primary">
               <LeafIcon className="size-8" />
             </span>
-            <DialogTitle className="text-lg font-bold">Terima kasih sudah bawa wadah!</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Terima kasih sudah bawa wadah sendiri</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
               Tunjukkan kotak bekal atau wadahmu ke warung saat mengambil pesanan. Pastikan bersih dan cukup untuk
               semua porsi.

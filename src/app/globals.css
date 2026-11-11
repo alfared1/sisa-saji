@@ -69,7 +69,7 @@
   --color-surface: var(--surface);
 
   /*
-   * Discount badges (dev guide §7). Spec hues #10B981 / #F97316 are the accents
+   * Discount badges (docs/ARCHITECTURE.md, Konvensi UI). Spec hues #10B981 / #F97316 are the accents
    * (ring + pulse glow); white label text sits on the 700 shades so it passes
    * WCAG AA for normal text: #047857 = 5.48:1, #C2410C = 5.18:1
    * (see src/components/common/discount-logic.ts).

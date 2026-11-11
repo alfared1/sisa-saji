@@ -152,7 +152,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
     void qc.invalidateQueries({ queryKey: customerKeys.ordersAll });
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (live.status === "READY_FOR_PICKUP" && prev === "PENDING_PAYMENT") {
-      toast.success("Pembayaran diterima!", { id: "paid", description: "Tunjukkan tiket ini ke warung." });
+      toast.success("Pembayaran diterima", { id: "paid", description: "Tunjukkan tiket ini ke warung." });
     }
     if (live.status === "EXPIRED") toast.error("Waktu pembayaran habis", { id: "expired" });
     if (live.status === "COMPLETED") {
@@ -166,7 +166,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
 
   const header = (
     <PageHeader
-      title={order ? (order.status === "COMPLETED" ? "Terima kasih!" : order.merchant.name) : "Pesanan"}
+      title={order ? order.merchant.name : "Pesanan"}
       subtitle={order?.order_number}
       backHref="/orders"
       actions={order && <OrderStatusChip status={order.status} className="mr-1" />}

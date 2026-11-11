@@ -92,7 +92,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
     mutationFn: () => api.post<OrderResponse>(`/orders/${order.id}/simulate-payment`),
     onSuccess: (res) => {
       onOrder(res);
-      toast.success("Pembayaran berhasil!", { description: "Tiket pengambilanmu sudah aktif." });
+      toast.success("Pembayaran berhasil", { description: "Tiket pengambilanmu sudah aktif." });
     },
     onError: (err) => {
       toast.error(err instanceof ApiClientError ? err.message : "Simulasi pembayaran gagal.");

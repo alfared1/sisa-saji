@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatCo2Kg, formatFoodWeight, impactFigures, impactText } from "@/components/common/impact-text";
 import { pinBadge, pinClassName, pinHtml } from "@/components/map/types";
 
-describe("impact text (dev guide §7)", () => {
+describe("impact text", () => {
   it("formats the reference line for one 200 g portion", () => {
     expect(impactText(200)).toBe("🌱 Selamatkan 200 g pangan • −0,5 kg CO₂e");
   });

@@ -27,7 +27,7 @@ export function LiveDot({ status }: { status: EventSourceStatus }) {
       )}
       title={live ? "Pembaruan real-time aktif" : "Menyambungkan pembaruan real-time…"}
     >
-      <span className={cn("size-1.5 rounded-full", live ? "animate-soft-pulse bg-primary" : "bg-muted-foreground")} aria-hidden />
+      <span className={cn("size-1.5 rounded-full", live ? "bg-primary" : "bg-muted-foreground")} aria-hidden />
       {live ? "Live" : "Menyambung…"}
     </span>
   );

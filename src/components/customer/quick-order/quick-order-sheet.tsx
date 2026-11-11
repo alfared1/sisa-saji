@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * QuickOrderSheet — step 2 of the ≤ 3-step quick order (dev guide §7):
+ * QuickOrderSheet: step 2 of the ≤ 3-step quick order (docs/ARCHITECTURE.md, Konvensi UI):
  * /discover → tap a menu card → "Pesan & Ambil Sendiri" → QRIS on /orders/<id>.
  *
  *   const { openQuickOrder, sheet } = useQuickOrder(batches);

@@ -63,7 +63,7 @@ test("merchant verifies a customer's SJ code; customer sees COMPLETED, reviews, 
   const sent = phone.waitForResponse((r) => r.url().includes(`/orders/${order.id}/review`));
   await review.getByRole("button", { name: "Kirim ulasan" }).click();
   expect((await sent).status()).toBe(200);
-  await expect(phone.getByText("Terima kasih atas ulasanmu!")).toBeVisible();
+  await expect(phone.getByText("Ulasanmu terkirim")).toBeVisible();
 
   // Impact totals increased (API + /impact page).
   const after = await ok<ImpactSummary>(await customer.get("/api/v1/profile/impact"));

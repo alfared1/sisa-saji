@@ -61,3 +61,6 @@ __pycache__/
 # per-dist-dir tsconfig written by next.config.ts (NEXT_DIST_DIR runs)
 /tsconfig.*.local.json
 .neon
+
+# Catatan lokal per developer (dokumentasi proyek ada di docs/)
+/AGENTS.md
