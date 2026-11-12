@@ -2,33 +2,79 @@ import Link from "next/link";
 import { LeafIcon, QrCodeIcon, TimerIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-switcher";
+import { EVENING_EXAMPLE, EVENING_TIMELINE } from "@/lib/pricing/evening-example";
+import { formatIdr } from "@/lib/time";
+import { cn } from "@/lib/utils";
+
+/**
+ * The product's one idea, shown instead of told: the same menu priced by the real optimizer
+ * at three points of the evening. Labelled "Contoh" because it is not live data.
+ */
+function PriceDropExample() {
+  return (
+    <section aria-labelledby="contoh-harga" className="rounded-3xl bg-card p-5 text-card-foreground shadow-card">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 id="contoh-harga" className="min-w-0 truncate text-base font-bold">
+          {EVENING_EXAMPLE.name}
+        </h3>
+        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">Contoh</span>
+      </div>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        Harga normal <span className="tabular-nums line-through">{formatIdr(EVENING_EXAMPLE.priceIdr)}</span>
+      </p>
+      <ol className="mt-3">
+        {EVENING_TIMELINE.map((step) => (
+          <li key={step.when} className="flex items-baseline justify-between gap-4 border-t border-border py-2.5 first:border-t-0">
+            <span className={cn("text-sm font-semibold", step.flash && "text-flash dark:text-flash-accent")}>
+              {step.flash ? `${step.when}, Diskon Kilat` : step.when}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              <b className="text-lg font-extrabold">{formatIdr(step.quote.recommendedSellingPriceIdr)}</b>
+              <span className="ml-1.5 text-sm font-bold text-deal">−{step.quote.recommendedDiscountPct}%</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const POINTS = [
+  { icon: TimerIcon, text: "Diskon naik sendiri mendekati jam tutup warung." },
+  { icon: QrCodeIcon, text: "Ambil sendiri di warung dengan tiket QR, tanpa ongkir." },
+  { icon: LeafIcon, text: "Setiap porsi yang kamu ambil tercatat sebagai dampakmu." },
+] as const;
 
 /** Auth frame: brand panel on desktop, focused single column on mobile. */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-backdrop min-h-dvh lg:grid lg:grid-cols-[1fr_minmax(28rem,36rem)]">
-      <aside className="relative hidden bg-impact p-12 text-white lg:flex lg:flex-col">
-        {/* The chip follows the theme: on a white chip the dark theme's light "Sisa" text would vanish. */}
-        <Link
-          href="/welcome"
-          className="relative w-fit rounded-2xl bg-white/95 px-3 py-2 text-foreground outline-none focus-visible:ring-3 focus-visible:ring-white/60 dark:bg-background/90"
-        >
-          <Logo />
-        </Link>
-        <div className="relative mt-auto max-w-md space-y-6">
-          <h2 className="text-4xl leading-tight font-extrabold">
-            Porsi terakhir malam ini menunggu untuk diselamatkan.
-          </h2>
-          <ul className="space-y-3 text-sm text-white/85">
-            <li className="flex items-center gap-3">
-              <TimerIcon className="size-5 shrink-0" /> Diskon otomatis naik mendekati jam tutup warung.
-            </li>
-            <li className="flex items-center gap-3">
-              <QrCodeIcon className="size-5 shrink-0" /> Bayar QRIS, ambil sendiri pakai tiket QR.
-            </li>
-            <li className="flex items-center gap-3">
-              <LeafIcon className="size-5 shrink-0" /> Setiap porsi tercatat sebagai dampak CO₂e-mu.
-            </li>
+    <div className="app-backdrop min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(30rem,1fr)]">
+      <aside className="hidden bg-impact text-white lg:flex lg:flex-col lg:px-12 lg:py-10 xl:px-16">
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+          <Link
+            href="/welcome"
+            aria-label="Beranda Sisa-Saji"
+            className="w-fit rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-white/60"
+          >
+            <Logo tone="onImpact" />
+          </Link>
+
+          <div className="my-auto py-10">
+            <h2 className="text-4xl leading-tight font-extrabold xl:text-[2.75rem]">Porsi terakhir malam ini menunggu untuk diselamatkan.</h2>
+            <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">
+              Warung di sekitarmu menjual porsi yang belum laku menjelang tutup. Makin dekat jam tutup, makin murah.
+            </p>
+            <div className="mt-8">
+              <PriceDropExample />
+            </div>
+          </div>
+
+          <ul className="space-y-2.5 text-sm text-white/85">
+            {POINTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3">
+                <Icon className="size-5 shrink-0" aria-hidden /> {text}
+              </li>
+            ))}
           </ul>
         </div>
       </aside>
@@ -40,7 +86,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </Link>
           <ThemeToggle className="-mr-1.5 ml-auto" />
         </header>
-        <main id="konten" className="safe-bottom mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-2 pb-10 lg:max-w-[32rem] lg:justify-center lg:pt-10">
+        <main id="konten" className="safe-bottom mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-2 pb-10 lg:max-w-[32rem] lg:justify-center lg:pt-6">
           {children}
         </main>
       </div>

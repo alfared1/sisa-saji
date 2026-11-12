@@ -14,6 +14,14 @@ test.describe("about page + demo login", () => {
     await expect(page.getByRole("link", { name: /FAO \(2013\)/ }).first()).toHaveAttribute("href", /fao\.org/);
   });
 
+  test("login: an empty number explains itself, and the demo account signs in with one tap", async ({ page }) => {
+    await page.goto("/auth/login?next=%2Fdiscover");
+    await page.getByRole("button", { name: "Kirim kode OTP" }).click();
+    await expect(page.getByText(/Nomor HP tidak valid/)).toBeVisible();
+    await page.getByRole("button", { name: "Masuk dengan akun demo pembeli" }).click();
+    await expect(page).toHaveURL(/\/discover/);
+  });
+
   test("one tap opens the demo warung, another the demo buyer", async ({ browser, baseURL }) => {
     const warung = await browser.newContext({ baseURL });
     const wp = await warung.newPage();

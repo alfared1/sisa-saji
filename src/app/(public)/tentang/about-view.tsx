@@ -2,12 +2,11 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowRightIcon } from "lucide-react";
 import { DemoLoginButtons } from "@/components/common/demo-login-buttons";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-switcher";
-import { api } from "@/lib/api/client";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import {
   CO2E_PER_KG_FOOD,
   DEFAULT_PORTION_WEIGHT_GRAMS,
@@ -16,10 +15,9 @@ import {
   MERCHANT_PREMIUM_PRICE_IDR,
   PLATFORM_COMMISSION_DEFAULT_IDR,
 } from "@/lib/constants";
-import type { GlobalStats } from "@/lib/contracts";
 import { CO2E_SOURCE } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
-import { GLOBAL_STATS_QUERY_KEY, ImpactStats } from "../welcome/welcome-view";
+import { ImpactStats } from "../welcome/welcome-view";
 
 const KM = DEFAULT_SEARCH_RADIUS_M / 1000;
 const CO2_PER_PORTION_KG = (DEFAULT_PORTION_WEIGHT_GRAMS / 1000) * CO2E_PER_KG_FOOD;
@@ -106,10 +104,7 @@ function Section({ id, title, children, lead }: { id: string; title: string; lea
 
 /** /tentang: the whole product on one page, for anyone (a jury, a partner) who has two minutes. */
 export function AboutView() {
-  const stats = useQuery({
-    queryKey: GLOBAL_STATS_QUERY_KEY,
-    queryFn: () => api.get<GlobalStats>("/stats/global"),
-  });
+  const stats = useGlobalStats();
   const demo = stats.data?.is_demo_data ?? false;
 
   return (

@@ -18,9 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDemoLogin } from "@/hooks/use-demo-login";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { ApiClientError, api } from "@/lib/api/client";
 import { OtpRequestBody, type OtpRequestResponse } from "@/lib/contracts";
-import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
 import { writeSession } from "@/lib/pwa/storage";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +30,7 @@ import {
   normalisePhoneInput,
   parseKind,
   parseRole,
+  postLoginPath,
   safeNextPath,
   type AuthRole,
   type IdentifierKind,
@@ -36,7 +38,7 @@ import {
 
 const COPY: Record<AuthRole, { title: string; subtitle: string }> = {
   CUSTOMER: {
-    title: "Masuk & mulai selamatkan makanan",
+    title: "Masuk untuk pesan porsi malam ini",
     subtitle: "Tanpa kata sandi. Kami kirim kode 6 digit untuk verifikasi.",
   },
   MERCHANT: {
@@ -53,6 +55,9 @@ export function LoginForm() {
   const [value, setValue] = useState(() => params.get("id") ?? "");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const next = safeNextPath(params.get("next"));
+  // The one-tap demo account exists only while the app runs on demo data.
+  const demo = useGlobalStats().data?.is_demo_data ?? false;
+  const demoLogin = useDemoLogin((user, r) => router.replace(postLoginPath(user, r, next)));
 
   const request = useMutation({
     mutationFn: (body: OtpRequestBody) => api.post<OtpRequestResponse>("/auth/otp/request", body),
@@ -160,7 +165,7 @@ export function LoginForm() {
               inputMode={kind === "phone" ? "tel" : "email"}
               autoComplete={kind === "phone" ? "tel" : "email"}
               autoFocus
-              placeholder={kind === "phone" ? "0812 3456 7890" : "nama@kampus.ac.id"}
+              placeholder={kind === "phone" ? "Contoh: 0812 3456 7890" : "Contoh: nama@kampus.ac.id"}
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
@@ -168,7 +173,7 @@ export function LoginForm() {
               }}
               aria-invalid={fieldError ? true : undefined}
               aria-describedby={fieldError ? "identifier-error" : "identifier-hint"}
-              className={cn("h-12 rounded-2xl bg-card text-base", kind === "phone" && "pl-11 tabular-nums")}
+              className={cn("h-12 rounded-xl bg-card text-base", kind === "phone" && "pl-11 tabular-nums")}
             />
           </div>
           {fieldError ? (
@@ -188,38 +193,35 @@ export function LoginForm() {
           </Alert>
         )}
 
-        <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={request.isPending || !value.trim()}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={request.isPending}>
           {request.isPending ? <Loader2Icon className="animate-spin" /> : null}
           {request.isPending ? "Mengirim kode…" : "Kirim kode OTP"}
           {!request.isPending && <ArrowRightIcon />}
         </Button>
       </form>
 
-      <button
-        type="button"
-        onClick={() => {
-          setValue(kind === "phone" ? DEMO_ACCOUNTS[role].phone : DEMO_ACCOUNTS[role].email);
-          setFieldError(null);
-        }}
-        className="flex items-center gap-3 rounded-2xl border border-dashed border-deal/40 bg-deal-soft/60 p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-deal text-deal-foreground">
-          <UserRoundIcon className="size-4" aria-hidden />
-        </span>
-        <span className="min-w-0 text-xs leading-snug">
-          <span className="block font-bold text-foreground">Coba akun demo {role === "MERCHANT" ? "mitra" : "pembeli"}</span>
-          <span className="text-muted-foreground">
-            Ketuk untuk mengisi{" "}
-            <span className="font-semibold tabular-nums">
-              {kind === "phone" ? DEMO_ACCOUNTS[role].phone : DEMO_ACCOUNTS[role].email}
-            </span>
-          </span>
-        </span>
-      </button>
-
-      <p className="mt-auto text-center text-xs lg:mt-0 leading-relaxed text-muted-foreground">
-        Dengan masuk, kamu menyetujui Ketentuan Layanan & Kebijakan Privasi Sisa-Saji.
-      </p>
+      {demo && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden>
+            <span className="h-px flex-1 bg-border" />
+            atau
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 w-full rounded-xl text-base font-bold"
+            disabled={demoLogin.isPending}
+            onClick={() => demoLogin.mutate(role)}
+          >
+            {demoLogin.isPending ? <Loader2Icon className="animate-spin" aria-hidden /> : <UserRoundIcon aria-hidden />}
+            Masuk dengan akun demo {role === "MERCHANT" ? "warung" : "pembeli"}
+          </Button>
+          <p className="text-center text-xs leading-relaxed text-muted-foreground">
+            Langsung masuk tanpa kode. Isinya data contoh, bukan pesanan sungguhan.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

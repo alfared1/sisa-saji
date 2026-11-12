@@ -2,13 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Loader2Icon, ShoppingBagIcon, StoreIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSetSessionUser } from "@/hooks/use-session";
-import { ApiClientError, api } from "@/lib/api/client";
-import type { OtpVerifyResponse } from "@/lib/contracts";
+import { useDemoLogin } from "@/hooks/use-demo-login";
 import type { DemoRole } from "@/lib/demo-accounts";
 import { cn } from "@/lib/utils";
 
@@ -20,15 +16,7 @@ const TARGET: Record<DemoRole, string> = { CUSTOMER: "/discover", MERCHANT: "/me
  */
 export function DemoLoginButtons({ demo, className }: { demo: boolean; className?: string }) {
   const router = useRouter();
-  const setSessionUser = useSetSessionUser();
-  const login = useMutation({
-    mutationFn: (role: DemoRole) => api.post<OtpVerifyResponse>("/auth/demo", { role }),
-    onSuccess: ({ user }, role) => {
-      setSessionUser(user);
-      router.push(TARGET[role]);
-    },
-    onError: (err) => toast.error(err instanceof ApiClientError ? err.message : "Akun demo belum bisa dibuka. Coba lagi."),
-  });
+  const login = useDemoLogin((_user, role) => router.push(TARGET[role]));
 
   const buttons = [
     { role: "CUSTOMER" as const, label: "Coba sebagai pembeli", icon: ShoppingBagIcon, primary: true },

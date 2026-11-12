@@ -8,7 +8,6 @@
  * has real ones. Names and prices come from the demo seed menus.
  */
 import type { ComponentType, ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   BadgePercentIcon,
   CheckIcon,
@@ -37,9 +36,9 @@ import { PriceTag } from "@/components/common/price-tag";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { StockBadge } from "@/components/common/stock-badge";
 import { FoodThumb } from "@/components/customer/food-thumb";
-import { api } from "@/lib/api/client";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { CAMPUSES, PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/constants";
-import type { GlobalStats, MenuCategory } from "@/lib/contracts";
+import type { MenuCategory } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { Coachmark } from "./coachmark";
@@ -53,13 +52,6 @@ import {
   keepTogether,
   type TourMockId,
 } from "./tour-steps";
-
-/**
- * Same key and fetcher as the /welcome impact counter (and customerKeys.globalStats),
- * so they share one cached request. Spelled out here rather than imported:
- * welcome-view is a page module, and customer/lib/queries pulls in the cart store.
- */
-const GLOBAL_STATS_QUERY_KEY = ["stats", "global"] as const;
 
 const DEMO_WARUNG = "Warung Nasi Teh Euis";
 const TIMBEL = "Nasi Timbel Ayam Goreng + Sayur Asem";
@@ -109,11 +101,8 @@ function Stepper({ value }: { value: number }) {
 /* ------------------------------------------------------------------ */
 
 function SambutMock() {
-  const stats = useQuery({
-    queryKey: GLOBAL_STATS_QUERY_KEY,
-    queryFn: () => api.get<GlobalStats>("/stats/global"),
-    staleTime: 60_000,
-  });
+  // Shares one cached request with the /welcome impact counter.
+  const stats = useGlobalStats();
   const s = stats.data;
   // Real numbers only: while loading, on error or before the first pickup, the strip shows plain copy.
   const live = s && s.total_orders_completed > 0 ? s : null;

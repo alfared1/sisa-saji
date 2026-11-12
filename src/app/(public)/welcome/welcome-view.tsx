@@ -2,7 +2,6 @@
 
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { CirclePlayIcon, Clock3Icon, CloudIcon, LeafIcon, ReceiptTextIcon, ShoppingBagIcon, StoreIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
@@ -12,42 +11,17 @@ import { FoodThumb } from "@/components/customer/food-thumb";
 import { InstallBanner } from "@/components/pwa/install-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api/client";
+import { useGlobalStats } from "@/hooks/use-global-stats";
 import { PAYMENT_TTL_SECONDS, SURPLUS_WINDOW_END, SURPLUS_WINDOW_START } from "@/lib/constants";
-import type { GlobalStats } from "@/lib/contracts";
-import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
+import { EVENING_EXAMPLE, EVENING_TIMELINE } from "@/lib/pricing/evening-example";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
-
-export const GLOBAL_STATS_QUERY_KEY = ["stats", "global"] as const;
 
 const WINDOW_LABEL = `${SURPLUS_WINDOW_START.replace(":", ".")}–${SURPLUS_WINDOW_END.replace(":", ".")} WIB`;
 const LOCK_MINUTES = Math.round(PAYMENT_TTL_SECONDS / 60);
 
-/** Example menu for the hero card and the evening timeline. */
-const EXAMPLE = { name: "Nasi Timbel Ayam Goreng", priceIdr: 18000, floorIdr: 5000 } as const;
-
-/** Price the real optimizer gives the example menu at a given point in the evening. */
-function examplePrice(minutesToClose: number, availableStock: number) {
-  return calculateOptimalRecoveryPrice({
-    originalPriceIdr: EXAMPLE.priceIdr,
-    minRecoveryPriceIdr: EXAMPLE.floorIdr,
-    availableStock,
-    minutesToClose,
-    activeUsersIn2km: 20,
-  });
-}
-
-const TIMELINE = [
-  { when: SURPLUS_WINDOW_START.replace(":", "."), text: "Warung memasang porsi sisa. Harga mulai dari diskon dasar.", quote: examplePrice(150, 10) },
-  { when: "1 jam lagi tutup", text: "Masih banyak yang belum laku? Diskon naik sendiri.", quote: examplePrice(60, 6) },
-  {
-    when: "30 menit lagi",
-    text: "Diskon Kilat: potongan terbesar, dan pembeli di sekitar warung dapat notifikasi.",
-    quote: examplePrice(30, 5),
-    flash: true,
-  },
-] as const;
+const EXAMPLE = EVENING_EXAMPLE;
+const TIMELINE = EVENING_TIMELINE;
 
 function fmt(n: number, digits = 0): string {
   return n.toLocaleString("id-ID", { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -67,11 +41,7 @@ function StatTile({ icon: Icon, value, unit, label }: { icon: ComponentType<{ cl
 }
 
 export function ImpactStats() {
-  const stats = useQuery({
-    queryKey: GLOBAL_STATS_QUERY_KEY,
-    queryFn: () => api.get<GlobalStats>("/stats/global"),
-    refetchInterval: 30_000,
-  });
+  const stats = useGlobalStats({ refetchInterval: 30_000 });
   const s = stats.data;
 
   return (
@@ -158,7 +128,7 @@ function EveningTimeline() {
       <ol className="mt-5 grid grid-cols-1 gap-x-6 lg:grid-cols-[1fr_1fr_1fr_1.15fr]">
         {TIMELINE.map((step) => (
           <li key={step.when} className="grid grid-cols-[5.5rem_1fr] gap-3 border-t border-border py-4 lg:grid-cols-1 lg:gap-2">
-            <p className={cn("text-sm font-extrabold tabular-nums", "flash" in step ? "text-flash dark:text-flash-accent" : "text-foreground")}>
+            <p className={cn("text-sm font-extrabold tabular-nums", step.flash ? "text-flash dark:text-flash-accent" : "text-foreground")}>
               {step.when}
             </p>
             <div>

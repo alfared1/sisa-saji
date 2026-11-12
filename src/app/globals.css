@@ -78,6 +78,8 @@
    * flash #C2410C about 5.2:1.
    */
   --color-impact: oklch(0.42 0.11 154);
+  /* Light green text on the fixed impact panel (logo "-Saji" on the login brand panel): 5.8:1. */
+  --color-impact-ink: oklch(0.88 0.1 152);
   /* Hemat badge keeps the spec emerald (#10B981 accent, #047857 fill, 5.5:1). */
   --color-hemat: #047857;
   --color-hemat-accent: #10b981;

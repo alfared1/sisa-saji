@@ -60,12 +60,22 @@ export function LogoMark({ className, title = "Sisa-Saji" }: { className?: strin
   );
 }
 
-export function Logo({ className, markClassName }: { className?: string; markClassName?: string }) {
+export function Logo({
+  className,
+  markClassName,
+  tone = "default",
+}: {
+  className?: string;
+  markClassName?: string;
+  /** "onImpact": white wordmark for the fixed deep-green panel; a hairline keeps the green tile's edge visible on it. */
+  tone?: "default" | "onImpact";
+}) {
+  const onImpact = tone === "onImpact";
   return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      <LogoMark className={markClassName} />
+    <span className={cn("inline-flex items-center gap-2", onImpact && "text-white", className)}>
+      <LogoMark className={cn(onImpact && "rounded-[23%] ring-1 ring-white/35", markClassName)} />
       <span className="text-lg font-extrabold tracking-tight">
-        Sisa<span className="text-primary">-Saji</span>
+        Sisa<span className={onImpact ? "text-impact-ink" : "text-primary"}>-Saji</span>
       </span>
     </span>
   );
