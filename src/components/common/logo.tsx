@@ -1,37 +1,52 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Sisa-Saji mark: one cream silhouette in which a tudung saji (the woven cover
- * that keeps served food at a warung) grows a leaf from its top, over a soft
- * orange plate. A row of ketupat-shaped cut-outs hints at the weave; it is cut
- * out of the cover (even-odd fill), so the same paths also make the white
- * one-colour badge.
+ * Sisa-Saji mark: a wide, shallow tudung saji (the woven cover that keeps
+ * served food at every warung) with a leaf on its top, over a soft orange
+ * plate. The criss-cross weave is pre-clipped to the cover's outline, so the
+ * mark needs no <clipPath> (no duplicate ids when it repeats on a page, and
+ * the PNG icon renderer draws it as is).
  *
  * Shared with the generated PWA icons (src/app/icons/render.tsx). viewBox 0 0 64 64.
  */
 export const LOGO_PATHS = {
-  cover:
-    "M10 45C10 33.2 18.4 24.9 29.4 22.5C28.7 15 33.3 9.4 41.6 8.4C42 15.6 38.9 20.5 34.6 22.3C46 24.4 54 33.2 54 45Z",
+  cover: "M7 43Q15 25.5 32 21Q49 25.5 57 43Z",
+  /** Weave lines, already clipped to `cover`. Stroked in the tile green. */
   weave:
-    "M17.1 38.2L19.6 35.1L22.1 38.2L19.6 41.3ZM23.3 38.2L25.8 35.1L28.3 38.2L25.8 41.3Z" +
-    "M29.5 38.2L32 35.1L34.5 38.2L32 41.3ZM35.7 38.2L38.2 35.1L40.7 38.2L38.2 41.3Z" +
-    "M41.9 38.2L44.4 35.1L46.9 38.2L44.4 41.3Z",
-  plate: { x: 7, y: 48.5, width: 50, height: 4, rx: 2 },
+    "M13.83 43L32.14 21.04M23.83 43L39.71 23.95M33.83 43L46.14 28.23M43.83 43L51.49 33.81M53.83 43L55.83 40.6" +
+    "M14.17 43L9.79 37.74M24.17 43L14.52 31.43M34.17 43L20.3 26.36M44.17 43L27.18 22.61M54.17 43L37.37 22.84",
+  leaf: "M32 21.3C31.2 16.4 34.2 13 39.6 12.4C39.9 17.4 37 20.7 32 21.3Z",
+  plate: { x: 5, y: 45, width: 54, height: 4.4, rx: 2.2 },
 } as const;
 
 /** Tile green = the app's deep "impact" green (oklch 0.42 0.11 154). */
 export const LOGO_COLORS = {
   green: "#005e2f",
   cream: "#fbf8f3",
+  leaf: "#b7f0cd",
   orange: "#f5a04a",
 } as const;
 
-/** The mark's foreground (cover with leaf, plate) inside a 64 × 64 box. `mono` = all white. */
+/**
+ * The mark's foreground inside a 64 × 64 box. `mono` = one white silhouette
+ * (cover, leaf, plate) for the status-bar badge, where the weave would not show.
+ */
 export function LogoGlyph({ mono = false }: { mono?: boolean }) {
+  if (mono) {
+    return (
+      <g fill="#ffffff">
+        <path d={LOGO_PATHS.cover} />
+        <path d={LOGO_PATHS.leaf} />
+        <rect {...LOGO_PATHS.plate} />
+      </g>
+    );
+  }
   return (
     <g>
-      <path d={LOGO_PATHS.cover + LOGO_PATHS.weave} fillRule="evenodd" fill={mono ? "#ffffff" : LOGO_COLORS.cream} />
-      <rect {...LOGO_PATHS.plate} fill={mono ? "#ffffff" : LOGO_COLORS.orange} />
+      <path d={LOGO_PATHS.cover} fill={LOGO_COLORS.cream} />
+      <path d={LOGO_PATHS.weave} fill="none" stroke={LOGO_COLORS.green} strokeWidth={1.9} />
+      <path d={LOGO_PATHS.leaf} fill={LOGO_COLORS.leaf} />
+      <rect {...LOGO_PATHS.plate} fill={LOGO_COLORS.orange} />
     </g>
   );
 }
