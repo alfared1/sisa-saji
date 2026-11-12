@@ -4,7 +4,8 @@ import { useId, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
-import { GiftIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
+import { FoodIllustration } from "@/components/common/food-illustration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,8 +109,8 @@ export function MenuForm({
               field.value ? "bg-deal-soft ring-deal/40" : "bg-card ring-border",
             )}
           >
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-deal text-deal-foreground">
-              <GiftIcon className="size-5" aria-hidden />
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-card ring-1 ring-deal/30">
+              <FoodIllustration kind="MYSTERY_BAG" className="size-6" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">Paket Kejutan (Mystery Bag)</span>
@@ -146,11 +147,11 @@ export function MenuForm({
                       aria-checked={active}
                       onClick={() => field.onChange(c)}
                       className={cn(
-                        "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "inline-flex h-10 items-center gap-1.5 rounded-full pr-3.5 pl-2.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                         active ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
                       )}
                     >
-                      {MENU_CATEGORY_LABELS[c]}
+                      <FoodIllustration kind={c} /> {MENU_CATEGORY_LABELS[c]}
                     </button>
                   );
                 })}

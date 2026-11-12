@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CheckIcon, GiftIcon, PlusIcon } from "lucide-react";
-import { CATEGORY_ICONS } from "@/components/common/category-chips";
+import { CheckIcon, PlusIcon } from "lucide-react";
+import { FoodIllustration } from "@/components/common/food-illustration";
 import type { MenuView } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,6 @@ export function MenuTemplateSelector({
       <div role="radiogroup" aria-label="Pilih menu" className="grid gap-2 sm:grid-cols-2">
         {ordered.map((m) => {
           const selected = m.id === value;
-          const Icon = m.is_mystery_bag ? GiftIcon : CATEGORY_ICONS[m.category];
           const pred = predicted.get(m.id);
           return (
             <button
@@ -52,12 +51,12 @@ export function MenuTemplateSelector({
               <span
                 className={cn(
                   "inline-flex size-11 shrink-0 items-center justify-center rounded-xl",
-                  m.is_mystery_bag ? "bg-deal text-deal-foreground" : "bg-brand-soft text-primary",
-                  selected && !m.is_mystery_bag && "bg-primary text-primary-foreground",
+                  m.is_mystery_bag ? "bg-deal-soft" : "bg-food",
+                  selected && "bg-card",
                 )}
                 aria-hidden
               >
-                <Icon className="size-5" />
+                <FoodIllustration kind={m.is_mystery_bag ? "MYSTERY_BAG" : m.category} className="size-6" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 block text-sm leading-tight font-semibold">{m.menu_name}</span>

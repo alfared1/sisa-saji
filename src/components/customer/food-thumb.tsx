@@ -1,10 +1,10 @@
-import { CATEGORY_ICONS } from "@/components/common/category-chips";
+import { FoodIllustration } from "@/components/common/food-illustration";
 import type { MenuCategory } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 
 /**
  * Placeholder when a menu has no photo: one warm tint for every category (the
- * icon tells the category apart), orange only for the Paket Kejutan.
+ * illustration tells the category apart), orange only for the Paket Kejutan.
  */
 const TINTS: Record<MenuCategory, string> = {
   MAKANAN_BERAT: "bg-food text-food-ink",
@@ -16,7 +16,7 @@ const TINTS: Record<MenuCategory, string> = {
   MYSTERY_BAG: "bg-deal-soft text-deal",
 };
 
-/** Menu photo, or a category-tinted placeholder with its icon. */
+/** Menu photo, or a tinted placeholder with the category's illustration. */
 export function FoodThumb({
   category,
   imageUrl,
@@ -35,7 +35,6 @@ export function FoodThumb({
   children?: React.ReactNode;
 }) {
   const cat: MenuCategory = mystery ? "MYSTERY_BAG" : category;
-  const Icon = CATEGORY_ICONS[cat];
   return (
     <div className={cn("relative isolate overflow-hidden bg-muted", className)}>
       {imageUrl ? (
@@ -48,7 +47,7 @@ export function FoodThumb({
           aria-label={alt}
           className={cn("absolute inset-0 flex items-center justify-center", TINTS[cat])}
         >
-          <Icon className={cn("size-9", iconClassName)} aria-hidden />
+          <FoodIllustration kind={cat} className={cn("size-12", iconClassName)} />
         </div>
       )}
       {children}

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { GiftIcon, PencilIcon, PlusIcon, UtensilsCrossedIcon } from "lucide-react";
-import { CATEGORY_ICONS } from "@/components/common/category-chips";
+import { PencilIcon, PlusIcon, UtensilsCrossedIcon } from "lucide-react";
+import { FoodIllustration } from "@/components/common/food-illustration";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState, errorMessage } from "@/components/common/error-state";
 import { ListSkeleton } from "@/components/common/list-skeleton";
@@ -46,7 +46,6 @@ export function menuPatch(before: MenuView, after: MenuFormOutput): MenuUpdateBo
 }
 
 function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit: () => void; onToggle: (v: boolean) => void; toggling: boolean }) {
-  const Icon = menu.is_mystery_bag ? GiftIcon : CATEGORY_ICONS[menu.category];
   const floorPct = Math.round((menu.min_recovery_price_idr / menu.original_price_idr) * 100);
   return (
     <li className={cn("flex flex-col rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border transition-opacity", !menu.is_active && "opacity-70")}>
@@ -54,12 +53,12 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
         <span
           className={cn(
             "inline-flex size-12 shrink-0 items-center justify-center rounded-2xl",
-            menu.is_mystery_bag ? "bg-deal text-deal-foreground" : "bg-brand-soft text-primary",
+            menu.is_mystery_bag ? "bg-deal-soft" : "bg-food",
             !menu.is_active && "grayscale",
           )}
           aria-hidden
         >
-          <Icon className="size-6" />
+          <FoodIllustration kind={menu.is_mystery_bag ? "MYSTERY_BAG" : menu.category} className="size-7" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="text-base leading-snug font-semibold">{menu.menu_name}</h3>

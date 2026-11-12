@@ -67,6 +67,7 @@ export function DealTile({
           mystery={batch.is_mystery_bag}
           alt={batch.menu_name}
           className="aspect-[4/3] w-full"
+          iconClassName="size-16"
         >
           <DiscountBadge
             pct={batch.discount_pct}
