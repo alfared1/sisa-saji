@@ -147,11 +147,11 @@ export function MenuForm({
                       aria-checked={active}
                       onClick={() => field.onChange(c)}
                       className={cn(
-                        "inline-flex h-10 items-center gap-1.5 rounded-full pr-3.5 pl-2.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                         active ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
                       )}
                     >
-                      <FoodIllustration kind={c} /> {MENU_CATEGORY_LABELS[c]}
+                      {MENU_CATEGORY_LABELS[c]}
                     </button>
                   );
                 })}
