@@ -7,7 +7,7 @@
  */
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
-import { LogInIcon, ShoppingBagIcon } from "lucide-react";
+import { ShoppingBagIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { LocationPill } from "@/components/common/location-pill";
 import { ThemeToggle } from "@/components/common/theme-switcher";
@@ -97,7 +97,7 @@ function DesktopCartButton({ pathname }: { pathname: string }) {
     <Link
       href="/checkout"
       aria-label={`Keranjang: ${count} item, total ${formatIdr(subtotal)}. Lanjut ke checkout`}
-      className="animate-float-up inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-primary pr-4 pl-1.5 text-sm font-bold text-primary-foreground shadow-soft outline-none transition-colors hover:bg-brand-strong max-xl:pr-1.5 focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="animate-float-up inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-primary pr-4 pl-1.5 text-sm font-semibold text-primary-foreground shadow-soft outline-none transition-colors hover:bg-brand-strong max-xl:pr-1.5 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <span className="relative inline-flex size-7 items-center justify-center rounded-full bg-white/15">
         <ShoppingBagIcon className="size-4" aria-hidden />
@@ -121,9 +121,9 @@ function DesktopLoginButton({ pathname }: { pathname: string }) {
   return (
     <Link
       href={loginHrefFor(pathname)}
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-bold text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-semibold text-background outline-none transition-opacity hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      <LogInIcon className="size-4 max-xl:hidden" aria-hidden /> Masuk
+      Masuk
     </Link>
   );
 }

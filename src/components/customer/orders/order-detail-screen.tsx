@@ -91,7 +91,7 @@ function ClosedView({ order }: { order: OrderDetail }) {
         }
         action={
           <div className="flex flex-col items-center gap-2">
-            <Button asChild className="h-11 rounded-xl px-6 font-bold">
+            <Button asChild className="h-11 rounded-xl px-6 font-semibold">
               <Link href="/discover">Cari makanan lain</Link>
             </Button>
             <Button asChild variant="ghost" className="h-10 rounded-full">
@@ -192,7 +192,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
               title="Pesanan tidak ditemukan"
               description="Pesanan ini tidak ada atau bukan milik akunmu."
               action={
-                <Button asChild className="h-11 rounded-xl px-6 font-bold">
+                <Button asChild className="h-11 rounded-xl px-6 font-semibold">
                   <Link href="/orders">Lihat pesananku</Link>
                 </Button>
               }

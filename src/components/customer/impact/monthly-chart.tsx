@@ -1,7 +1,6 @@
 "use client";
 
 /** MonthlyImpactChart — accessible SVG bar chart (no chart library). */
-import { BarChart3Icon } from "lucide-react";
 import type { MonthlyImpact } from "@/lib/contracts";
 import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
@@ -117,8 +116,8 @@ export function MonthlyImpactChart({
   return (
     <section className="relative rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border lg:p-6" aria-labelledby="chart-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="chart-title" className="flex items-center gap-1.5 text-sm font-extrabold whitespace-nowrap">
-          <BarChart3Icon className="size-4 text-primary" /> Per bulan
+        <h2 id="chart-title" className="flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap">
+          Per bulan
         </h2>
         <div role="radiogroup" aria-label="Pilih metrik" className="inline-flex rounded-full bg-muted p-0.5">
           {METRICS.map((m) => (
@@ -129,7 +128,7 @@ export function MonthlyImpactChart({
               aria-checked={metric === m.key}
               onClick={() => onMetricChange(m.key)}
               className={cn(
-                "h-8 rounded-full px-3 text-xs font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "h-8 rounded-full px-3 text-xs font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 metric === m.key ? "bg-card text-foreground shadow-soft" : "text-muted-foreground",
               )}
             >

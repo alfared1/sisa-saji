@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { motion } from "motion/react";
-import { AlertTriangleIcon, ClipboardListIcon, KeyboardIcon, Loader2Icon, PackageCheckIcon } from "lucide-react";
+import { AlertTriangleIcon, Loader2Icon, PackageCheckIcon } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -138,7 +138,7 @@ export function PickupScanView() {
             href="/merchant/orders"
             className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-card px-4 text-sm font-semibold ring-1 ring-border hover:bg-muted"
           >
-            <ClipboardListIcon className="size-4" /> Pesanan
+            Pesanan
           </Link>
         }
       />
@@ -148,8 +148,8 @@ export function PickupScanView() {
           <QrScanner paused={stage.kind !== "idle" || lookup.isPending} onDecode={(t) => check(t, "camera")} className="mx-auto max-w-md lg:max-w-none" />
 
           <section aria-labelledby="pin-heading" className="mx-auto max-w-md rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5 lg:max-w-none">
-            <h2 id="pin-heading" className="flex items-center gap-2 text-base font-bold">
-              <KeyboardIcon className="size-4 text-primary" aria-hidden /> Ketik kode pengambilan
+            <h2 id="pin-heading" className="flex items-center gap-2 text-base font-semibold">
+              Ketik kode pengambilan
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">4 digit di tiket pembeli. Otomatis diperiksa saat lengkap.</p>
             <form
@@ -165,7 +165,7 @@ export function PickupScanView() {
                 transition={{ duration: 0.4 }}
                 className="flex items-center justify-center gap-2"
               >
-                <span className="text-3xl font-extrabold text-muted-foreground" aria-hidden>
+                <span className="text-3xl font-bold text-muted-foreground" aria-hidden>
                   SJ-
                 </span>
                 <InputOTP
@@ -213,7 +213,7 @@ export function PickupScanView() {
               <button
                 type="submit"
                 disabled={pin.length !== 4 || lookup.isPending}
-                className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-sm font-bold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
+                className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-sm font-semibold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
               >
                 Periksa kode
               </button>
@@ -222,7 +222,7 @@ export function PickupScanView() {
 
           {recent.length > 0 && (
             <section aria-labelledby="recent-heading" className="mx-auto max-w-md lg:max-w-none">
-              <h2 id="recent-heading" className="mb-2 text-sm font-bold text-muted-foreground">
+              <h2 id="recent-heading" className="mb-2 text-sm font-semibold text-muted-foreground">
                 Baru diverifikasi
               </h2>
               <ul className="space-y-2">
@@ -249,7 +249,7 @@ export function PickupScanView() {
             <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-3xl px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <div className="mx-auto mt-1 h-1.5 w-12 rounded-full bg-muted" aria-hidden />
               <SheetHeader className="px-0 pb-0">
-                <SheetTitle className="text-lg font-extrabold">{stage.kind === "done" ? "Berhasil diverifikasi" : "Verifikasi pesanan"}</SheetTitle>
+                <SheetTitle className="text-lg font-bold">{stage.kind === "done" ? "Berhasil diverifikasi" : "Verifikasi pesanan"}</SheetTitle>
                 <SheetDescription>{stage.kind === "done" ? "Saldo & dampak sudah tercatat." : "Cocokkan isi pesanan, lalu serahkan."}</SheetDescription>
               </SheetHeader>
               <div className="mx-auto w-full max-w-md">{panel}</div>

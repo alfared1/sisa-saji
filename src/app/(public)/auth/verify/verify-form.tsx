@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { toast } from "sonner";
-import { ChevronLeftIcon, FlaskConicalIcon, Loader2Icon, RotateCwIcon, ShieldCheckIcon, UserRoundIcon } from "lucide-react";
+import { ChevronLeftIcon, FlaskConicalIcon, Loader2Icon, RotateCwIcon, ShieldCheckIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,7 +140,7 @@ export function VerifyForm() {
         <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-soft text-primary">
           <ShieldCheckIcon className="size-6" />
         </span>
-        <h1 className="text-2xl leading-tight font-extrabold">Masukkan kode verifikasi</h1>
+        <h1 className="text-2xl leading-tight font-bold">Masukkan kode verifikasi</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Kode {OTP_LENGTH} digit sudah dikirim ke {channelLabel}{" "}
           <span className="font-semibold text-foreground tabular-nums">{maskIdentifier(identifier, kind)}</span>.
@@ -153,14 +153,14 @@ export function VerifyForm() {
             <FlaskConicalIcon className="size-4" />
           </span>
           <p className="min-w-0 flex-1 text-xs leading-snug">
-            <span className="block font-bold text-foreground">Mode demo. Kode OTP: {flow.dev_code}</span>
+            <span className="block font-semibold text-foreground">Mode demo. Kode OTP: {flow.dev_code}</span>
             <span className="text-muted-foreground">Server belum terhubung ke WhatsApp/email.</span>
           </p>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 rounded-full bg-card px-3 font-bold"
+            className="h-8 rounded-full bg-card px-3 font-semibold"
             onClick={() => {
               setCode(flow.dev_code ?? "");
               submit(flow.dev_code ?? "");
@@ -175,7 +175,7 @@ export function VerifyForm() {
         {needsName && (
           <div className="animate-float-up space-y-2 rounded-2xl bg-card p-4 ring-1 ring-border">
             <Label htmlFor="full_name" className="text-sm font-semibold">
-              <UserRoundIcon className="size-4 text-primary" /> Kamu pengguna baru. Siapa namamu?
+              Kamu pengguna baru. Siapa namamu?
             </Label>
             <Input
               id="full_name"
@@ -238,7 +238,7 @@ export function VerifyForm() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-xl text-base font-bold"
+          className="h-12 w-full rounded-xl text-base font-semibold"
           disabled={verify.isPending || code.length !== OTP_LENGTH}
         >
           {verify.isPending && <Loader2Icon className="animate-spin" />}
@@ -253,7 +253,7 @@ export function VerifyForm() {
           onClick={() => resend.mutate()}
           disabled={remaining > 0 || resend.isPending}
           className={cn(
-            "inline-flex items-center gap-1 rounded-full px-1 font-bold outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            "inline-flex items-center gap-1 rounded-full px-1 font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
             remaining > 0 || resend.isPending ? "text-muted-foreground" : "text-primary hover:underline",
           )}
         >

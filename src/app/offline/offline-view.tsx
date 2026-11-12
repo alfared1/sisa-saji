@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ChevronDownIcon, MapPinIcon, QrCodeIcon, RotateCwIcon, TicketIcon, WifiIcon, WifiOffIcon } from "lucide-react";
+import { ChevronDownIcon, MapPinIcon, RotateCwIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { Logo } from "@/components/common/logo";
 import { QrCodeView } from "@/components/common/qr-code-view";
@@ -36,7 +36,7 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
     <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
       <div className="flex items-start justify-between gap-3 bg-brand-soft/70 px-4 py-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold">{order.merchant.name}</p>
+          <p className="truncate text-sm font-semibold">{order.merchant.name}</p>
           <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
             <MapPinIcon className="size-3 shrink-0" /> {order.merchant.address}
           </p>
@@ -61,9 +61,9 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
               type="button"
               onClick={() => setShowQr((v) => !v)}
               aria-expanded={showQr}
-              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-full bg-muted px-3 text-xs font-bold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-full bg-muted px-3 text-xs font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <QrCodeIcon className="size-4" /> {showQr ? "Sembunyikan QR" : "Tampilkan QR"}
+              {showQr ? "Sembunyikan QR" : "Tampilkan QR"}
               <ChevronDownIcon className={cn("size-4 transition-transform", showQr && "rotate-180")} />
             </button>
             {showQr && (
@@ -79,7 +79,7 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
         )}
       </div>
       <div className="border-t border-border px-4 py-2.5">
-        <Link href={`/orders/${order.id}`} className="text-xs font-bold text-primary hover:underline">
+        <Link href={`/orders/${order.id}`} className="text-xs font-semibold text-primary hover:underline">
           Buka detail tiket
         </Link>
       </div>
@@ -114,20 +114,20 @@ export function OfflineView() {
               {online ? <WifiIcon className="size-9" /> : <WifiOffIcon className="size-9" />}
             </span>
           </div>
-          <h1 className="mt-6 text-2xl font-extrabold">{online ? "Kamu kembali online" : "Kamu sedang offline"}</h1>
+          <h1 className="mt-6 text-2xl font-bold">{online ? "Kamu kembali online" : "Kamu sedang offline"}</h1>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
             {online
               ? "Internet sudah tersambung lagi. Muat ulang untuk melanjutkan."
               : "Sambungan internet terputus. Tiket pengambilan yang sudah tersimpan tetap bisa kamu tunjukkan ke warung."}
           </p>
-          <Button className="mt-5 h-11 rounded-xl px-6 font-bold" onClick={() => window.location.reload()}>
+          <Button className="mt-5 h-11 rounded-xl px-6 font-semibold" onClick={() => window.location.reload()}>
             <RotateCwIcon /> Coba lagi
           </Button>
         </section>
 
         <section aria-labelledby="tiket-offline" className="mt-10 lg:mt-6">
-          <h2 id="tiket-offline" className="flex items-center gap-2 text-base font-extrabold">
-            <TicketIcon className="size-5 text-primary" /> Tiket tersimpan
+          <h2 id="tiket-offline" className="flex items-center gap-2 text-base font-semibold">
+            Tiket tersimpan
           </h2>
           {!hydrated ? null : list.length === 0 ? (
             <p className="mt-3 rounded-2xl bg-card p-4 text-sm leading-relaxed text-muted-foreground ring-1 ring-border">

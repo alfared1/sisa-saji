@@ -50,7 +50,7 @@ export function InstallBanner({
     >
       <LogoMark className="size-12 rounded-2xl" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold">Pasang Sisa-Saji</p>
+        <p className="text-sm font-semibold">Pasang Sisa-Saji</p>
         {showIOSHint && !canInstall ? (
           <p className="text-xs leading-snug text-muted-foreground">
             Ketuk <ShareIcon className="inline size-3.5 align-[-2px]" aria-label="Bagikan" /> lalu{" "}

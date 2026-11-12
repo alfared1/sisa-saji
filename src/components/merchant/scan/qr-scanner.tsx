@@ -122,9 +122,9 @@ export function QrScanner({ paused, onDecode, className }: { paused: boolean; on
                 <span className="inline-flex size-16 items-center justify-center rounded-3xl bg-white/10 ring-1 ring-white/15">
                   <ScanLineIcon className="size-8" />
                 </span>
-                <p className="text-base font-bold">Pindai QR tiket pembeli</p>
+                <p className="text-base font-semibold">Pindai QR tiket pembeli</p>
                 <p className="max-w-64 text-sm text-white/70">Arahkan kamera belakang ke QR di layar HP pembeli.</p>
-                <Button onClick={() => void start()} className="mt-1 h-12 rounded-xl bg-white px-6 text-sm font-bold text-neutral-950 hover:bg-white/90">
+                <Button onClick={() => void start()} className="mt-1 h-12 rounded-xl bg-white px-6 text-sm font-semibold text-neutral-950 hover:bg-white/90">
                   <CameraIcon /> Nyalakan kamera
                 </Button>
               </>
@@ -134,7 +134,7 @@ export function QrScanner({ paused, onDecode, className }: { paused: boolean; on
                 <span className="inline-flex size-16 items-center justify-center rounded-3xl bg-white/10 ring-1 ring-white/15">
                   <CameraOffIcon className="size-8" />
                 </span>
-                <p className="text-base font-bold" role="alert">
+                <p className="text-base font-semibold" role="alert">
                   {state === "denied" ? "Akses kamera ditolak" : "Kamera tidak tersedia"}
                 </p>
                 <p className="max-w-72 text-sm text-white/70">
@@ -160,7 +160,7 @@ export function QrScanner({ paused, onDecode, className }: { paused: boolean; on
           <button
             type="button"
             onClick={() => void stop().then(() => setState("idle"))}
-            className="absolute right-3 bottom-3 inline-flex h-10 items-center gap-1.5 rounded-full bg-black/60 px-3.5 text-xs font-bold backdrop-blur outline-none focus-visible:ring-3 focus-visible:ring-white/60"
+            className="absolute right-3 bottom-3 inline-flex h-10 items-center gap-1.5 rounded-full bg-black/60 px-3.5 text-xs font-semibold backdrop-blur outline-none focus-visible:ring-3 focus-visible:ring-white/60"
           >
             <SquareIcon className="size-3.5 fill-current" /> Matikan kamera
           </button>

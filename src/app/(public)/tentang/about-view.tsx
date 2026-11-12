@@ -93,7 +93,7 @@ const SDGS = [
 function Section({ id, title, children, lead }: { id: string; title: string; lead?: ReactNode; children?: ReactNode }) {
   return (
     <section aria-labelledby={id} className="mt-12">
-      <h2 id={id} className="text-2xl font-extrabold">
+      <h2 id={id} className="text-2xl font-bold">
         {title}
       </h2>
       {lead && <p className="mt-2 max-w-prose text-base leading-relaxed text-muted-foreground">{lead}</p>}
@@ -118,7 +118,7 @@ export function AboutView() {
         </header>
 
         <section className="pt-6 lg:pt-12">
-          <h1 className="max-w-3xl text-[2rem] leading-[1.1] font-extrabold sm:text-5xl">
+          <h1 className="max-w-3xl text-[2rem] leading-[1.1] font-bold sm:text-5xl">
             Porsi surplus warung, terjual sebelum <span className="text-primary">terbuang</span>.
           </h1>
           <p className="mt-4 max-w-prose text-lg leading-relaxed text-muted-foreground">
@@ -127,7 +127,7 @@ export function AboutView() {
             di tempat sampah.
           </p>
           <div className="mt-6 rounded-3xl bg-card p-4 ring-1 ring-border sm:p-5">
-            <p className="font-bold">Coba langsung, tanpa daftar</p>
+            <p className="font-semibold">Coba langsung, tanpa daftar</p>
             <p className="mt-1 text-sm text-muted-foreground">
               {demo
                 ? "Masuk ke akun contoh dengan satu ketukan. Warung dan pesanan di dalamnya adalah data demo."
@@ -154,7 +154,7 @@ export function AboutView() {
             {STEPS.map((s, i) => (
               <li key={s.title} className="rounded-2xl bg-card p-4 ring-1 ring-border">
                 <p className="text-sm font-extrabold text-primary tabular-nums">{i + 1}</p>
-                <p className="mt-1 font-bold">{s.title}</p>
+                <p className="mt-1 font-semibold">{s.title}</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
               </li>
             ))}
@@ -184,7 +184,7 @@ export function AboutView() {
           <ul className="divide-y divide-border overflow-hidden rounded-2xl bg-card ring-1 ring-border">
             {TECH.map((t) => (
               <li key={t.title} className="p-4">
-                <p className="font-bold">{t.title}</p>
+                <p className="font-semibold">{t.title}</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t.body}</p>
               </li>
             ))}
@@ -210,8 +210,8 @@ export function AboutView() {
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {SDGS.map((g) => (
               <li key={g.goal} className="rounded-2xl bg-card p-4 ring-1 ring-border">
-                <p className="text-sm font-extrabold text-primary">{g.goal}</p>
-                <p className="mt-1 font-bold">{g.title}</p>
+                <p className="text-sm font-semibold text-primary">{g.goal}</p>
+                <p className="mt-1 font-semibold">{g.title}</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{g.body}</p>
               </li>
             ))}
@@ -229,7 +229,7 @@ export function AboutView() {
               { href: "/welcome", label: "Beranda aplikasi" },
             ].map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-primary hover:underline">
+                <Link href={l.href} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
                   {l.label} <ArrowRightIcon className="size-4" aria-hidden />
                 </Link>
               </li>
@@ -238,7 +238,7 @@ export function AboutView() {
         </section>
 
         <section aria-labelledby="sumber" className="mt-8 text-sm leading-relaxed text-muted-foreground">
-          <h2 id="sumber" className="font-bold text-foreground">
+          <h2 id="sumber" className="font-semibold text-foreground">
             Sumber
           </h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">

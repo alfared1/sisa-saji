@@ -6,7 +6,17 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ClockIcon, CompassIcon, CrownIcon, ExternalLinkIcon, LandmarkIcon, Loader2Icon, LogOutIcon, MapPinIcon, SaveIcon, StoreIcon, SunMoonIcon } from "lucide-react";
+import {
+  ClockIcon,
+  ExternalLinkIcon,
+  LandmarkIcon,
+  Loader2Icon,
+  LogOutIcon,
+  MapPinIcon,
+  SaveIcon,
+  StoreIcon,
+  SunMoonIcon,
+} from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { ErrorState } from "@/components/common/error-state";
 import { ThemeSwitcher } from "@/components/common/theme-switcher";
@@ -77,7 +87,7 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
             <Button type="button" variant="ghost" className="h-11 rounded-xl" onClick={() => form.reset()} disabled={update.isPending}>
               Batal
             </Button>
-            <Button type="submit" className="h-11 rounded-xl px-5 font-bold" disabled={update.isPending}>
+            <Button type="submit" className="h-11 rounded-xl px-5 font-semibold" disabled={update.isPending}>
               {update.isPending ? <Loader2Icon className="animate-spin" /> : <SaveIcon />} Simpan
             </Button>
           </div>
@@ -116,7 +126,7 @@ export function MerchantSettingsView() {
             <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5" aria-label="Status warung">
               <label className="flex cursor-pointer items-center justify-between gap-3">
                 <span>
-                  <span className="block text-sm font-bold">Warung {m.is_open ? "buka" : "tutup"}</span>
+                  <span className="block text-sm font-semibold">Warung {m.is_open ? "buka" : "tutup"}</span>
                   <span className="block text-xs text-muted-foreground">{m.is_open ? "Surplus tampil di aplikasi pembeli." : "Surplus disembunyikan dari pembeli."}</span>
                 </span>
                 <Switch checked={m.is_open} onCheckedChange={(v) => update.mutate({ is_open: v }, { onSuccess: () => toast.success(v ? "Warung dibuka" : "Warung ditutup") })} aria-label="Buka atau tutup warung" />
@@ -127,20 +137,20 @@ export function MerchantSettingsView() {
 
             <section className="space-y-3 rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5" aria-label="Langganan">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-bold">Paket</span>
+                <span className="text-sm font-semibold">Paket</span>
                 {m.merchant_verified ? <VerifiedBadge /> : <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">Reguler</span>}
               </div>
               <p className="text-xs text-muted-foreground">
                 Saldo warung <b className="text-foreground tabular-nums">{formatIdr(m.wallet_balance_idr)}</b> · Rating {m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} ({m.total_reviews} ulasan)
               </p>
-              <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-deal-soft text-sm font-bold text-deal">
-                <CrownIcon className="size-4" /> {m.subscription_tier === "PREMIUM" ? "Kelola Premium" : "Upgrade ke Premium"}
+              <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-deal-soft text-sm font-semibold text-deal">
+                {m.subscription_tier === "PREMIUM" ? "Kelola Premium" : "Upgrade ke Premium"}
               </Link>
               <Link href={`/warung/${m.slug}`} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
                 <ExternalLinkIcon className="size-4" /> Lihat halaman warung
               </Link>
               <Link href="/tour?peran=mitra" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
-                <CompassIcon className="size-4" /> Lihat tur mitra
+                Lihat tur mitra
               </Link>
             </section>
 

@@ -98,7 +98,7 @@ function StatusPill({ status, startIso }: { status: MerchantBatchView["status"];
   };
   const s = map[status];
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-none font-bold", s.cls)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-none font-semibold", s.cls)}>
       {status === "ACTIVE" && <span className="size-1.5 rounded-full bg-primary" aria-hidden />}
       {s.label}
     </span>
@@ -157,7 +157,7 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
             <StatusPill status={batch.status} startIso={batch.pickup_start_time} />
             {!closed && <CountdownBadge endIso={batch.pickup_end_time} />}
           </div>
-          <h3 className="mt-1.5 text-base leading-snug font-bold">{batch.menu_name}</h3>
+          <h3 className="mt-1.5 text-base leading-snug font-semibold">{batch.menu_name}</h3>
           <PriceTag
             className="mt-1"
             original={batch.original_price_idr}
@@ -231,7 +231,7 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
               onClick={() => setConfirm(true)}
               className="inline-flex h-11 items-center gap-1.5 rounded-2xl px-3 text-xs font-semibold text-urgent outline-none hover:bg-urgent-soft focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <XCircleIcon className="size-4" /> Batalkan
+              Batalkan
             </button>
           </div>
         </div>
@@ -268,12 +268,12 @@ export function ActiveSurplusBatchList({ batches }: { batches: MerchantBatchView
   return (
     <section aria-labelledby="batches-heading">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 id="batches-heading" className="text-lg font-extrabold tracking-tight">
+        <h2 id="batches-heading" className="text-lg font-bold">
           Surplus aktif <span className="text-muted-foreground tabular-nums">({batches.length})</span>
         </h2>
         <Link
           href="/merchant/surplus/new"
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-bold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <PlusIcon className="size-4" /> Tambah
         </Link>

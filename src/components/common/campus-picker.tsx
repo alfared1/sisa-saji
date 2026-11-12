@@ -73,7 +73,7 @@ export function CampusPicker({
             >
               {g.region}
               {isHomeRegion(g.region) && (
-                <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold tracking-normal text-primary normal-case">
+                <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold tracking-normal text-primary normal-case">
                   Pusat
                 </span>
               )}

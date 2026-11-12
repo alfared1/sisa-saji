@@ -161,7 +161,7 @@ export function WeeklySurplusHeatmap({ cells }: { cells: InsightsResponse["heatm
                   return (
                     <td
                       key={d}
-                      className={cn("h-10 rounded-md text-center text-[11px] font-bold tabular-nums sm:h-11 sm:rounded-lg sm:text-xs", lvl >= 3 ? "text-white" : "text-foreground/80")}
+                      className={cn("h-10 rounded-md text-center text-[11px] font-semibold tabular-nums sm:h-11 sm:rounded-lg sm:text-xs", lvl >= 3 ? "text-white" : "text-foreground/80")}
                       style={heatStyle(lvl)}
                       title={v === null ? "Tidak ada data" : `${DAY_NAMES_ID[d]}: rata-rata ${v} porsi surplus, ${left ?? 0} terbuang`}
                     >

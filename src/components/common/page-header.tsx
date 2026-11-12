@@ -71,7 +71,7 @@ export function PageHeader({
           <span className="w-2 lg:hidden" />
         )}
         <div className="min-w-0 flex-1 py-2">
-          <h1 className="truncate text-base font-bold leading-tight lg:text-2xl lg:font-extrabold">{title}</h1>
+          <h1 className="truncate text-base font-bold leading-tight lg:text-2xl">{title}</h1>
           {subtitle && <p className="truncate text-xs text-muted-foreground lg:mt-0.5 lg:text-sm">{subtitle}</p>}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-1 pr-1">{actions}</div>}

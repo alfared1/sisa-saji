@@ -2,7 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import Link from "next/link";
-import { LogInIcon, MinusIcon, PlusIcon, StarIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, StarIcon } from "lucide-react";
 import { LogoMark } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/contracts";
@@ -31,7 +31,7 @@ export function SectionHeader({
   return (
     <div className={cn("flex items-end justify-between gap-3", className)}>
       <div className="min-w-0">
-        <h2 id={id} className="flex items-center gap-1.5 text-base font-extrabold">
+        <h2 id={id} className="flex items-center gap-1.5 text-base font-semibold">
           {Icon && <Icon className={cn("size-4.5 shrink-0", iconClassName)} />}
           <span className="truncate">{title}</span>
         </h2>
@@ -133,7 +133,7 @@ export function OrderStatusChip({ status, className }: { status: OrderStatus; cl
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] leading-none font-bold",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] leading-none font-semibold",
         TONE_CLASS[meta.tone],
         className,
       )}
@@ -169,11 +169,11 @@ export function LoginCta({
           {icon ?? <LogoMark className="size-12" />}
         </span>
       </div>
-      <h2 className="mt-6 text-xl font-extrabold">{title}</h2>
+      <h2 className="mt-6 text-xl font-bold">{title}</h2>
       <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">{description}</p>
-      <Button asChild className="mt-6 h-12 rounded-xl px-7 text-base font-bold shadow-card">
+      <Button asChild className="mt-6 h-12 rounded-xl px-7 text-base font-semibold shadow-card">
         <Link href={`/auth/login?next=${encodeURIComponent(next)}`}>
-          <LogInIcon className="size-5" /> Masuk / Daftar
+          Masuk / Daftar
         </Link>
       </Button>
       <p className="mt-3 text-xs text-muted-foreground">Cukup nomor WhatsApp atau email, tanpa kata sandi.</p>
@@ -187,7 +187,7 @@ export function TabTitle({ title, subtitle, action }: { title: string; subtitle?
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="truncate text-xl font-extrabold">{title}</h1>
+        <h1 className="truncate text-xl font-bold">{title}</h1>
         {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
       </div>
       {action}

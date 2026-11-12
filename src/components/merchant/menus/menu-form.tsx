@@ -113,7 +113,7 @@ export function MenuForm({
               <GiftIcon className="size-5" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">Paket Kejutan (Mystery Bag)</span>
+              <span className="block text-sm font-semibold">Paket Kejutan (Mystery Bag)</span>
               <span className="block text-xs text-muted-foreground">Isi campuran sisa hari itu. Biasanya paling cepat habis.</span>
             </span>
             <Switch
@@ -257,7 +257,7 @@ export function MenuForm({
                     onClick={() => field.onChange(w)}
                     aria-pressed={field.value === w}
                     className={cn(
-                      "h-10 rounded-full px-3 text-xs font-bold tabular-nums ring-1",
+                      "h-10 rounded-full px-3 text-xs font-semibold tabular-nums ring-1",
                       field.value === w ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
                     )}
                   >
@@ -288,7 +288,7 @@ export function MenuForm({
 
       <div className={cn("flex gap-2 pt-1 sm:justify-end", actionsClassName)}>
         {secondary}
-        <Button type="submit" className={cn("h-12 flex-1 rounded-xl px-4 text-base font-bold sm:px-6", !secondary && "sm:flex-none")} disabled={pending}>
+        <Button type="submit" className={cn("h-12 flex-1 rounded-xl px-4 text-base font-semibold sm:px-6", !secondary && "sm:flex-none")} disabled={pending}>
           {pending && <Loader2Icon className="animate-spin" />}
           {submitLabel}
         </Button>

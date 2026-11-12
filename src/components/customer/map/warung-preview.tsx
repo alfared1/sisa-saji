@@ -57,10 +57,10 @@ export function PreviewBatches({
             className="w-full rounded-2xl bg-muted/70 p-3 text-left transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.98]"
             aria-label={`Pesan ${b.menu_name}`}
           >
-            <p className="line-clamp-1 text-xs font-bold">{b.menu_name}</p>
+            <p className="line-clamp-1 text-xs font-semibold">{b.menu_name}</p>
             <p className="mt-1 text-sm font-extrabold tabular-nums">
               Rp {b.selling_price_idr.toLocaleString("id-ID")}{" "}
-              <span className="text-[11px] font-bold text-deal">-{b.discount_pct}%</span>
+              <span className="text-[11px] font-semibold text-deal">-{b.discount_pct}%</span>
             </p>
             <p className="text-[11px] text-muted-foreground">Sisa {b.available_stock} porsi</p>
           </button>
@@ -82,7 +82,7 @@ export function IdleWarungPreview({ warung }: { warung: WarungMapPin }) {
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
-          <h3 className="truncate text-[15px] font-bold">{warung.merchant_name}</h3>
+          <h3 className="truncate text-[15px] font-semibold">{warung.merchant_name}</h3>
           {warung.is_verified && (
             // Static icon, not the tooltip badge: the sheet focuses its first control on open.
             <BadgeCheckIcon className="size-4 shrink-0 text-brand-strong" aria-label="Mitra Terverifikasi" role="img" />
@@ -93,7 +93,7 @@ export function IdleWarungPreview({ warung }: { warung: WarungMapPin }) {
           <span className="font-semibold text-foreground">{formatRating(warung.rating_avg)}</span>
           <span>({warung.total_reviews})</span>
         </p>
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
           <MoonStarIcon className="size-3.5" aria-hidden />
           {warung.is_open ? "Belum ada surplus saat ini" : "Warung sedang tutup"}
         </p>
@@ -136,7 +136,7 @@ export function WarungPreview({
         <Button
           asChild
           variant={idle ? "outline" : "default"}
-          className={cn("w-full rounded-full font-bold", layout === "row" ? "mt-4 h-12 text-base" : "mt-3 h-11")}
+          className={cn("w-full rounded-full font-semibold", layout === "row" ? "mt-4 h-12 text-base" : "mt-3 h-11")}
         >
           <Link href={`/warung/${slug}`}>
             {idle ? <StoreIcon className="size-4" /> : <UtensilsCrossedIcon className="size-4" />}

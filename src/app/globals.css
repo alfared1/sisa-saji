@@ -182,7 +182,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.23 0.02 155);
 
-  --primary: oklch(0.53 0.14 152);
+  /* One step from the logo green (#005e2f) so buttons and logo read as one brand; 6.3:1 with its text, 5.8:1 as text on the backdrop. */
+  --primary: oklch(0.47 0.12 153);
   --primary-foreground: oklch(0.99 0.01 150);
   --brand-soft: oklch(0.95 0.04 152);
   --brand-strong: oklch(0.42 0.11 154);
@@ -218,7 +219,7 @@
 
   --sidebar: oklch(0.99 0.006 85);
   --sidebar-foreground: oklch(0.23 0.02 155);
-  --sidebar-primary: oklch(0.53 0.14 152);
+  --sidebar-primary: oklch(0.47 0.12 153);
   --sidebar-primary-foreground: oklch(0.99 0.01 150);
   --sidebar-accent: oklch(0.95 0.035 150);
   --sidebar-accent-foreground: oklch(0.36 0.09 152);
@@ -313,7 +314,8 @@
   h2,
   h3,
   h4 {
-    @apply font-heading tracking-tight text-balance;
+    /* Normal tracking: Plus Jakarta Sans is already compact, and tight bold headings read as shouting. */
+    @apply font-heading text-balance;
   }
   ::selection {
     background: color-mix(in oklch, var(--primary) 25%, transparent);

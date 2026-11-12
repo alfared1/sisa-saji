@@ -53,7 +53,7 @@ export function FloatingCartBar({ className, href = "/checkout" }: { className?:
           )}
         </span>
       </span>
-      <span className="inline-flex shrink-0 items-center gap-0.5 text-sm font-bold">
+      <span className="inline-flex shrink-0 items-center gap-0.5 text-sm font-semibold">
         Checkout <ChevronRightIcon className="size-4" />
       </span>
     </Link>

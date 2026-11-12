@@ -1,8 +1,7 @@
 "use client";
 
-import type { ComponentType } from "react";
 import Link from "next/link";
-import { CirclePlayIcon, Clock3Icon, CloudIcon, LeafIcon, ReceiptTextIcon, ShoppingBagIcon, StoreIcon } from "lucide-react";
+import { CirclePlayIcon, Clock3Icon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
@@ -27,13 +26,12 @@ function fmt(n: number, digits = 0): string {
   return n.toLocaleString("id-ID", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
 
-function StatTile({ icon: Icon, value, unit, label }: { icon: ComponentType<{ className?: string }>; value: string; unit?: string; label: string }) {
+function StatTile({ value, unit, label }: { value: string; unit?: string; label: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-surface p-3">
-      <Icon className="size-4 text-primary" aria-hidden />
       <p className="truncate text-xl leading-tight font-extrabold tabular-nums sm:text-2xl">
         {value}
-        {unit && <span className="ml-1 text-sm font-bold text-muted-foreground">{unit}</span>}
+        {unit && <span className="ml-1 text-sm font-semibold text-muted-foreground">{unit}</span>}
       </p>
       <p className="text-xs leading-tight text-muted-foreground">{label}</p>
     </div>
@@ -47,11 +45,11 @@ export function ImpactStats() {
   return (
     <section aria-labelledby="dampak-title" className="rounded-3xl bg-card p-4 ring-1 ring-border">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="dampak-title" className="text-sm font-bold">
+        <h2 id="dampak-title" className="text-sm font-semibold">
           Dampak bersama
         </h2>
         {s?.is_demo_data && (
-          <span className="rounded-full bg-warning-soft px-2 py-1 text-[11px] font-bold text-amber-800 dark:text-amber-200">Data demo</span>
+          <span className="rounded-full bg-warning-soft px-2 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200">Data demo</span>
         )}
       </div>
       {stats.isPending ? (
@@ -67,10 +65,10 @@ export function ImpactStats() {
       ) : (
         <>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <StatTile icon={LeafIcon} value={fmt(s.total_food_saved_grams / 1000, 1)} unit="kg" label="pangan diselamatkan" />
-            <StatTile icon={CloudIcon} value={fmt(s.total_co2_avoided_grams / 1000, 1)} unit="kg" label="emisi CO₂e dicegah" />
-            <StatTile icon={ReceiptTextIcon} value={fmt(s.total_orders_completed)} label="pesanan diambil" />
-            <StatTile icon={StoreIcon} value={fmt(s.active_merchants)} label="warung buka" />
+            <StatTile value={fmt(s.total_food_saved_grams / 1000, 1)} unit="kg" label="pangan diselamatkan" />
+            <StatTile value={fmt(s.total_co2_avoided_grams / 1000, 1)} unit="kg" label="emisi CO₂e dicegah" />
+            <StatTile value={fmt(s.total_orders_completed)} label="pesanan diambil" />
+            <StatTile value={fmt(s.active_merchants)} label="warung buka" />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             {s.is_demo_data
@@ -82,7 +80,7 @@ export function ImpactStats() {
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Mendukung SDG 12.3: mengurangi separuh sampah pangan per kapita di tingkat ritel dan konsumen pada 2030.
       </p>
-      <Link href="/uji-coba" className="mt-1 inline-flex min-h-11 items-center text-sm font-bold text-primary hover:underline">
+      <Link href="/uji-coba" className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">
         Lihat hasil uji coba di warung sungguhan
       </Link>
     </section>
@@ -97,7 +95,7 @@ function DealPreview() {
       <div className="flex gap-3">
         <FoodThumb category="MAKANAN_BERAT" alt="" className="size-20 shrink-0 rounded-2xl" iconClassName="size-8" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{EXAMPLE.name}</p>
+          <p className="truncate text-sm font-semibold">{EXAMPLE.name}</p>
           <p className="truncate text-xs text-muted-foreground">Warung contoh · 240 m</p>
           <PriceTag original={EXAMPLE.priceIdr} selling={flash.recommendedSellingPriceIdr} discountPct={flash.recommendedDiscountPct} className="mt-1.5" />
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -117,7 +115,7 @@ function DealPreview() {
 function EveningTimeline() {
   return (
     <section aria-labelledby="malam-title" className="mt-12 lg:mt-16">
-      <h2 id="malam-title" className="text-xl font-extrabold">
+      <h2 id="malam-title" className="text-xl font-bold">
         Harga turun mendekati jam tutup
       </h2>
       <p className="mt-1 max-w-prose text-sm text-muted-foreground">
@@ -134,14 +132,14 @@ function EveningTimeline() {
             <div>
               <p className="flex items-baseline gap-2">
                 <span className="text-2xl leading-none font-extrabold tabular-nums">{formatIdr(step.quote.recommendedSellingPriceIdr)}</span>
-                <span className="text-sm font-bold text-muted-foreground tabular-nums">−{step.quote.recommendedDiscountPct}%</span>
+                <span className="text-sm font-semibold text-muted-foreground tabular-nums">−{step.quote.recommendedDiscountPct}%</span>
               </p>
               <p className="mt-1.5 text-sm leading-snug text-muted-foreground">{step.text}</p>
             </div>
           </li>
         ))}
         <li className="grid grid-cols-[5.5rem_1fr] gap-3 border-t border-border py-4 lg:grid-cols-1 lg:gap-2">
-          <p className="text-sm font-extrabold">Kamu pesan</p>
+          <p className="text-sm font-semibold">Kamu pesan</p>
           <p className="text-sm leading-snug text-muted-foreground">
             Porsimu dikunci {LOCK_MINUTES} menit selama bayar lewat QRIS. Setelah itu datang ke warung dan tunjukkan QR atau kode
             SJ-XXXX. Tidak ada pengantaran.
@@ -157,18 +155,14 @@ const ROLE_CARDS = [
     href: "/discover",
     title: "Cari makanan hemat",
     body: "Lihat porsi surplus warung dalam radius 2 km dari kampusmu.",
-    icon: ShoppingBagIcon,
     tone: "bg-primary text-primary-foreground",
-    iconTone: "bg-white/15 text-white",
     cta: "Lihat menu malam ini",
   },
   {
     href: "/auth/login?role=MERCHANT",
     title: "Daftarkan warungmu",
     body: "Pasang porsi sisa dalam 60 detik. Harga diskonnya dihitung otomatis dan naik sendiri menjelang tutup.",
-    icon: StoreIcon,
     tone: "bg-card text-card-foreground ring-1 ring-border",
-    iconTone: "bg-deal-soft text-deal",
     cta: "Daftar sebagai mitra",
   },
 ] as const;
@@ -192,7 +186,7 @@ export function WelcomeView() {
 
         <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-14 lg:pt-12">
           <section className="space-y-5">
-            <h1 className="text-[2rem] leading-[1.1] font-extrabold sm:text-5xl">
+            <h1 className="text-[2rem] leading-[1.1] font-bold sm:text-5xl">
               Makanan enak tetap <span className="text-primary">termakan</span>, dompet tetap aman.
             </h1>
             <p className="max-w-prose text-base leading-relaxed text-muted-foreground">
@@ -201,7 +195,7 @@ export function WelcomeView() {
             </p>
             <Link
               href="/tour"
-              className="-mt-2 -ml-1 flex min-h-11 w-fit items-center gap-2.5 rounded-xl py-1 pr-4 pl-1 text-sm font-bold outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="-mt-2 -ml-1 flex min-h-11 w-fit items-center gap-2.5 rounded-xl py-1 pr-4 pl-1 text-sm font-semibold outline-none transition-colors hover:bg-card focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-primary">
                 <CirclePlayIcon className="size-5" aria-hidden />
@@ -210,7 +204,7 @@ export function WelcomeView() {
             </Link>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {ROLE_CARDS.map(({ href, title, body, icon: Icon, tone, iconTone, cta }) => (
+              {ROLE_CARDS.map(({ href, title, body, tone, cta }) => (
                 <Link
                   key={href}
                   href={href}
@@ -219,14 +213,11 @@ export function WelcomeView() {
                     tone,
                   )}
                 >
-                  <span className={cn("inline-flex size-11 items-center justify-center rounded-2xl", iconTone)}>
-                    <Icon className="size-5" aria-hidden />
-                  </span>
                   <span>
-                    <span className="block text-base font-extrabold">{title}</span>
+                    <span className="block text-lg font-bold">{title}</span>
                     <span className="mt-1 block text-sm leading-snug opacity-80">{body}</span>
                   </span>
-                  <span className="mt-auto text-sm font-bold underline decoration-2 underline-offset-4">{cta}</span>
+                  <span className="mt-auto text-sm font-semibold underline decoration-2 underline-offset-4">{cta}</span>
                 </Link>
               ))}
             </div>

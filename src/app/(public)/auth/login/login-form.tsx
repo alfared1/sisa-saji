@@ -3,16 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import {
-  ArrowRightIcon,
-  Loader2Icon,
-  MailIcon,
-  MessageCircleIcon,
-  PhoneIcon,
-  ShoppingBagIcon,
-  StoreIcon,
-  UserRoundIcon,
-} from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,17 +92,17 @@ export function LoginForm() {
     <div className="flex flex-1 flex-col gap-6 pt-2 lg:flex-none lg:rounded-3xl lg:bg-card lg:p-8 lg:shadow-card lg:ring-1 lg:ring-border">
       <Tabs value={role} onValueChange={switchRole}>
         <TabsList className="grid h-12! w-full grid-cols-2 rounded-2xl bg-muted p-1">
-          <TabsTrigger value="CUSTOMER" className="h-full rounded-xl text-sm font-bold data-active:shadow-soft">
-            <ShoppingBagIcon /> Pembeli
+          <TabsTrigger value="CUSTOMER" className="h-full rounded-xl text-sm font-semibold data-active:shadow-soft">
+            Pembeli
           </TabsTrigger>
-          <TabsTrigger value="MERCHANT" className="h-full rounded-xl text-sm font-bold data-active:shadow-soft">
-            <StoreIcon /> Mitra Warung
+          <TabsTrigger value="MERCHANT" className="h-full rounded-xl text-sm font-semibold data-active:shadow-soft">
+            Mitra Warung
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
       <div className="space-y-2">
-        <h1 className="text-2xl leading-tight font-extrabold">{copy.title}</h1>
+        <h1 className="text-2xl leading-tight font-bold">{copy.title}</h1>
         <p className="text-sm leading-relaxed text-muted-foreground">{copy.subtitle}</p>
       </div>
 
@@ -123,10 +114,10 @@ export function LoginForm() {
         >
           {(
             [
-              { k: "phone", label: "Nomor HP", Icon: MessageCircleIcon },
-              { k: "email", label: "Email", Icon: MailIcon },
+              { k: "phone", label: "Nomor HP" },
+              { k: "email", label: "Email" },
             ] as const
-          ).map(({ k, label, Icon }) => (
+          ).map(({ k, label }) => (
             <button
               key={k}
               type="button"
@@ -139,11 +130,11 @@ export function LoginForm() {
                 request.reset();
               }}
               className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 kind === k ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="size-3.5" /> {label}
+              {label}
             </button>
           ))}
         </div>
@@ -153,11 +144,6 @@ export function LoginForm() {
             {kind === "phone" ? "Nomor WhatsApp" : "Alamat email"}
           </Label>
           <div className="relative">
-            {kind === "phone" && (
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-muted-foreground">
-                <PhoneIcon className="size-4" aria-hidden />
-              </span>
-            )}
             <Input
               id="identifier"
               name={kind === "phone" ? "tel" : "email"}
@@ -173,7 +159,7 @@ export function LoginForm() {
               }}
               aria-invalid={fieldError ? true : undefined}
               aria-describedby={fieldError ? "identifier-error" : "identifier-hint"}
-              className={cn("h-12 rounded-xl bg-card text-base", kind === "phone" && "pl-11 tabular-nums")}
+              className={cn("h-12 rounded-xl bg-card text-base", kind === "phone" && "tabular-nums")}
             />
           </div>
           {fieldError ? (
@@ -193,10 +179,9 @@ export function LoginForm() {
           </Alert>
         )}
 
-        <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={request.isPending}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={request.isPending}>
           {request.isPending ? <Loader2Icon className="animate-spin" /> : null}
           {request.isPending ? "Mengirim kode…" : "Kirim kode OTP"}
-          {!request.isPending && <ArrowRightIcon />}
         </Button>
       </form>
 
@@ -210,11 +195,11 @@ export function LoginForm() {
           <Button
             type="button"
             variant="outline"
-            className="h-12 w-full rounded-xl text-base font-bold"
+            className="h-12 w-full rounded-xl text-base font-semibold"
             disabled={demoLogin.isPending}
             onClick={() => demoLogin.mutate(role)}
           >
-            {demoLogin.isPending ? <Loader2Icon className="animate-spin" aria-hidden /> : <UserRoundIcon aria-hidden />}
+            {demoLogin.isPending && <Loader2Icon className="animate-spin" aria-hidden />}
             Masuk dengan akun demo {role === "MERCHANT" ? "warung" : "pembeli"}
           </Button>
           <p className="text-center text-xs leading-relaxed text-muted-foreground">

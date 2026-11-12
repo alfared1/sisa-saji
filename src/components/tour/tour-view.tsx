@@ -83,11 +83,11 @@ const SLIDE_TRANSITION = {
 };
 
 /** Primary pill used by every bottom-bar action (48 px tall: comfortable thumb target). */
-const ACTION = "h-12 cursor-pointer rounded-xl px-5 text-base font-bold";
+const ACTION = "h-12 cursor-pointer rounded-xl px-5 text-base font-semibold";
 
 /** Secondary actions on the last step: underlined text with a 44 px hit area. */
 const TEXT_ACTION =
-  "inline-flex h-11 cursor-pointer items-center rounded-lg px-1.5 font-bold text-brand-strong underline decoration-brand-strong/40 underline-offset-4 outline-none hover:decoration-brand-strong focus-visible:ring-3 focus-visible:ring-ring/50";
+  "inline-flex h-11 cursor-pointer items-center rounded-lg px-1.5 font-semibold text-brand-strong underline decoration-brand-strong/40 underline-offset-4 outline-none hover:decoration-brand-strong focus-visible:ring-3 focus-visible:ring-ring/50";
 
 const HINT_ID = "tur-petunjuk";
 
@@ -311,7 +311,7 @@ export function TourView() {
             {/* md+: a fixed minimum height (the longest step), so the role switch and the controls do not jump between steps. */}
             <div className="mt-4 md:col-start-1 md:row-start-3 md:mt-9 md:min-h-[23rem] lg:mt-7 lg:min-h-[24rem]">
               {/* Persistent live region: announced politely on every step change. */}
-              <p aria-live="polite" aria-atomic="true" className="text-sm font-bold text-brand-strong tabular-nums">
+              <p aria-live="polite" aria-atomic="true" className="text-sm font-semibold text-brand-strong tabular-nums">
                 {stepCounterLabel(step, total)}
               </p>
               <div className="relative mt-1.5">
@@ -383,7 +383,7 @@ function RoleSwitch({
             <span
               aria-hidden
               className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors md:h-11",
+                "flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors md:h-11",
                 "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary",
                 checked
                   ? "bg-primary text-primary-foreground shadow-soft"
@@ -513,7 +513,7 @@ function SlideText({
       <h2
         id={titleId}
         tabIndex={-1}
-        className="-mx-2 -my-1 rounded-lg px-2 py-1 text-[1.65rem] leading-[1.15] font-extrabold text-balance outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:text-[2rem] lg:text-[2.35rem] lg:leading-[1.08] xl:text-[2.6rem]"
+        className="-mx-2 -my-1 rounded-lg px-2 py-1 text-[1.65rem] leading-[1.15] font-bold text-balance outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:text-[2rem] lg:text-[2.35rem] lg:leading-[1.08] xl:text-[2.6rem]"
       >
         {step.title}
       </h2>

@@ -22,7 +22,7 @@ export function LiveDot({ status }: { status: EventSourceStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] leading-none font-bold",
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] leading-none font-semibold",
         live ? "bg-success-soft text-primary" : "bg-muted text-muted-foreground",
       )}
       title={live ? "Pembaruan real-time aktif" : "Menyambungkan pembaruan real-time…"}
@@ -60,7 +60,7 @@ export function StoreStatusHeader({
             <p className="text-xs font-semibold text-muted-foreground">
               {greeting}, {firstName}
             </p>
-            <h1 className="line-clamp-2 text-xl leading-tight font-extrabold tracking-tight break-words sm:text-2xl">{merchant.merchant_name}</h1>
+            <h1 className="line-clamp-2 text-xl leading-tight font-bold break-words sm:text-2xl">{merchant.merchant_name}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {merchant.merchant_verified ? (
                 <VerifiedBadge />
@@ -104,7 +104,7 @@ export function StoreStatusHeader({
           >
             <span className="min-w-0">
               <span className="block text-[11px] font-semibold text-muted-foreground">Status</span>
-              <span className={cn("block text-lg leading-tight font-extrabold", isOpen ? "text-primary" : "text-foreground/70")}>
+              <span className={cn("block text-lg leading-tight font-bold", isOpen ? "text-primary" : "text-foreground/70")}>
                 {isOpen ? "Buka" : "Tutup"}
               </span>
             </span>

@@ -24,7 +24,7 @@ export function MerchantShellPreview() {
   return (
     <MerchantShell user={DEMO_USER} previewPathname="/merchant/dashboard">
       <div className="space-y-4 p-4 lg:p-8">
-        <h1 className="text-2xl font-extrabold">Dasbor</h1>
+        <h1 className="text-2xl font-bold">Dasbor</h1>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {["Pendapatan hari ini", "Pesanan selesai", "Menunggu diambil", "Pangan diselamatkan"].map((t) => (
             <div key={t} className="rounded-2xl bg-card p-4 ring-1 ring-border">

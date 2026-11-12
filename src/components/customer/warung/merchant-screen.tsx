@@ -117,7 +117,7 @@ function SubscribeButton({ merchant }: { merchant: MerchantDetail }) {
   return (
     <Button
       variant={subscribed ? "secondary" : "outline"}
-      className={cn("h-10 rounded-full px-3.5 font-bold", subscribed && "text-primary")}
+      className={cn("h-10 rounded-full px-3.5 font-semibold", subscribed && "text-primary")}
       aria-pressed={subscribed}
       disabled={mutation.isPending || session.isLoading}
       onClick={() => {
@@ -205,7 +205,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
             title="Warung tidak ditemukan"
             description="Mungkin tautannya salah atau warung ini sudah tidak aktif."
             action={
-              <Button asChild className="h-11 rounded-xl px-5 font-bold">
+              <Button asChild className="h-11 rounded-xl px-5 font-semibold">
                 <Link href="/discover">Cari warung lain</Link>
               </Button>
             }
@@ -270,7 +270,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   {/* The sticky PageHeader already carries the page's h1 (same name). */}
-                  <h2 className="text-xl leading-tight font-extrabold">{m.name}</h2>
+                  <h2 className="text-xl leading-tight font-bold">{m.name}</h2>
                   {(m.is_verified || m.is_pilot) && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {m.is_verified && <VerifiedBadge label="Toko Terverifikasi" />}
@@ -283,7 +283,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
 
               {/* No "·" between the groups (the footprints icon separates them), so none is left dangling on a wrap. */}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="inline-flex items-center gap-1 font-bold">
+                <span className="inline-flex items-center gap-1 font-semibold">
                   <StarIcon className="size-4 fill-amber-400 text-amber-400" aria-hidden />
                   {formatRating(m.rating_avg)}
                   <span className="font-normal text-muted-foreground">({m.total_reviews} ulasan)</span>
@@ -318,17 +318,17 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                   <p className="flex items-center gap-1 text-[11px] font-semibold text-deal">
                     <HandPlatterIcon className="size-3.5" /> Pengambilan
                   </p>
-                  <p className="mt-0.5 text-sm font-extrabold">Ambil sendiri</p>
+                  <p className="mt-0.5 text-sm font-semibold">Ambil sendiri</p>
                 </div>
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
+                <Button asChild variant="outline" className="h-11 rounded-xl font-semibold">
                   <a href={mapsDirectionsUrl(m.lat, m.lng)} target="_blank" rel="noreferrer">
                     <NavigationIcon className="size-4 text-primary" /> Petunjuk Arah
                   </a>
                 </Button>
-                <Button asChild variant="outline" className="h-11 rounded-xl font-bold">
+                <Button asChild variant="outline" className="h-11 rounded-xl font-semibold">
                   <a
                     href={whatsappUrl(m.whatsapp_number, `Halo ${m.name}, saya lihat porsi surplus di Sisa-Saji.`)}
                     target="_blank"
@@ -346,7 +346,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
               <div className="flex items-start gap-3 rounded-2xl bg-muted p-4" role="status">
                 <MoonIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-bold">Warung sedang tutup</p>
+                  <p className="text-sm font-semibold">Warung sedang tutup</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     Ikuti warung ini supaya kamu dapat notifikasi saat porsi surplus dibuka lagi.
                   </p>
@@ -413,11 +413,11 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     <li key={r.id} className="rounded-2xl bg-card p-3.5 ring-1 ring-border">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-extrabold text-primary">
+                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-primary">
                             {r.customer_name.charAt(0)}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{r.customer_name}</p>
+                            <p className="truncate text-sm font-semibold">{r.customer_name}</p>
                             <RatingStars value={r.rating} />
                           </div>
                         </div>
@@ -439,7 +439,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     <li className="lg:col-span-2">
                       <Button
                         variant="ghost"
-                        className="h-11 w-full rounded-xl font-bold"
+                        className="h-11 w-full rounded-xl font-semibold"
                         onClick={() => setShowAllReviews((v) => !v)}
                         aria-expanded={showAllReviews}
                       >

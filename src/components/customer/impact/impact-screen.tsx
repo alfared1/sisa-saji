@@ -12,12 +12,10 @@ import {
   AwardIcon,
   BellOffIcon,
   BellRingIcon,
-  ChartColumnIcon,
   CloudIcon,
   HeartIcon,
   LeafIcon,
   Loader2Icon,
-  RadioIcon,
   SproutIcon,
   StoreIcon,
   TreesIcon,
@@ -60,7 +58,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
         </span>
         <div className="min-w-0">
           <p className="text-xs font-semibold text-white/80">Level kamu</p>
-          <p className="text-2xl leading-tight font-extrabold">{badgeLabel(d.badge_tier)}</p>
+          <p className="text-2xl leading-tight font-bold">{badgeLabel(d.badge_tier)}</p>
         </div>
         <div className="ml-auto text-right">
           <p className="text-xl font-extrabold tabular-nums">{d.loyalty_points.toLocaleString("id-ID")}</p>
@@ -152,7 +150,7 @@ export function PushOptIn() {
         {on ? <BellRingIcon className="size-5" /> : <BellOffIcon className="size-5" />}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold">{on ? "Notifikasi aktif" : "Aktifkan notifikasi"}</p>
+        <p className="text-sm font-semibold">{on ? "Notifikasi aktif" : "Aktifkan notifikasi"}</p>
         <p className="text-xs leading-snug text-muted-foreground">
           {push.permission === "denied"
             ? "Notifikasi diblokir. Izinkan lewat pengaturan browser."
@@ -162,7 +160,7 @@ export function PushOptIn() {
         </p>
       </div>
       {!on && push.permission !== "denied" && (
-        <Button className="h-10 shrink-0 rounded-full px-4 font-bold" onClick={() => void push.subscribe()} disabled={push.isSubscribing}>
+        <Button className="h-10 shrink-0 rounded-full px-4 font-semibold" onClick={() => void push.subscribe()} disabled={push.isSubscribing}>
           {push.isSubscribing ? <Loader2Icon className="animate-spin" /> : "Aktifkan"}
         </Button>
       )}
@@ -221,18 +219,18 @@ function SubscriptionRow({ s }: { s: SubscriptionItem }) {
           <StoreIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <Link href={`/warung/${s.merchant_slug}`} className="block truncate text-[15px] font-bold hover:underline">
+          <Link href={`/warung/${s.merchant_slug}`} className="block truncate text-[15px] font-semibold hover:underline">
             {s.merchant_name}
           </Link>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {s.has_live_batches && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-0.5 text-[11px] font-bold text-deal">
-                <RadioIcon className="size-3" aria-hidden /> Surplus live sekarang
+              <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-0.5 text-[11px] font-semibold text-deal">
+                Surplus live sekarang
               </span>
             )}
             {s.predicted_surplus_portions !== null && s.predicted_surplus_portions > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-primary">
-                <ChartColumnIcon className="size-3" aria-hidden /> Perkiraan malam ini ±{s.predicted_surplus_portions} porsi
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-primary">
+                Perkiraan malam ini ±{s.predicted_surplus_portions} porsi
               </span>
             )}
           </div>
@@ -301,7 +299,7 @@ function PredictiveSubscriptionList() {
           title="Belum ada warung favorit"
           description="Tekan “Ingatkan” di halaman warung untuk dapat kabar saat surplusnya dibuka."
           action={
-            <Button asChild variant="outline" className="h-10 rounded-full px-5 font-bold">
+            <Button asChild variant="outline" className="h-10 rounded-full px-5 font-semibold">
               <Link href="/discover">Jelajahi warung</Link>
             </Button>
           }

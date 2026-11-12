@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChartColumnIcon, CheckIcon, GiftIcon, MegaphoneIcon } from "lucide-react";
+import { ChartColumnIcon, CheckIcon, GiftIcon } from "lucide-react";
 import type { TonightPrediction } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { roundPortions } from "../lib/logic";
@@ -38,7 +38,7 @@ export function AiPredictionAlertCard({
             <ChartColumnIcon className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-bold">
+            <h2 className="text-base font-semibold">
               Perkiraan porsi sisa belum tersedia
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -47,9 +47,9 @@ export function AiPredictionAlertCard({
             </p>
             <Link
               href="/merchant/surplus/new"
-              className="mt-3 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="mt-3 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <MegaphoneIcon className="size-4" aria-hidden /> Publikasikan surplus
+              Publikasikan surplus
             </Link>
           </div>
         </div>
@@ -69,7 +69,7 @@ export function AiPredictionAlertCard({
       className={cn("rounded-3xl bg-impact p-4 text-white shadow-card sm:p-5", className)}
     >
       <p className="text-sm font-semibold text-white/85">Perkiraan malam ini</p>
-      <h2 className="mt-1 text-lg leading-snug font-extrabold sm:text-xl">
+      <h2 className="mt-1 text-lg leading-snug font-bold sm:text-xl">
         Sekitar {portions} porsi kemungkinan belum laku, paling banyak sekitar pukul {clock(prediction.peak_hour)}.
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-white/85">
@@ -122,9 +122,8 @@ export function AiPredictionAlertCard({
 
       <Link
         href={top ? `/merchant/surplus/new?menu=${top.menu_id}` : "/merchant/surplus/new"}
-        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-extrabold text-impact outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
+        className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-impact outline-none transition-colors hover:bg-white/90 focus-visible:ring-3 focus-visible:ring-white/60 sm:w-auto"
       >
-        <MegaphoneIcon className="size-4" aria-hidden />
         Publikasikan sekarang
       </Link>
     </section>

@@ -43,7 +43,7 @@ function OrderCard({ order }: { order: OrderDetail }) {
     >
       <div className="flex items-start justify-between gap-2 p-4 pb-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-bold">{order.merchant.name}</p>
+          <p className="truncate text-[15px] font-semibold">{order.merchant.name}</p>
           {/* Same clipped-separator trick as ImpactLine: when the date wraps, its "·" lands in the clipped margin. */}
           <p className="overflow-hidden text-[11px] text-muted-foreground tabular-nums">
             <span className="-ml-2 flex flex-wrap">
@@ -89,11 +89,11 @@ function OrderCard({ order }: { order: OrderDetail }) {
             </span>
           ) : (
             <>
-              Total <Money value={order.total_customer_paid_idr} className="font-extrabold text-foreground" />
+              Total <Money value={order.total_customer_paid_idr} className="font-semibold text-foreground" />
             </>
           )}
         </div>
-        <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-bold text-primary">
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-primary">
           {ready ? "Buka tiket" : pending ? "Bayar sekarang" : order.status === "COMPLETED" && !order.review ? "Beri ulasan" : "Detail"}
           <ChevronRightIcon className="size-4" />
         </span>
@@ -193,7 +193,7 @@ export function OrdersScreen() {
                   aria-selected={active}
                   onClick={() => setTab(t.key)}
                   className={cn(
-                    "relative inline-flex h-11 shrink-0 items-center gap-1.5 px-3 text-sm font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "relative inline-flex h-11 shrink-0 items-center gap-1.5 px-3 text-sm font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -255,7 +255,7 @@ export function OrdersScreen() {
                 description={EMPTY_COPY[tab].description}
                 action={
                   (tab === "ready" || tab === "done") && (
-                    <Button asChild className="h-11 rounded-xl px-6 font-bold">
+                    <Button asChild className="h-11 rounded-xl px-6 font-semibold">
                       <Link href="/discover">Cari makanan surplus</Link>
                     </Button>
                   )

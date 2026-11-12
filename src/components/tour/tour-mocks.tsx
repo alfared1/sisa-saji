@@ -76,7 +76,7 @@ const CARD = "rounded-2xl bg-card ring-1 ring-border";
 function ScreenTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2 pt-1">
-      <p className="text-[16px] font-extrabold tracking-tight">{children}</p>
+      <p className="text-[16px] font-semibold">{children}</p>
       {aside}
     </div>
   );
@@ -119,7 +119,7 @@ function SambutMock() {
 
       {/* Stays dark green in both themes, so white text keeps its contrast. */}
       <section className="flex min-h-[86px] flex-col justify-center rounded-2xl bg-impact p-3 text-white">
-        <p className="text-[12px] font-bold">Dampak bersama{live?.is_demo_data ? " (data demo)" : ""}</p>
+        <p className="text-[12px] font-semibold">Dampak bersama{live?.is_demo_data ? " (data demo)" : ""}</p>
         {live ? (
           <div className="mt-1.5 grid grid-cols-3 gap-1.5">
             <LiveStat value={fmtMass(live.total_food_saved_grams)} label="pangan" />
@@ -145,7 +145,7 @@ function SambutMock() {
         <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="h-28 rounded-xl" iconClassName="size-12">
           <DiscountBadge pct={50} minutesToClose={null} className="absolute top-2 left-2" />
         </FoodThumb>
-        <p className="mt-2 truncate text-[13px] font-bold">{TIMBEL}</p>
+        <p className="mt-2 truncate text-[13px] font-semibold">{TIMBEL}</p>
         <p className="truncate text-[11px] text-muted-foreground">{DEMO_WARUNG} · 240 m</p>
         <PriceTag original={TIMBEL_PRICE} selling={TIMBEL_RECOVERY} showBadge={false} className="mt-1" />
       </div>
@@ -190,7 +190,7 @@ function DealCard({ deal: d, coach }: { deal: Deal; coach: string }) {
           <DiscountBadge pct={d.pct} minutesToClose={null} size="sm" />
         </Coachmark>
       </div>
-      <p className="mt-2 truncate text-[13px] font-bold">{d.name}</p>
+      <p className="mt-2 truncate text-[13px] font-semibold">{d.name}</p>
       <p className="truncate text-[11px] text-muted-foreground">
         {d.warung} · {d.distance}
       </p>
@@ -209,7 +209,7 @@ function DealRow({ deal: d }: { deal: Deal }) {
     <div className={cn(CARD, "flex gap-2.5 p-2.5 shadow-soft")}>
       <FoodThumb category={d.category} alt={d.name} className="size-[68px] shrink-0 rounded-xl" iconClassName="size-7" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-bold">{d.name}</p>
+        <p className="truncate text-[13px] font-semibold">{d.name}</p>
         <p className="truncate text-[11px] text-muted-foreground">
           {d.warung} · {d.distance}
         </p>
@@ -259,18 +259,18 @@ function CariMock() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-medium text-muted-foreground">Ambil di sekitar</p>
-          <p className="flex items-center gap-1 text-[13px] font-bold">
+          <p className="flex items-center gap-1 text-[13px] font-semibold">
             <span className="truncate">{campus.name}</span>
             <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
           </p>
         </div>
-        <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground px-3 text-[12px] font-bold text-background tabular-nums">
+        <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground px-3 text-[12px] font-semibold text-background tabular-nums">
           {RADIUS_KM} km
           <ChevronDownIcon className="size-3.5" />
         </span>
       </div>
       <div className="pt-1">
-        <p className="flex items-center gap-1.5 text-[15px] leading-tight font-extrabold tracking-tight">
+        <p className="flex items-center gap-1.5 text-[15px] leading-tight font-semibold">
           <FlameIcon className="size-4 shrink-0 text-urgent" />
           Hampir Habis &amp; Diskon Tertinggi
         </p>
@@ -293,7 +293,7 @@ function PesanMock() {
         <div className="flex gap-2.5">
           <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="size-14 shrink-0 rounded-xl" iconClassName="size-6" />
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[13px] leading-snug font-bold">{TIMBEL}</p>
+            <p className="line-clamp-2 text-[13px] leading-snug font-semibold">{TIMBEL}</p>
             <p className="truncate text-[11px] text-muted-foreground">{DEMO_WARUNG}</p>
           </div>
         </div>
@@ -310,7 +310,7 @@ function PesanMock() {
           </p>
         </div>
         <Coachmark label={`Porsi dikunci ${LOCK_MINUTES} menit untukmu`} side="top" align="end" radius="rounded-full" className="shrink-0">
-          <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-bold whitespace-nowrap text-primary-foreground">
+          <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-semibold whitespace-nowrap text-primary-foreground">
             <QrCodeIcon className="size-4" />
             Bayar QRIS
           </span>
@@ -328,16 +328,16 @@ function AmbilMock() {
           <StoreIcon className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-extrabold">{DEMO_WARUNG}</p>
+          <p className="truncate text-[13px] font-semibold">{DEMO_WARUNG}</p>
           <p className="text-[11px] text-muted-foreground">2× Nasi Timbel · ambil sebelum 22.30</p>
         </div>
       </div>
       <div className="flex flex-col items-center px-4 pt-3 pb-4 text-center">
-        <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] font-bold text-brand-strong ring-1 ring-primary/25">
+        <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] font-semibold text-brand-strong ring-1 ring-primary/25">
           <CloudOffIcon className="size-3.5" />
           Tersimpan offline
         </span>
-        <p className="mt-2.5 text-xs font-bold text-muted-foreground">Kode pengambilan</p>
+        <p className="mt-2.5 text-xs font-semibold text-muted-foreground">Kode pengambilan</p>
         <Coachmark label="Tunjukkan ke kasir warung" radius="rounded-2xl" className="mt-1.5">
           <span className="px-2 py-0.5 text-[40px] leading-none font-black tracking-[0.08em] tabular-nums">SJ-8515</span>
         </Coachmark>
@@ -368,7 +368,7 @@ function DampakMock() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-muted-foreground">Level kamu</p>
-            <p className="text-[16px] font-extrabold">Penyelamat</p>
+            <p className="text-[16px] font-semibold">Penyelamat</p>
           </div>
         </div>
         <Coachmark
@@ -390,7 +390,7 @@ function DampakMock() {
                 <li key={l.label} className="flex flex-1 items-center gap-1 last:flex-none">
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold",
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold",
                       l.state === "done" && "bg-brand-soft text-brand-strong",
                       l.state === "current" && "bg-primary text-primary-foreground",
                       l.state === "next" && "bg-muted text-muted-foreground",
@@ -444,10 +444,10 @@ function GabungMock() {
           <StoreIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-extrabold">{DEMO_WARUNG}</p>
+          <p className="truncate text-[14px] font-semibold">{DEMO_WARUNG}</p>
           <p className="text-[11px] text-muted-foreground">Tutup pukul 22.30</p>
         </div>
-        <span className="rounded-full bg-brand-soft px-2 py-1 text-[11px] font-bold text-brand-strong">Buka</span>
+        <span className="rounded-full bg-brand-soft px-2 py-1 text-[11px] font-semibold text-brand-strong">Buka</span>
       </div>
       <Coachmark block label="Masuk ke saldo setelah pesanan diambil" radius="rounded-2xl" className="mb-[calc(72px/var(--z))]">
         <div className={cn(CARD, "w-full p-3 shadow-soft")}>
@@ -457,13 +457,13 @@ function GabungMock() {
         </div>
       </Coachmark>
       <div className={cn(CARD, "divide-y divide-border px-3")}>
-        <p className="py-2 text-[12px] font-bold">Pesanan diambil</p>
+        <p className="py-2 text-[12px] font-semibold">Pesanan diambil</p>
         {PICKED_UP.map((o) => (
           <div key={o.code} className="flex items-center gap-2 py-2 text-[12px]">
             <CircleCheckIcon className="size-4 shrink-0 text-primary" />
-            <span className="font-bold tabular-nums">{o.code}</span>
+            <span className="font-semibold tabular-nums">{o.code}</span>
             <span className="min-w-0 flex-1 truncate text-muted-foreground">{o.portions}× Nasi Timbel</span>
-            <span className="font-bold whitespace-nowrap tabular-nums">{formatIdr(o.portions * TIMBEL_RECOVERY)}</span>
+            <span className="font-semibold whitespace-nowrap tabular-nums">{formatIdr(o.portions * TIMBEL_RECOVERY)}</span>
           </div>
         ))}
       </div>
@@ -479,7 +479,7 @@ function PublikasiMock() {
       <div className={cn(CARD, "mt-1 flex items-center justify-between gap-2 p-2 pl-2.5")}>
         <div className="min-w-0">
           <p className="text-[10.5px] text-muted-foreground">Menu · {MENU_CHOICES.length} pilihan</p>
-          <p className="flex items-center gap-1 text-[13px] font-bold">
+          <p className="flex items-center gap-1 text-[13px] font-semibold">
             {MENU_CHOICES[0]}
             <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           </p>
@@ -488,7 +488,7 @@ function PublikasiMock() {
       </div>
       <div className={cn(CARD, "mb-[calc(70px/var(--z))] p-3 shadow-soft")}>
         {/* Same header as the publisher's "Saran harga" card. */}
-        <p className="flex items-center gap-2 text-[13px] font-bold">
+        <p className="flex items-center gap-2 text-[13px] font-semibold">
           <span className="inline-flex size-7 items-center justify-center rounded-lg bg-brand-soft text-primary">
             <BadgePercentIcon className="size-4" aria-hidden />
           </span>
@@ -508,7 +508,7 @@ function PublikasiMock() {
           </div>
         </Coachmark>
       </div>
-      <span className="flex h-11 items-center justify-center rounded-xl bg-primary text-[14px] font-bold text-primary-foreground">
+      <span className="flex h-11 items-center justify-center rounded-xl bg-primary text-[14px] font-semibold text-primary-foreground">
         Publikasikan Sekarang
       </span>
     </div>
@@ -529,7 +529,7 @@ function EskalasiMock() {
     <div className="space-y-3">
       {/* The curve first (with its time axis and the 22.30 closing mark), the push it triggers below. */}
       <div className={cn(CARD, "mt-1 p-3 shadow-soft")}>
-        <p className="text-[12px] font-bold text-muted-foreground">Kurva harga otomatis</p>
+        <p className="text-[12px] font-semibold text-muted-foreground">Kurva harga otomatis</p>
         {/* Top margin = room for the callout above the 70% column. */}
         <ol className="mt-[calc(58px/var(--z))] flex items-end gap-1.5">
           {ESCALATION.map((s, i) => {
@@ -539,7 +539,7 @@ function EskalasiMock() {
                 <span className="text-[11px] font-extrabold tabular-nums">{s.pct}%</span>
                 <span
                   className={cn(
-                    "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-bold text-white tabular-nums",
+                    "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-semibold text-white tabular-nums",
                     DISCOUNT_VARIANT_CLASS[variant],
                   )}
                   style={{ height: 26 + ((s.pct - 45) / 25) * 70 }}
@@ -563,7 +563,7 @@ function EskalasiMock() {
           })}
           <li className="flex w-9 shrink-0 flex-col items-center gap-1">
             <span className="h-[112px] w-px border-l-2 border-dashed border-border" />
-            <span className="text-[10px] font-bold text-urgent tabular-nums">22.30</span>
+            <span className="text-[10px] font-semibold text-urgent tabular-nums">22.30</span>
           </li>
         </ol>
         <p className="mt-2.5 flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -575,10 +575,10 @@ function EskalasiMock() {
         <LogoMark className="size-8 rounded-lg" title="" />
         <div className="min-w-0 flex-1">
           <p className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span className="font-bold text-foreground">Sisa-Saji</span>
+            <span className="font-semibold text-foreground">Sisa-Saji</span>
             <span>sekarang</span>
           </p>
-          <p className="text-[12px] leading-snug font-bold">Diskon Kilat 70% di {DEMO_WARUNG}</p>
+          <p className="text-[12px] leading-snug font-semibold">Diskon Kilat 70% di {DEMO_WARUNG}</p>
           <p className="text-[11px] leading-snug text-muted-foreground">Nasi Timbel tinggal 5 porsi. Ambil sebelum 22.30.</p>
         </div>
       </div>
@@ -591,7 +591,7 @@ function SerahkanMock() {
     <div className="space-y-3">
       <ScreenTitle
         aside={
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#18201c] px-2.5 py-1.5 text-[11px] font-bold text-white">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#18201c] px-2.5 py-1.5 text-[11px] font-semibold text-white">
             <ScanLineIcon className="size-3.5" />
             Pindai QR
           </span>
@@ -604,7 +604,7 @@ function SerahkanMock() {
       <div className="mb-[calc(70px/var(--z))] flex justify-center">
         <Coachmark label="Kamera bermasalah? Ketik 4 digitnya" radius="rounded-2xl">
           <div className="flex items-center gap-1.5 px-1 py-0.5">
-            <span className="text-[22px] font-extrabold text-muted-foreground">SJ-</span>
+            <span className="text-[22px] font-bold text-muted-foreground">SJ-</span>
             {"8515".split("").map((d, i) => (
               <span
                 key={i}
@@ -619,13 +619,13 @@ function SerahkanMock() {
       <div className="flex items-center gap-2.5 rounded-2xl bg-brand-soft p-3 ring-1 ring-primary/25">
         <CircleCheckIcon className="size-7 shrink-0 text-primary" />
         <div className="min-w-0">
-          <p className="text-[14px] font-extrabold">Pesanan cocok</p>
+          <p className="text-[14px] font-semibold">Pesanan cocok</p>
           <p className="text-[11px] text-muted-foreground">Lunas · ambil sebelum 22.30</p>
         </div>
       </div>
       {/* What to hand over, then the same "Selesaikan Pesanan" step as the real scan screen. */}
       <div className={cn(CARD, "p-2.5")}>
-        <p className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
+        <p className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
           <span>Serahkan</span>
           <span className="tabular-nums">2 porsi</span>
         </p>
@@ -633,10 +633,10 @@ function SerahkanMock() {
           <span className="inline-flex h-9 min-w-11 items-center justify-center rounded-xl bg-primary px-2 text-[16px] font-extrabold text-primary-foreground tabular-nums">
             2×
           </span>
-          <span className="min-w-0 flex-1 text-[13px] leading-snug font-bold">{TIMBEL}</span>
+          <span className="min-w-0 flex-1 text-[13px] leading-snug font-semibold">{TIMBEL}</span>
         </div>
       </div>
-      <span className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[14px] font-extrabold text-primary-foreground">
+      <span className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[14px] font-semibold text-primary-foreground">
         <PackageCheckIcon className="size-5" />
         Selesaikan Pesanan
       </span>
@@ -662,7 +662,7 @@ function AnalitikMock() {
   const max = Math.max(...WEEK.map((d) => d.sold + d.wasted));
   return (
     <div className="space-y-3">
-      <ScreenTitle aside={<span className="rounded-full bg-muted px-2 py-1 text-[11px] font-bold">7 hari</span>}>Analitik</ScreenTitle>
+      <ScreenTitle aside={<span className="rounded-full bg-muted px-2 py-1 text-[11px] font-semibold">7 hari</span>}>Analitik</ScreenTitle>
       <div className="mb-[calc(70px/var(--z))] grid grid-cols-2 gap-2">
         <Coachmark block label="Dari porsi yang tadinya terbuang" radius="rounded-2xl" align="start">
           <div className={cn(CARD, "w-full p-2.5 shadow-soft")}>

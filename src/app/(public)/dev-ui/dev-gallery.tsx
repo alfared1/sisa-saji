@@ -65,7 +65,7 @@ function demoItem(nowMs: number, batch: string, name: string, price: number, ori
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section id={id} className="space-y-3 rounded-3xl bg-card p-4 ring-1 ring-border">
-      <h2 className="text-sm font-extrabold tracking-wide text-muted-foreground uppercase">{title}</h2>
+      <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">{title}</h2>
       {children}
     </section>
   );
@@ -174,7 +174,7 @@ export function DevGallery() {
             <span className="inline-flex items-center gap-1 text-sm font-semibold">
               Warung Nasi Teh Euis <VerifiedBadge compact />
             </span>
-            <Money value={123500} className="font-bold" />
+            <Money value={123500} className="font-semibold" />
             <Money value={2000} prefix="-" className="text-primary" />
           </div>
         </Section>

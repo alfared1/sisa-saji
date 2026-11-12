@@ -1,6 +1,6 @@
 "use client";
 
-import { GiftIcon, TrendingDownIcon } from "lucide-react";
+import { GiftIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { ImpactLine } from "@/components/common/impact-line";
@@ -77,7 +77,7 @@ export function DynamicPriceMenuCard({
         className={cn("size-26 shrink-0 rounded-2xl", inactive && "grayscale")}
       >
         {soldOut && (
-          <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-extrabold text-background uppercase">
+          <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-semibold text-background uppercase">
             Habis
           </span>
         )}
@@ -85,7 +85,7 @@ export function DynamicPriceMenuCard({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start gap-2">
-          <h3 className="line-clamp-2 min-w-0 flex-1 text-[15px] leading-snug font-bold">{batch.menu_name}</h3>
+          <h3 className="line-clamp-2 min-w-0 flex-1 text-[15px] leading-snug font-semibold">{batch.menu_name}</h3>
         </div>
         {batch.is_mystery_bag ? (
           <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-deal">
@@ -102,8 +102,8 @@ export function DynamicPriceMenuCard({
             <DiscountBadge pct={batch.discount_pct} endIso={batch.pickup_end_time} size="sm" className="px-2" />
           )}
           {batch.auto_discount_enabled && !inactive && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-1 text-[11px] leading-none font-bold text-deal">
-              <TrendingDownIcon className="size-3" aria-hidden /> Harga Turun Otomatis
+            <span className="inline-flex items-center gap-1 rounded-full bg-deal-soft px-2 py-1 text-[11px] leading-none font-semibold text-deal">
+              Harga Turun Otomatis
             </span>
           )}
           <StockBadge available={batch.available_stock} className="text-[11px] [&>svg]:size-3" />
@@ -112,7 +112,7 @@ export function DynamicPriceMenuCard({
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">
           <div className="min-w-0">
             {flash && (
-              <span className="mb-0.5 block animate-float-up text-[11px] font-extrabold text-deal">
+              <span className="mb-0.5 block animate-float-up text-[11px] font-semibold text-deal">
                 Harga turun!
               </span>
             )}
@@ -128,7 +128,7 @@ export function DynamicPriceMenuCard({
 
           <div className="relative z-10 shrink-0">
             {inactive ? (
-              <span className="rounded-full bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+              <span className="rounded-full bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
                 {soldOut ? "Habis" : disabledLabel}
               </span>
             ) : qty > 0 ? (
@@ -142,7 +142,7 @@ export function DynamicPriceMenuCard({
               />
             ) : (
               <Button
-                className="h-10 shrink-0 rounded-full px-4 font-bold shadow-soft"
+                className="h-10 shrink-0 rounded-full px-4 font-semibold shadow-soft"
                 onClick={() => onAdd(merchant, cartItemFromBatch(batch))}
                 aria-label={`Tambah ${batch.menu_name} ke keranjang`}
               >

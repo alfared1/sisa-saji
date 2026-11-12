@@ -9,7 +9,6 @@ import { motion } from "motion/react";
 import {
   BellRingIcon,
   CheckIcon,
-  LayoutDashboardIcon,
   Loader2Icon,
   MegaphoneIcon,
   PlusIcon,
@@ -74,7 +73,7 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
             <CheckIcon className="size-10" strokeWidth={3} />
           </motion.span>
         </div>
-        <h1 className="mt-6 text-2xl font-extrabold tracking-tight">Surplus sudah tayang</h1>
+        <h1 className="mt-6 text-2xl font-bold">Surplus sudah tayang</h1>
         <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <BellRingIcon className="size-4 text-deal" aria-hidden />
           {result.notified_devices > 0 ? (
@@ -86,7 +85,7 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
           )}
         </p>
         {seconds !== null && seconds < 600 && (
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-bold text-primary">
+          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1.5 text-xs font-semibold text-primary">
             <TimerIcon className="size-3.5" aria-hidden /> Dipublikasikan dalam {seconds} detik
           </p>
         )}
@@ -116,14 +115,14 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Link
           href="/merchant/dashboard"
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-extrabold text-primary-foreground shadow-card"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-card"
         >
-          <LayoutDashboardIcon className="size-4" /> Kembali ke dasbor
+          Kembali ke dasbor
         </Link>
         <button
           type="button"
           onClick={onAnother}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-5 text-sm font-bold ring-1 ring-border hover:bg-muted"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-5 text-sm font-semibold ring-1 ring-border hover:bg-muted"
         >
           <PlusIcon className="size-4" /> Publikasikan menu lain
         </button>
@@ -269,7 +268,7 @@ export function SurplusPublisherView() {
             title="Belum ada menu aktif"
             description="Tambahkan menu (atau Paket Kejutan) dulu. Setelah itu publikasi surplus cukup 3 ketukan."
             action={
-              <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
+              <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">
                 <PlusIcon className="size-4" /> Tambah menu
               </Link>
             }
@@ -306,7 +305,7 @@ export function SurplusPublisherView() {
       className="flex h-16 w-full items-center justify-between gap-3 rounded-2xl bg-primary pr-3 pl-5 text-left text-primary-foreground shadow-card transition-transform outline-none active:scale-[0.99] focus-visible:ring-4 focus-visible:ring-ring/50 disabled:opacity-60"
     >
       <span className="min-w-0">
-        <span className="block text-base leading-tight font-extrabold">{publish.isPending ? "Mempublikasikan…" : "Publikasikan Sekarang"}</span>
+        <span className="block text-base leading-tight font-semibold">{publish.isPending ? "Mempublikasikan…" : "Publikasikan Sekarang"}</span>
         {/* Only the menu name truncates; the price stays whole. */}
         <span className="flex min-w-0 gap-1 text-xs font-semibold text-primary-foreground/85 tabular-nums">
           <span className="truncate">{menu ? `${stock} porsi ${menu.menu_name}` : "Pilih menu"}</span>
@@ -362,7 +361,7 @@ export function SurplusPublisherView() {
                   onClick={() => setStockChoice(n)}
                   aria-pressed={stock === n}
                   className={cn(
-                    "h-10 min-w-12 rounded-full px-3 text-sm font-bold tabular-nums ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "h-10 min-w-12 rounded-full px-3 text-sm font-semibold tabular-nums ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     stock === n ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
                   )}
                 >
@@ -394,7 +393,7 @@ export function SurplusPublisherView() {
               <TrendingUpIcon className="size-5" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold">Aktifkan Auto-Escalation Diskon</span>
+              <span className="block text-sm font-semibold">Aktifkan Auto-Escalation Diskon</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
                 Diskon naik otomatis hingga 70% bila 30 menit sebelum tutup masih tersisa ≥ 5 porsi. Tidak pernah di bawah harga minimum.
               </span>

@@ -86,9 +86,9 @@ function ImpactInfographic({ order }: { order: OrderDetail }) {
     <section className="relative overflow-hidden rounded-3xl bg-impact p-5 text-white shadow-card">
       <div className="relative flex items-center gap-2">
         <LogoMark className="size-8" />
-        <p className="text-xs font-bold text-white/85">Dampak pesanan {order.order_number}</p>
+        <p className="text-xs font-semibold text-white/85">Dampak pesanan {order.order_number}</p>
       </div>
-      <p className="relative mt-3 text-xl leading-snug font-extrabold text-balance">
+      <p className="relative mt-3 text-xl leading-snug font-bold text-balance">
         Kamu menyelamatkan {formatKg(order.food_saved_grams)} makanan dari {order.merchant.name}!
       </p>
       <div className="relative mt-4 grid grid-cols-2 gap-2">
@@ -161,7 +161,7 @@ export function ImpactCelebrationModal({
           >
             <PartyPopperIcon className="size-10" />
           </motion.span>
-          <DialogTitle className="relative mt-5 text-2xl font-extrabold">Pesanan selesai!</DialogTitle>
+          <DialogTitle className="relative mt-5 text-2xl font-bold">Pesanan selesai!</DialogTitle>
           <DialogDescription className="relative mt-1 text-sm leading-relaxed">
             Terima kasih sudah menyelamatkan makanan dari {order.merchant.name}.
           </DialogDescription>
@@ -185,7 +185,7 @@ export function ImpactCelebrationModal({
           <div className="relative mt-5 grid gap-2">
             {!order.review && (
               <Button
-                className="h-12 rounded-xl text-base font-bold"
+                className="h-12 rounded-xl text-base font-semibold"
                 onClick={() => {
                   onOpenChange(false);
                   onReview();
@@ -194,7 +194,7 @@ export function ImpactCelebrationModal({
                 <StarIcon className="size-4" /> Beri ulasan
               </Button>
             )}
-            <Button variant="outline" className="h-11 rounded-xl font-bold" onClick={() => void shareImpact(order)}>
+            <Button variant="outline" className="h-11 rounded-xl font-semibold" onClick={() => void shareImpact(order)}>
               <Share2Icon className="size-4" /> Bagikan dampakku
             </Button>
           </div>
@@ -265,7 +265,7 @@ export function ReviewFormSheet({
                 </button>
               ))}
             </div>
-            <p className="mt-1 h-5 text-sm font-bold text-foreground/80">{RATING_COPY[rating]}</p>
+            <p className="mt-1 h-5 text-sm font-semibold text-foreground/80">{RATING_COPY[rating]}</p>
           </div>
 
           <fieldset>
@@ -307,7 +307,7 @@ export function ReviewFormSheet({
             />
           </div>
 
-          <Button type="submit" className="h-12 w-full rounded-xl text-base font-bold" disabled={rating < 1 || submit.isPending}>
+          <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={rating < 1 || submit.isPending}>
             {submit.isPending && <Loader2Icon className="size-4 animate-spin" />}
             {rating < 1 ? "Pilih bintang dulu" : "Kirim ulasan"}
           </Button>
@@ -349,13 +349,13 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
       <ImpactInfographic order={order} />
-      <Button variant="outline" className="h-12 rounded-xl font-bold" onClick={() => void shareImpact(order)}>
+      <Button variant="outline" className="h-12 rounded-xl font-semibold" onClick={() => void shareImpact(order)}>
         <Share2Icon className="size-4" /> Bagikan ke Instagram Story / WhatsApp
       </Button>
 
       {order.review ? (
         <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
-          <h2 className="text-sm font-extrabold">Ulasanmu</h2>
+          <h2 className="text-sm font-semibold">Ulasanmu</h2>
           <RatingStars value={order.review.rating} className="mt-2 [&_svg]:size-5" />
           {order.review.comment && <p className="mt-2 text-sm leading-relaxed">{order.review.comment}</p>}
           {order.review.tags.length > 0 && (
@@ -378,7 +378,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
             <MessageSquareHeartIcon className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-extrabold text-balance">Beri ulasan untuk {order.merchant.name}</span>
+            <span className="block text-sm font-semibold text-balance">Beri ulasan untuk {order.merchant.name}</span>
             <span className="block text-xs text-pretty text-muted-foreground">Cuma 10 detik, dan membantu warung makin dipercaya.</span>
           </span>
           <StarIcon className="size-5 fill-amber-400 text-amber-400" />
@@ -392,7 +392,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
       {order.picked_up_at && (
         <p className="text-center text-xs text-muted-foreground">Diambil {formatDateTimeId(order.picked_up_at)} WIB</p>
       )}
-      <Button asChild className="h-12 rounded-xl font-bold">
+      <Button asChild className="h-12 rounded-xl font-semibold">
         <Link href="/discover">Selamatkan makanan lagi</Link>
       </Button>
       </div>

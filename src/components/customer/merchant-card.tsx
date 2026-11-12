@@ -70,7 +70,7 @@ export function MerchantCard({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
-          <h3 className="truncate text-[15px] font-bold">{merchant.name}</h3>
+          <h3 className="truncate text-[15px] font-semibold">{merchant.name}</h3>
           {merchant.is_verified &&
             (variant === "sheet" ? (
               // Static icon, not the tooltip badge: the preview sheet focuses its first control on open.

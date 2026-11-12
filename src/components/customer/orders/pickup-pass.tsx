@@ -8,15 +8,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  AlarmClockIcon,
-  CalendarClockIcon,
-  CloudOffIcon,
-  MapPinIcon,
-  QrCodeIcon,
-  ShieldCheckIcon,
-  StoreIcon,
-} from "lucide-react";
+import { AlarmClockIcon, CalendarClockIcon, CloudOffIcon, MapPinIcon, ShieldCheckIcon, StoreIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { Button } from "@/components/ui/button";
@@ -58,7 +50,7 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
       </p>
       <Button
         variant="ghost"
-        className="mt-2 -ml-2 h-10 rounded-xl px-2 text-sm font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+        className="mt-2 -ml-2 h-10 rounded-xl px-2 text-sm font-semibold text-urgent hover:bg-urgent-soft hover:text-urgent"
         onClick={() => setConfirm(true)}
       >
         Batalkan pesanan
@@ -98,7 +90,7 @@ export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
           <AlarmClockIcon className={cn("size-5", c.isUrgent && "animate-soft-pulse")} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug font-extrabold">
+          <p className="text-sm leading-snug font-semibold">
             {over
               ? "Batas pengambilan sudah lewat"
               : `Segera ambil pesanan kamu sebelum jam ${formatClockId(deadlineIso)}`}
@@ -121,7 +113,7 @@ function LiveBand() {
   return (
     <div className="relative mt-4 h-9 overflow-hidden rounded-xl bg-impact">
       <div className="ss-pass-shine absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/60 to-transparent" aria-hidden />
-      <div className="relative flex h-full items-center justify-center gap-2 text-xs font-extrabold text-white">
+      <div className="relative flex h-full items-center justify-center gap-2 text-xs font-semibold text-white">
         <ShieldCheckIcon className="size-4" />
         Tiket asli · {now !== null ? `${wibTime(new Date(now))}:${String(new Date(now).getSeconds()).padStart(2, "0")}` : "--:--:--"} WIB
       </div>
@@ -143,12 +135,12 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
           <StoreIcon className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-extrabold">{order.merchant.name}</p>
+          <p className="truncate text-sm font-semibold">{order.merchant.name}</p>
           <p className="text-[11px] text-muted-foreground tabular-nums">{order.order_number}</p>
         </div>
         {savedOffline && (
           <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] font-bold text-primary ring-1 ring-primary/20"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20"
             title="Tiket ini tetap bisa dibuka tanpa internet"
           >
             <CloudOffIcon className="size-3.5" /> Tersimpan offline
@@ -157,7 +149,7 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
       </div>
 
       <div className="relative px-5 pt-5 pb-5 text-center">
-        <p className="text-xs font-bold text-muted-foreground">Kode pengambilan</p>
+        <p className="text-xs font-semibold text-muted-foreground">Kode pengambilan</p>
         <p
           className="mt-1 text-5xl font-black tracking-[0.12em] tabular-nums min-[380px]:text-[3.4rem]"
           aria-label={`Kode pengambilan ${pickupCodeLabel(order).split("").join(" ")}`}
@@ -182,7 +174,7 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
           </button>
         )}
         <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-          <QrCodeIcon className="size-3.5" /> Ketuk QR untuk {big ? "perkecil" : "perbesar"}
+          Ketuk QR untuk {big ? "perkecil" : "perbesar"}
         </p>
         <LiveBand />
       </div>
@@ -226,11 +218,11 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
       {/* lg+: sticky details column. */}
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
-        <h2 className="text-sm font-extrabold">Cara ambil pesanan</h2>
+        <h2 className="text-sm font-semibold">Cara ambil pesanan</h2>
         <ol className="mt-3 space-y-3">
           {steps.map((s, i) => (
             <li key={s} className="flex items-start gap-3 text-sm">
-              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground">
+              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {i + 1}
               </span>
               <span className="pt-0.5 leading-snug">{s}</span>

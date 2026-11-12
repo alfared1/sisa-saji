@@ -131,13 +131,15 @@ Harga dibulatkan ke atas ke kelipatan Rp 500 dengan aritmetika integer, lalu `ma
 - **Target kecepatan:** pembeli dari /discover sampai QRIS dalam maksimal 3 layar; mitra dari /merchant/surplus/new sampai "Publikasikan Sekarang" dalam kurang dari 60 detik.
 - **Tema:** Terang, Gelap, atau Sistem lewat next-themes (localStorage `theme`). Gaya gelap selalu lewat varian `dark:` (kelas `.dark` di `<html>`), bukan `prefers-color-scheme`. Setiap layar dicek di kedua tema.
 - **Warna punya peran, bukan hiasan.** Komponen hanya memakai token di `src/app/globals.css`:
-  - hijau = merek dan dampak (`primary`, `brand-soft`, `brand-strong`/`impact`); badge Hemat memakai emerald dari spesifikasi;
+  - hijau = merek dan dampak (`primary`, `brand-soft`, `brand-strong`/`impact`); `primary` sengaja satu langkah dari hijau logo (#005e2f) dan lolos AA sebagai teks di latar krem dan hijau muda; badge Hemat memakai emerald dari spesifikasi;
   - oranye = harga, diskon, dan uang (`deal`, `deal-soft`, `flash`);
   - merah = error dan waktu habis (`urgent`); kuning = label demo dan peringatan (`warning-soft`);
   - selain itu netral (`muted`, `surface`, `food` untuk thumbnail tanpa foto).
 
   Jangan memberi ikon, tile, atau baris menu warna berbeda hanya supaya bervariasi. Pengecualian: bintang rating (kuning), warna merek e-wallet, dan overlay kamera pemindai. Hindari juga gradien dekoratif, orb blur, dan animasi denyut kecuali untuk status yang mendesak.
 - **Bentuk dan label.** Radius dasar 10px. Kartu dan panel memakai `rounded-2xl`/`rounded-3xl`, tombol aksi dan input `rounded-xl`, dan bentuk pil (`rounded-full`) hanya untuk chip, tag, filter, avatar, dan titik status. Label section ditulis huruf kalimat biasa, tanpa `uppercase` dan tanpa spasi huruf lebar. Pengecualian: kode yang harus dibaca dan diketik (SJ-1234, kode voucher) dan stempel "Habis".
+- **Tipografi.** Satu huruf: Plus Jakarta Sans, dibuat desainer Indonesia untuk identitas kota Jakarta. Judul memakai `font-bold` dengan jarak huruf normal (tanpa `tracking-tight`); `font-extrabold` hanya untuk angka yang jadi fokus (harga, statistik, `tabular-nums`); tombol, tab, dan label `font-semibold`; teks biasa regular. Pengecualian: wordmark logo dan kode yang diketik.
+- **Ikon hanya bila membawa arti.** Pakai ikon untuk navigasi, tombol tanpa teks, status (memuat, offline, peringatan), aksi yang dikenali dari bentuknya (kembali, hapus, unduh, bagikan, kamera, scan, WhatsApp), dan baris info (alamat, jam). Jangan menempel ikon di tombol, tab, atau label yang teksnya sudah jelas, dan jangan memberi setiap kartu ubin ikon.
 - **Istilah.** Diskon terbesar menjelang tutup bernama "Diskon Kilat". Level pembeli: Pemula, Penyelamat, Juara Pangan.
 - **Tur produk** (`src/components/tour/`) dirakit dari komponen asli aplikasi di dalam `ScreenPreview` berlabel "Contoh tampilan", tanpa bingkai HP tiruan. Bila tata letak sebuah tiruan berubah, ukur ulang `focusY` di `TOUR_MOCKS`.
 - **Kunjungan pertama:** "/" mengirim tamu baru ke /tour (`?peran=mitra` untuk mitra). Selesai atau lewati tur menyimpan `ss-tour-seen`, sehingga kunjungan berikutnya ke /welcome. Pembeli yang login langsung ke /discover, mitra ke /merchant/dashboard.

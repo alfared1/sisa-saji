@@ -95,7 +95,7 @@ export function MerchantOrdersView() {
         actions={
           <Link
             href="/merchant/orders/scan"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft"
           >
             <ScanLineIcon className="size-4" /> Scan tiket
           </Link>
@@ -104,14 +104,14 @@ export function MerchantOrdersView() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
         <TabsList className="grid h-12! w-full grid-cols-3 rounded-2xl bg-muted p-1 sm:w-auto sm:min-w-[30rem]">
-          <TabsTrigger value="active" className="h-full rounded-xl px-1 text-xs font-bold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
-            <InboxIcon /> Aktif
+          <TabsTrigger value="active" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
+            Aktif
           </TabsTrigger>
-          <TabsTrigger value="today" className="h-full rounded-xl px-1 text-xs font-bold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
-            <ClipboardCheckIcon /> Selesai Hari Ini
+          <TabsTrigger value="today" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
+            Selesai Hari Ini
           </TabsTrigger>
-          <TabsTrigger value="history" className="h-full rounded-xl px-1 text-xs font-bold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
-            <HistoryIcon /> Riwayat
+          <TabsTrigger value="history" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
+            Riwayat
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -160,7 +160,7 @@ export function MerchantOrdersView() {
           <div className="space-y-6">
             {waiting.length > 0 && (
               <section aria-labelledby="waiting-h">
-                <h2 id="waiting-h" className="mb-2 text-sm font-bold">
+                <h2 id="waiting-h" className="mb-2 text-sm font-semibold">
                   Menunggu diambil <span className="text-muted-foreground tabular-nums">({waiting.length})</span>
                 </h2>
                 <OrderList orders={[...waiting].sort((a, b) => Date.parse(a.pickup_deadline_at) - Date.parse(b.pickup_deadline_at))} />
@@ -168,7 +168,7 @@ export function MerchantOrdersView() {
             )}
             {unpaid.length > 0 && (
               <section aria-labelledby="unpaid-h">
-                <h2 id="unpaid-h" className="mb-2 text-sm font-bold">
+                <h2 id="unpaid-h" className="mb-2 text-sm font-semibold">
                   Menunggu pembayaran <span className="text-muted-foreground tabular-nums">({unpaid.length})</span>
                 </h2>
                 <p className="mb-2 text-xs text-muted-foreground">Stok dikunci 10 menit selama pembeli membayar QRIS.</p>
@@ -179,7 +179,7 @@ export function MerchantOrdersView() {
         ) : tab === "today" ? (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2 text-sm">
-              <span className="rounded-full bg-brand-soft px-3 py-1.5 font-bold text-primary tabular-nums">{orders.length} pesanan</span>
+              <span className="rounded-full bg-brand-soft px-3 py-1.5 font-semibold text-primary tabular-nums">{orders.length} pesanan</span>
               <span className="rounded-full bg-card px-3 py-1.5 font-semibold ring-1 ring-border tabular-nums">{portions} porsi</span>
               <span className="rounded-full bg-card px-3 py-1.5 font-semibold ring-1 ring-border tabular-nums">+{formatIdr(payout)}</span>
             </div>
@@ -189,7 +189,7 @@ export function MerchantOrdersView() {
           <div className="space-y-6">
             {groupByDate(orders).map(([date, list]) => (
               <section key={date} aria-label={formatDateLabel(date, today)}>
-                <h2 className="mb-2 text-sm font-bold">
+                <h2 className="mb-2 text-sm font-semibold">
                   {formatDateLabel(date, today)} <span className="font-medium text-muted-foreground tabular-nums">· {list.length} pesanan</span>
                 </h2>
                 <OrderList orders={list} />

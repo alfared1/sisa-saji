@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { GiftIcon, MegaphoneIcon, PencilIcon, PlusIcon, ScaleIcon, ShieldCheckIcon, TagIcon, UtensilsCrossedIcon } from "lucide-react";
+import { GiftIcon, PencilIcon, PlusIcon, UtensilsCrossedIcon } from "lucide-react";
 import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState, errorMessage } from "@/components/common/error-state";
@@ -62,7 +62,7 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
           <Icon className="size-6" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base leading-snug font-bold">{menu.menu_name}</h3>
+          <h3 className="text-base leading-snug font-semibold">{menu.menu_name}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {menu.is_mystery_bag ? "Paket Kejutan" : MENU_CATEGORY_LABELS[menu.category]}
           </p>
@@ -76,13 +76,13 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
       <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
         <div className="rounded-2xl bg-surface p-2.5">
           <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <TagIcon className="size-3" aria-hidden /> Normal
+            Normal
           </dt>
           <dd className="font-extrabold tabular-nums">{formatIdr(menu.original_price_idr)}</dd>
         </div>
         <div className="rounded-2xl bg-surface p-2.5">
           <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <ShieldCheckIcon className="size-3" aria-hidden /> Minimum
+            Minimum
           </dt>
           <dd className="font-extrabold tabular-nums">
             {formatIdr(menu.min_recovery_price_idr)} <span className="text-[11px] font-semibold text-muted-foreground">{floorPct}%</span>
@@ -90,7 +90,7 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
         </div>
         <div className="rounded-2xl bg-surface p-2.5">
           <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <ScaleIcon className="size-3" aria-hidden /> Porsi
+            Porsi
           </dt>
           <dd className="font-extrabold tabular-nums">{menu.portion_weight_grams} g</dd>
         </div>
@@ -106,9 +106,9 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
         {menu.is_active ? (
           <Link
             href={`/merchant/surplus/new?menu=${menu.id}`}
-            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-primary text-sm font-bold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <MegaphoneIcon className="size-4" /> Publikasikan
+            Publikasikan
           </Link>
         ) : (
           <span className="inline-flex h-11 items-center justify-center rounded-2xl bg-muted text-xs font-semibold text-muted-foreground">Aktifkan untuk publikasi</span>
@@ -197,7 +197,7 @@ export function MerchantMenusView() {
           <button
             type="button"
             onClick={() => setEditing({ mode: "create" })}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <PlusIcon className="size-4" /> Tambah menu
           </button>
@@ -217,7 +217,7 @@ export function MerchantMenusView() {
           {renderList(active)}
           {inactive.length > 0 && (
             <section aria-labelledby="inactive-h">
-              <h2 id="inactive-h" className="mb-2 text-sm font-bold text-muted-foreground">
+              <h2 id="inactive-h" className="mb-2 text-sm font-semibold text-muted-foreground">
                 Nonaktif ({inactive.length})
               </h2>
               {renderList(inactive)}
@@ -232,7 +232,7 @@ export function MerchantMenusView() {
           className={cn("overflow-hidden", isDesktop ? "data-[side=right]:sm:max-w-lg" : "max-h-[92dvh] rounded-t-3xl pb-[env(safe-area-inset-bottom)]")}
         >
           <SheetHeader className="px-5 pt-5 pb-0">
-            <SheetTitle className="text-xl font-extrabold">{editing?.mode === "edit" ? "Ubah menu" : "Menu baru"}</SheetTitle>
+            <SheetTitle className="text-xl font-bold">{editing?.mode === "edit" ? "Ubah menu" : "Menu baru"}</SheetTitle>
             <SheetDescription>{editing?.mode === "edit" ? editing.menu.menu_name : "Cukup sekali. Setelah ini publikasi surplus tinggal 3 ketukan."}</SheetDescription>
           </SheetHeader>
           {/* Only the form scrolls, so the title and the close button stay in view. */}

@@ -31,7 +31,7 @@ export function DemoLoginButtons({ demo, className }: { demo: boolean; className
             key={role}
             type="button"
             variant={primary ? "default" : "outline"}
-            className="h-12 rounded-xl px-5 text-base font-bold"
+            className="h-12 rounded-xl px-5 text-base font-semibold"
             disabled={login.isPending}
             onClick={() => login.mutate(role)}
           >
@@ -39,7 +39,7 @@ export function DemoLoginButtons({ demo, className }: { demo: boolean; className
             {label}
           </Button>
         ) : (
-          <Button key={role} asChild variant={primary ? "default" : "outline"} className="h-12 rounded-xl px-5 text-base font-bold">
+          <Button key={role} asChild variant={primary ? "default" : "outline"} className="h-12 rounded-xl px-5 text-base font-semibold">
             <Link href={role === "MERCHANT" ? "/auth/login?role=MERCHANT" : "/discover"}>
               <Icon aria-hidden />
               {label}

@@ -61,7 +61,7 @@ export function ErrorState({
       <span className="inline-flex size-16 items-center justify-center rounded-3xl bg-urgent-soft text-urgent">
         <Icon className="size-7" aria-hidden />
       </span>
-      <h3 className="mt-2 text-base font-bold">{heading}</h3>
+      <h3 className="mt-2 text-base font-semibold">{heading}</h3>
       <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{body}</p>
       {onRetry && (
         <Button className="mt-2 h-10 rounded-full px-5" onClick={onRetry} disabled={retrying}>

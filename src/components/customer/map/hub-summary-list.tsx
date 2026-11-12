@@ -29,11 +29,11 @@ export function HubSummaryList({
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3
                 id={headingId}
-                className="flex min-w-0 items-center gap-2 text-xs font-bold text-muted-foreground"
+                className="flex min-w-0 items-center gap-2 text-xs font-semibold text-muted-foreground"
               >
                 <span className="truncate">{r.region}</span>
                 {r.isHome && (
-                  <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-bold tracking-normal text-primary normal-case">
+                  <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold tracking-normal text-primary normal-case">
                     Pusat
                   </span>
                 )}
@@ -61,7 +61,7 @@ export function HubSummaryList({
                         <GraduationCapIcon className="size-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm leading-snug font-bold [overflow-wrap:anywhere]">{h.hub.name}</span>
+                        <span className="block text-sm leading-snug font-semibold [overflow-wrap:anywhere]">{h.hub.name}</span>
                         {/*
                           Wraps between parts, never inside "19 menu live". Each "·" sits in its
                           part's left padding, which falls into the clipped negative margin at
@@ -83,7 +83,7 @@ export function HubSummaryList({
                         </span>
                       </span>
                       {live && (
-                        <span className="shrink-0 rounded-full bg-brand-soft px-2 py-1 text-[11px] leading-none font-bold text-primary tabular-nums">
+                        <span className="shrink-0 rounded-full bg-brand-soft px-2 py-1 text-[11px] leading-none font-semibold text-primary tabular-nums">
                           {h.portions} porsi
                         </span>
                       )}

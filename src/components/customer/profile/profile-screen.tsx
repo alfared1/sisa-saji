@@ -79,7 +79,7 @@ function LinkRow({
         <Icon className="size-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-bold">{label}</span>
+        <span className="block text-sm font-semibold">{label}</span>
         {hint && <span className="block truncate text-xs text-muted-foreground">{hint}</span>}
       </span>
       {trailing ?? <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" />}
@@ -210,7 +210,7 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
         <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={onDone} disabled={save.isPending}>
           Batal
         </Button>
-        <Button type="submit" className="h-11 rounded-xl font-bold" disabled={save.isPending}>
+        <Button type="submit" className="h-11 rounded-xl font-semibold" disabled={save.isPending}>
           {save.isPending && <Loader2Icon className="animate-spin" />} Simpan
         </Button>
       </div>
@@ -261,17 +261,17 @@ export function ProfileScreen() {
         ) : (
           <section className="overflow-hidden rounded-3xl bg-card shadow-soft ring-1 ring-border lg:col-start-1 lg:row-start-2">
             <div className="flex items-center gap-3 p-4">
-              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground">
+              <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
                 {initials(user.full_name) || "S"}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-extrabold">{user.full_name}</p>
+                <p className="truncate text-base font-semibold">{user.full_name}</p>
                 <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                   {user.phone_number ? <PhoneIcon className="size-3" /> : <MailIcon className="size-3" />}
                   {user.phone_number ?? user.email}
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-primary">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-primary">
                     <LeafIcon className="size-3" /> {badgeLabel(user.badge_tier)}
                   </span>
                   {user.campus_or_area && (
@@ -347,7 +347,7 @@ export function ProfileScreen() {
         {user && (
           <Button
             variant="ghost"
-            className="h-12 rounded-xl font-bold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-4 lg:mt-2 lg:justify-self-start lg:px-6"
+            className="h-12 rounded-xl font-semibold text-urgent hover:bg-urgent-soft hover:text-urgent lg:col-start-1 lg:row-start-4 lg:mt-2 lg:justify-self-start lg:px-6"
             onClick={() => setConfirmLogout(true)}
           >
             <LogOutIcon className="size-4" /> Keluar

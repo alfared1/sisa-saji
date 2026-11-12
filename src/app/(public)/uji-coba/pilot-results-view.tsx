@@ -24,7 +24,7 @@ function Figure({ value, unit, label }: { value: string; unit?: string; label: s
     <div className="rounded-2xl bg-card p-4 ring-1 ring-border">
       <p className="text-2xl leading-tight font-extrabold tabular-nums sm:text-3xl">
         {value}
-        {unit && <span className="ml-1 text-base font-bold text-muted-foreground">{unit}</span>}
+        {unit && <span className="ml-1 text-base font-semibold text-muted-foreground">{unit}</span>}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
@@ -59,11 +59,11 @@ function LeftoverSection({ l }: { l: PilotStats["leftovers"] }) {
       ) : (
         <div className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border">
           {l.waste_reduction_pct !== null ? (
-            <p className="text-2xl leading-tight font-extrabold sm:text-3xl">
+            <p className="text-2xl leading-tight font-bold sm:text-3xl">
               Porsi yang dibuang {wasteChangeText(l.waste_reduction_pct)}
             </p>
           ) : (
-            <p className="text-base font-bold">Perbandingan dengan sebelum uji coba belum tersedia.</p>
+            <p className="text-base font-semibold">Perbandingan dengan sebelum uji coba belum tersedia.</p>
           )}
           <p className="mt-1 text-sm text-muted-foreground">
             Dibanding sebelum ikut uji coba, dari {l.nights_reported} malam laporan.
@@ -112,7 +112,7 @@ export function PilotResultsView() {
           <ArrowLeftIcon className="size-4" aria-hidden /> Beranda
         </Link>
 
-        <h1 className="mt-2 text-3xl leading-tight font-extrabold sm:text-4xl">Hasil uji coba di warung sungguhan</h1>
+        <h1 className="mt-2 text-3xl leading-tight font-bold sm:text-4xl">Hasil uji coba di warung sungguhan</h1>
         <p className="mt-3 max-w-prose text-base leading-relaxed text-muted-foreground">
           Angka di halaman ini hanya berasal dari warung yang ikut uji coba lapangan. Data contoh di aplikasi demo tidak
           ikut dihitung.
@@ -189,7 +189,7 @@ export function PilotResultsView() {
                     <li key={d.date} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                       <span>{dateLabel(`${d.date}T12:00:00+07:00`)}</span>
                       <span className="tabular-nums">
-                        <b className="font-extrabold">{d.portions_rescued}</b> porsi · {kg(d.food_saved_grams)} kg
+                        <b className="font-semibold">{d.portions_rescued}</b> porsi · {kg(d.food_saved_grams)} kg
                       </span>
                     </li>
                   ))}
@@ -200,7 +200,7 @@ export function PilotResultsView() {
         )}
 
         <section aria-labelledby="cara-hitung" className="mt-10 rounded-2xl bg-muted p-4 text-sm leading-relaxed text-foreground/85">
-          <h2 id="cara-hitung" className="font-bold text-foreground">
+          <h2 id="cara-hitung" className="font-semibold text-foreground">
             Cara menghitung
           </h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">

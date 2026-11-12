@@ -15,15 +15,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  FootprintsIcon,
-  GiftIcon,
-  HandPlatterIcon,
-  Loader2Icon,
-  QrCodeIcon,
-  ShoppingBagIcon,
-  StoreIcon,
-} from "lucide-react";
+import { FootprintsIcon, GiftIcon, HandPlatterIcon, Loader2Icon, QrCodeIcon, StoreIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { useAddToCart } from "@/components/common/diff-merchant-dialog";
 import { DiscountBadge } from "@/components/common/discount-badge";
@@ -283,7 +275,7 @@ function QuickOrderBody({
           <div className={cn("min-w-0 flex-1", desktop && "pt-1 pr-8")}>
             <DiscountBadge pct={batch.discount_pct} endIso={batch.pickup_end_time} />
             <ResponsiveSheetTitle
-              className={cn("mt-1.5 line-clamp-2 text-lg leading-snug font-extrabold", desktop && "mt-2 text-xl")}
+              className={cn("mt-1.5 line-clamp-2 text-lg leading-snug font-bold", desktop && "mt-2 text-xl")}
             >
               {batch.menu_name}
             </ResponsiveSheetTitle>
@@ -325,7 +317,7 @@ function QuickOrderBody({
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-muted/70 p-3">
           <div className="min-w-0">
-            <p className="flex items-center gap-1 text-sm font-bold">
+            <p className="flex items-center gap-1 text-sm font-semibold">
               <HandPlatterIcon className="size-4 text-deal" aria-hidden /> Ambil Sendiri di Warung
             </p>
             <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
@@ -359,7 +351,7 @@ function QuickOrderBody({
       <ResponsiveSheetFooter className={cn("gap-2 pt-3 pb-5", desktop && "flex-row px-6 pt-4 pb-6 *:flex-1")}>
         <Button
           ref={ctaRef}
-          className="h-12 w-full rounded-xl text-base font-bold shadow-soft"
+          className="h-12 w-full rounded-xl text-base font-semibold shadow-soft"
           disabled={blocked || checkout.isPending || session.isLoading}
           onClick={order}
         >
@@ -373,11 +365,11 @@ function QuickOrderBody({
         {!blocked && (
           <Button
             variant="outline"
-            className={cn("h-11 w-full rounded-xl font-bold", desktop && "h-12")}
+            className={cn("h-11 w-full rounded-xl font-semibold", desktop && "h-12")}
             disabled={checkout.isPending}
             onClick={() => onAddToCart(qty)}
           >
-            <ShoppingBagIcon className="size-4" aria-hidden /> Tambah ke Keranjang
+            Tambah ke Keranjang
           </Button>
         )}
       </ResponsiveSheetFooter>

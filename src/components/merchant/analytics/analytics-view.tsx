@@ -90,10 +90,10 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
       <div className="bg-gradient-to-br from-deal-soft to-card p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-deal px-2 py-1 text-[11px] font-bold text-deal-foreground">
+            <span className="inline-flex items-center gap-1 rounded-full bg-deal px-2 py-1 text-[11px] font-semibold text-deal-foreground">
               <CrownIcon className="size-3.5" aria-hidden /> Premium
             </span>
-            <h2 id="premium-h" className="mt-2 text-lg font-extrabold">
+            <h2 id="premium-h" className="mt-2 text-lg font-bold">
               {isPremium ? "Kamu Mitra Terverifikasi" : "Jadi Mitra Terverifikasi"}
             </h2>
           </div>
@@ -125,7 +125,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-bold ring-1 ring-border hover:bg-muted"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted"
             >
               Perpanjang 30 hari
             </button>
@@ -134,9 +134,9 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-deal text-sm font-extrabold text-deal-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-deal text-sm font-semibold text-deal-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <CrownIcon className="size-4" /> Upgrade ke Premium
+            Upgrade ke Premium
           </button>
         )}
       </div>
@@ -211,7 +211,7 @@ export function MerchantAnalyticsView() {
                 aria-checked={range === r}
                 onClick={() => setRange(r)}
                 className={cn(
-                  "inline-flex h-9 min-w-16 items-center justify-center gap-1 rounded-full px-3 text-xs font-bold tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "inline-flex h-9 min-w-16 items-center justify-center gap-1 rounded-full px-3 text-xs font-semibold tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   range === r ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
                 )}
               >

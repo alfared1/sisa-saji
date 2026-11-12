@@ -7,7 +7,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, ClockIcon, LandmarkIcon, MapPinIcon, StoreIcon, UtensilsIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ClockIcon,
+  LandmarkIcon,
+  MapPinIcon,
+  StoreIcon,
+  UtensilsIcon,
+} from "lucide-react";
 import { errorMessage } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { SESSION_QUERY_KEY, useSession } from "@/hooks/use-session";
@@ -146,7 +154,7 @@ export function OnboardingWizard() {
           <current.icon className="size-6" aria-hidden />
         </span>
         <div>
-          <h1 className="text-2xl leading-tight font-extrabold tracking-tight">{current.title}</h1>
+          <h1 className="text-2xl leading-tight font-bold">{current.title}</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{current.subtitle}</p>
         </div>
       </div>
@@ -170,7 +178,7 @@ export function OnboardingWizard() {
                   pending={finish.isPending}
                   submitLabel={
                     <>
-                      <CheckIcon /> Selesai & buka dasbor
+                      Selesai & buka dasbor
                     </>
                   }
                   onSubmit={(menu) => submitWith(menu)}
@@ -240,7 +248,7 @@ export function OnboardingWizard() {
                       Lewati
                     </Button>
                   )}
-                  <Button type="submit" className="h-12 flex-1 rounded-xl text-base font-bold">
+                  <Button type="submit" className="h-12 flex-1 rounded-xl text-base font-semibold">
                     Lanjut <ArrowRightIcon />
                   </Button>
                 </div>

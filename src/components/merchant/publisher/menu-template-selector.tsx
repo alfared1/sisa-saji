@@ -60,21 +60,21 @@ export function MenuTemplateSelector({
                 <Icon className="size-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="line-clamp-2 block text-sm leading-tight font-bold">{m.menu_name}</span>
+                <span className="line-clamp-2 block text-sm leading-tight font-semibold">{m.menu_name}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">
                   {formatIdr(m.original_price_idr)} · min {formatIdr(m.min_recovery_price_idr)}
                 </span>
                 <span className="mt-1 flex flex-wrap gap-1">
                   {m.is_mystery_bag && (
-                    <span className="rounded-full bg-deal px-1.5 py-0.5 text-[10px] leading-none font-bold text-deal-foreground">Paket Kejutan</span>
+                    <span className="rounded-full bg-deal px-1.5 py-0.5 text-[10px] leading-none font-semibold text-deal-foreground">Paket Kejutan</span>
                   )}
                   {pred !== undefined && pred > 0 && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] leading-none font-bold text-primary">
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] leading-none font-semibold text-primary">
                       Perkiraan ±{roundPortions(pred)} sisa
                     </span>
                   )}
                   {liveMenuIds.has(m.id) && (
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none font-bold text-muted-foreground">Sedang tayang</span>
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none font-semibold text-muted-foreground">Sedang tayang</span>
                   )}
                 </span>
               </span>

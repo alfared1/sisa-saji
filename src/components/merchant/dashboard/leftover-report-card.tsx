@@ -82,7 +82,7 @@ function LeftoverForm({ view, onDate }: { view: LeftoverReportView; onDate: (d: 
       <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {LEFTOVER_DESTINATIONS.map((k) => (
           <li key={k} className="rounded-2xl bg-muted/50 p-3">
-            <p className="text-sm font-bold">{LEFTOVER_LABELS[k].label}</p>
+            <p className="text-sm font-semibold">{LEFTOVER_LABELS[k].label}</p>
             <p className="mb-2 text-xs text-muted-foreground">{LEFTOVER_LABELS[k].hint}</p>
             <Stepper
               size="md"
@@ -112,7 +112,7 @@ function LeftoverForm({ view, onDate }: { view: LeftoverReportView; onDate: (d: 
         </p>
       )}
 
-      <Button type="submit" className="mt-4 h-11 w-full rounded-xl font-bold sm:w-auto sm:px-5" disabled={save.isPending}>
+      <Button type="submit" className="mt-4 h-11 w-full rounded-xl font-semibold sm:w-auto sm:px-5" disabled={save.isPending}>
         {save.isPending && <Loader2Icon className="animate-spin" aria-hidden />}
         {view.report ? "Perbarui laporan" : "Simpan laporan"}
       </Button>
@@ -146,7 +146,7 @@ export function LeftoverReportCard({ className }: { className?: string }) {
       ) : q.isError ? (
         <p className="text-sm text-muted-foreground">
           Laporan sisa belum bisa dimuat.{" "}
-          <button type="button" className="font-bold text-primary hover:underline" onClick={() => void q.refetch()}>
+          <button type="button" className="font-semibold text-primary hover:underline" onClick={() => void q.refetch()}>
             Coba lagi
           </button>
         </p>

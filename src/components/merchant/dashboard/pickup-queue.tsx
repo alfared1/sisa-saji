@@ -15,7 +15,7 @@ export function IncomingPickupQueue({ orders, className }: { orders: OrderDetail
     <section aria-labelledby="queue-heading" className={cn("rounded-3xl bg-card shadow-soft ring-1 ring-border", className)}>
       <header className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-5 sm:pt-5">
         <div>
-          <h2 id="queue-heading" className="text-lg leading-tight font-extrabold tracking-tight">
+          <h2 id="queue-heading" className="text-lg leading-tight font-bold">
             Antrean ambil
           </h2>
           <p className="text-xs text-muted-foreground">
@@ -36,7 +36,7 @@ export function IncomingPickupQueue({ orders, className }: { orders: OrderDetail
       <div className="p-4 sm:p-5">
         <Link
           href="/merchant/orders/scan"
-          className="mb-3 flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-base font-extrabold text-primary-foreground shadow-card outline-none transition-transform active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="mb-3 flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary px-4 text-base font-semibold text-primary-foreground shadow-card outline-none transition-transform active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <ScanLineIcon className="size-5" /> Scan / Verifikasi
         </Link>

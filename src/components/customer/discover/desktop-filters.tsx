@@ -11,7 +11,7 @@ import { RADIUS_OPTIONS, formatRadius, useLocationStore } from "@/stores/locatio
 
 export function RailLabel({ children, id }: { children: ReactNode; id?: string }) {
   return (
-    <p id={id} className="text-xs font-bold text-muted-foreground">
+    <p id={id} className="text-xs font-semibold text-muted-foreground">
       {children}
     </p>
   );
@@ -43,7 +43,7 @@ export function SegmentedRadio<T extends string | number>({
             aria-checked={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "inline-flex h-8 items-center rounded-full px-3 text-xs font-bold tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "inline-flex h-8 items-center rounded-full px-3 text-xs font-semibold tabular-nums transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               active ? "bg-foreground text-background" : "bg-muted/70 text-foreground/80 hover:bg-muted",
             )}
           >

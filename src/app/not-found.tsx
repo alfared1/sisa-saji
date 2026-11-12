@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CompassIcon, HomeIcon, SoupIcon } from "lucide-react";
+import { SoupIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
 
@@ -26,20 +26,20 @@ export default function NotFound() {
               404
             </span>
           </div>
-          <h1 className="mt-8 text-2xl font-extrabold">Yah, porsinya sudah habis</h1>
+          <h1 className="mt-8 text-2xl font-bold">Yah, porsinya sudah habis</h1>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
             Halaman yang kamu cari tidak ditemukan atau sudah dipindahkan. Masih banyak makanan surplus lain yang
             menunggu diselamatkan!
           </p>
           <div className="mt-8 grid w-full max-w-xs gap-2">
-            <Button asChild className="h-12 rounded-xl text-base font-bold">
+            <Button asChild className="h-12 rounded-xl text-base font-semibold">
               <Link href="/discover">
-                <CompassIcon className="size-5" /> Cari makanan surplus
+                Cari makanan surplus
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-12 rounded-xl font-bold">
+            <Button asChild variant="outline" className="h-12 rounded-xl font-semibold">
               <Link href="/welcome">
-                <HomeIcon className="size-4" /> Ke halaman utama
+                Ke halaman utama
               </Link>
             </Button>
           </div>

@@ -37,7 +37,7 @@ function ProofPhoto() {
 
   return (
     <div>
-      <p className="mb-2 text-xs font-bold text-muted-foreground">Foto bukti bungkusan (opsional)</p>
+      <p className="mb-2 text-xs font-semibold text-muted-foreground">Foto bukti bungkusan (opsional)</p>
       {preview ? (
         <div className="relative overflow-hidden rounded-2xl ring-1 ring-border">
           {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
@@ -94,14 +94,14 @@ export function OrderVerificationPanel({
       <div className="flex items-center gap-3">
         <CustomerAvatar name={order.customer.full_name} className="size-12" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-lg leading-tight font-extrabold">{order.customer.full_name}</p>
+          <p className="truncate text-lg leading-tight font-bold">{order.customer.full_name}</p>
           <p className="text-xs font-medium text-muted-foreground tabular-nums">{order.order_number}</p>
         </div>
         <OrderStatusPill status={order.status} />
       </div>
 
       <div className="rounded-2xl bg-surface p-3 ring-1 ring-border">
-        <p className="mb-2 flex items-center justify-between text-xs font-bold text-muted-foreground">
+        <p className="mb-2 flex items-center justify-between text-xs font-semibold text-muted-foreground">
           <span>Serahkan</span>
           <span className="tabular-nums">{portions} porsi</span>
         </p>
@@ -111,20 +111,20 @@ export function OrderVerificationPanel({
               <span className="inline-flex h-10 min-w-12 items-center justify-center rounded-xl bg-primary px-2 text-lg font-extrabold text-primary-foreground tabular-nums">
                 {i.quantity}×
               </span>
-              <span className="min-w-0 flex-1 text-base leading-snug font-bold">{i.menu_name}</span>
+              <span className="min-w-0 flex-1 text-base leading-snug font-semibold">{i.menu_name}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {order.uses_own_lunchbox && (
-        <p className="flex items-center gap-2 rounded-2xl bg-brand-soft px-3 py-2.5 text-sm font-bold text-primary">
+        <p className="flex items-center gap-2 rounded-2xl bg-brand-soft px-3 py-2.5 text-sm font-semibold text-primary">
           <RecycleIcon className="size-5 shrink-0" aria-hidden /> Bawa wadah sendiri, tak perlu kemasan sekali pakai
         </p>
       )}
 
       {order.payment_method === "BAYAR_DI_WARUNG" && !order.paid_at && (
-        <p className="rounded-2xl bg-deal-soft px-3 py-2.5 text-sm font-bold text-deal">
+        <p className="rounded-2xl bg-deal-soft px-3 py-2.5 text-sm font-semibold text-deal">
           Tagih {formatIdr(order.total_customer_paid_idr)} dari pembeli (bayar di warung, tunai atau QRIS warung).
         </p>
       )}
@@ -158,7 +158,7 @@ export function OrderVerificationPanel({
         <Button variant="outline" className="h-14 rounded-2xl px-4" onClick={onCancel} disabled={completing}>
           Batal
         </Button>
-        <Button className="h-14 rounded-2xl text-base font-extrabold" onClick={onComplete} disabled={completing}>
+        <Button className="h-14 rounded-2xl text-base font-semibold" onClick={onComplete} disabled={completing}>
           {completing ? <Loader2Icon className="size-5 animate-spin" /> : <PackageCheckIcon className="size-5" />}
           {completing ? "Menyelesaikan…" : "Selesaikan Pesanan"}
         </Button>
@@ -179,7 +179,7 @@ export function VerificationSuccess({ order, onNext }: { order: OrderDetail; onN
         <CheckCircle2Icon className="size-9" />
       </motion.span>
       <div>
-        <p className="text-xl font-extrabold">Pesanan selesai!</p>
+        <p className="text-xl font-bold">Pesanan selesai!</p>
         <p className="mt-1 text-sm text-muted-foreground">
           {order.customer.full_name} · {order.order_number}
         </p>
@@ -203,7 +203,7 @@ export function VerificationSuccess({ order, onNext }: { order: OrderDetail; onN
           <p className="text-[11px] text-muted-foreground">CO₂e dicegah</p>
         </div>
       </div>
-      <Button autoFocus className="h-14 w-full rounded-2xl text-base font-extrabold" onClick={onNext}>
+      <Button autoFocus className="h-14 w-full rounded-2xl text-base font-semibold" onClick={onNext}>
         <ScanLineIcon className="size-5" /> Scan berikutnya
       </Button>
     </motion.div>
@@ -216,7 +216,7 @@ export function VerificationPlaceholder({ className }: { className?: string }) {
       <span className="inline-flex size-14 items-center justify-center rounded-3xl bg-brand-soft text-primary">
         <TicketIcon className="size-6" />
       </span>
-      <p className="text-base font-bold">Belum ada tiket diperiksa</p>
+      <p className="text-base font-semibold">Belum ada tiket diperiksa</p>
       <p className="max-w-64 text-sm text-muted-foreground">Rincian pesanan yang harus diserahkan muncul di sini setelah QR dipindai atau kode diketik.</p>
     </div>
   );

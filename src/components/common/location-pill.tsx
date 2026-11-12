@@ -67,7 +67,7 @@ export function LocationPill({
           <span className={cn("block text-[11px] font-medium text-muted-foreground", compact && "truncate leading-tight")}>
             Ambil di sekitar
           </span>
-          <span className={cn("flex items-center gap-1 text-sm font-bold", compact && "leading-tight")}>
+          <span className={cn("flex items-center gap-1 text-sm font-semibold", compact && "leading-tight")}>
             <span className={cn("truncate", !hydrated && "opacity-60")}>{shown}</span>
             <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-y-px" />
           </span>
@@ -77,7 +77,7 @@ export function LocationPill({
       {!allIndonesia && (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground px-3 text-xs font-bold text-background tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground px-3 text-xs font-semibold text-background tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             aria-label={`Radius ${formatRadius(radius)}. Ubah radius`}
           >
             {formatRadius(radius)}

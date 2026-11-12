@@ -104,7 +104,7 @@ function GroupSwatch({ idle = false }: { idle?: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-card text-[9px] leading-none font-extrabold",
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-card text-[9px] leading-none font-semibold",
         idle
           ? "border-2 border-dashed border-muted-foreground/80 text-muted-foreground"
           : "border-[3px] border-primary text-foreground",
@@ -144,13 +144,13 @@ function MapLegend({ scope }: { scope: MapScope }) {
           <li className="flex items-center gap-2">
             <GroupSwatch />
             <span>
-              <span className="font-extrabold text-foreground">Angka</span> = jumlah warung, klik untuk memperbesar
+              <span className="font-semibold text-foreground">Angka</span> = jumlah warung, klik untuk memperbesar
             </span>
           </li>
           <li className="flex items-center gap-2">
             <GroupSwatch idle />
             <span>
-              <span className="font-extrabold text-foreground">Garis putus-putus</span> = belum ada yang membuka surplus
+              <span className="font-semibold text-foreground">Garis putus-putus</span> = belum ada yang membuka surplus
             </span>
           </li>
         </>
@@ -160,7 +160,7 @@ function MapLegend({ scope }: { scope: MapScope }) {
           <FlashSwatch />
         </span>
         <span>
-          <span className="font-extrabold text-flash dark:text-flash-accent">Pin oranye berdenyut</span> = Diskon Kilat,
+          <span className="font-semibold text-flash dark:text-flash-accent">Pin oranye berdenyut</span> = Diskon Kilat,
           tutup &lt; 45 menit
         </span>
       </li>
@@ -169,7 +169,7 @@ function MapLegend({ scope }: { scope: MapScope }) {
           <IdleSwatch />
         </span>
         <span>
-          <span className="font-extrabold text-foreground">Titik abu-abu</span> = warung belum membuka surplus
+          <span className="font-semibold text-foreground">Titik abu-abu</span> = warung belum membuka surplus
         </span>
       </li>
     </ul>
@@ -184,7 +184,7 @@ function PhoneLegendChip({ scope }: { scope: MapScope }) {
         <li className="flex items-center gap-1.5">
           <GroupSwatch />
           <span>
-            <span className="font-extrabold text-foreground">Angka</span> = jumlah warung · ketuk untuk memperbesar
+            <span className="font-semibold text-foreground">Angka</span> = jumlah warung · ketuk untuk memperbesar
           </span>
         </li>
       ) : (
@@ -193,7 +193,7 @@ function PhoneLegendChip({ scope }: { scope: MapScope }) {
             <FlashSwatch />
           </span>
           <span>
-            <span className="font-extrabold text-flash dark:text-flash-accent">Oranye berdenyut</span> = tutup &lt; 45 menit
+            <span className="font-semibold text-flash dark:text-flash-accent">Oranye berdenyut</span> = tutup &lt; 45 menit
           </span>
         </li>
       )}
@@ -202,7 +202,7 @@ function PhoneLegendChip({ scope }: { scope: MapScope }) {
           <IdleSwatch />
         </span>
         <span>
-          <span className="font-extrabold text-foreground">Abu-abu</span> = belum ada surplus
+          <span className="font-semibold text-foreground">Abu-abu</span> = belum ada surplus
         </span>
       </li>
     </ul>
@@ -214,7 +214,7 @@ function ShowAllButton({ onClick, className }: { onClick: () => void; className?
     <Button
       variant="outline"
       onClick={onClick}
-      className={cn("h-10 rounded-full bg-card px-4 text-sm font-bold shadow-soft", className)}
+      className={cn("h-10 rounded-full bg-card px-4 text-sm font-semibold shadow-soft", className)}
     >
       <EarthIcon className="text-primary" />
       Seluruh Indonesia
@@ -354,7 +354,7 @@ export function MapScreen() {
     selectedId && (indonesia || !selected) ? (
       <div className="mb-4 rounded-3xl bg-card p-3 shadow-card ring-2 ring-primary">
         <div className="-mt-1 mb-1.5 flex items-center justify-between gap-2 pl-1">
-          <span className="text-xs font-bold text-primary">Dipilih di peta</span>
+          <span className="text-xs font-semibold text-primary">Dipilih di peta</span>
           <button
             type="button"
             onClick={clearSelection}
@@ -428,7 +428,7 @@ export function MapScreen() {
                   aria-checked={view === k}
                   onClick={() => setView(k)}
                   className={cn(
-                    "inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-bold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     view === k ? "bg-card text-foreground shadow-soft" : "text-muted-foreground",
                   )}
                 >
@@ -451,14 +451,14 @@ export function MapScreen() {
             <Button
               variant="ghost"
               onClick={showAll}
-              className="-ml-2 h-8 rounded-full px-2.5 text-xs font-bold text-primary hover:text-primary"
+              className="-ml-2 h-8 rounded-full px-2.5 text-xs font-semibold text-primary hover:text-primary"
             >
               <ArrowLeftIcon /> Seluruh Indonesia
             </Button>
           )}
           <div className={cn("flex items-start justify-between gap-3", !indonesia && "-mt-2")}>
             <div className="min-w-0">
-              <h1 className="text-2xl font-extrabold tracking-tight">Peta surplus</h1>
+              <h1 className="text-2xl font-bold">Peta surplus</h1>
               <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground" aria-live="polite">
                 <LiveDot />
                 <span className="truncate">
@@ -472,7 +472,7 @@ export function MapScreen() {
             </div>
             <Button
               variant="outline"
-              className="h-9 shrink-0 rounded-full px-3 text-xs font-bold"
+              className="h-9 shrink-0 rounded-full px-3 text-xs font-semibold"
               onClick={() => void locateMe()}
               disabled={isLocating}
             >
@@ -530,7 +530,7 @@ export function MapScreen() {
                   description={`Warung biasanya membuka porsi surplus sekitar 20.00 ${timeZone}.`}
                   action={
                     bigger ? (
-                      <Button className="h-10 rounded-full px-5 font-bold" onClick={() => expandRadius(bigger)}>
+                      <Button className="h-10 rounded-full px-5 font-semibold" onClick={() => expandRadius(bigger)}>
                         Perluas ke {formatRadius(bigger)}
                       </Button>
                     ) : undefined
@@ -553,7 +553,7 @@ export function MapScreen() {
                         {isSelected ? (
                           <div className="rounded-3xl bg-card p-3 shadow-card ring-2 ring-primary">
                             <div className="-mt-1 mb-1.5 flex items-center justify-between gap-2 pl-1">
-                              <span className="text-xs font-bold text-primary">
+                              <span className="text-xs font-semibold text-primary">
                                 Dipilih di peta
                               </span>
                               <button
@@ -610,7 +610,7 @@ export function MapScreen() {
               <Button
                 variant="outline"
                 onClick={() => setLocationSheetOpen(true)}
-                className="h-11 rounded-xl bg-card px-4 text-sm font-bold shadow-float"
+                className="h-11 rounded-xl bg-card px-4 text-sm font-semibold shadow-float"
               >
                 <MapPinIcon className="text-primary" />
                 Pilih kota / lokasi
@@ -634,12 +634,12 @@ export function MapScreen() {
               // Phones: above the "Seluruh Indonesia" / recentre buttons (and the cart bar).
               style={{ "--empty-bottom": `${fit.bottom + 68}px` } as CSSProperties}
               className="absolute inset-x-3 bottom-[var(--empty-bottom)] z-[600] rounded-3xl bg-card p-4 text-center shadow-float ring-1 ring-border lg:inset-x-auto lg:bottom-6 lg:left-1/2 lg:w-[26rem] lg:-translate-x-1/2">
-              <p className="text-sm font-bold">Belum ada surplus dalam {formatRadius(params.radius_m)}</p>
+              <p className="text-sm font-semibold">Belum ada surplus dalam {formatRadius(params.radius_m)}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Warung biasanya membuka porsi surplus sekitar 20.00 {timeZone}.
               </p>
               {bigger && (
-                <Button className="mt-3 h-10 rounded-full px-5 font-bold" onClick={() => expandRadius(bigger)}>
+                <Button className="mt-3 h-10 rounded-full px-5 font-semibold" onClick={() => expandRadius(bigger)}>
                   Perluas ke {formatRadius(bigger)}
                 </Button>
               )}

@@ -17,7 +17,7 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
   return (
     <section className={cn("rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border", className)}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-extrabold">Rincian pesanan</h2>
+        <h2 className="text-sm font-semibold">Rincian pesanan</h2>
         <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{order.order_number}</span>
       </div>
       <ul className="space-y-2">
@@ -57,8 +57,8 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
           </div>
         )}
         <div className="flex items-baseline justify-between pt-1 text-sm">
-          <dt className="font-bold">Total</dt>
-          <dd className="text-base font-extrabold">
+          <dt className="font-semibold">Total</dt>
+          <dd className="text-base font-semibold">
             <Money value={order.total_customer_paid_idr} />
           </dd>
         </div>
@@ -79,12 +79,12 @@ export function DirectionsAndWhatsAppButtons({ order }: { order: OrderDetail }) 
   } dari Sisa-Saji.`;
   return (
     <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-      <Button asChild className="h-12 rounded-xl font-bold">
+      <Button asChild className="h-12 rounded-xl font-semibold">
         <a href={mapsDirectionsUrl(order.merchant.lat, order.merchant.lng)} target="_blank" rel="noreferrer">
           <NavigationIcon className="size-4" /> Petunjuk Arah
         </a>
       </Button>
-      <Button asChild variant="outline" className="h-12 rounded-xl font-bold">
+      <Button asChild variant="outline" className="h-12 rounded-xl font-semibold">
         <a href={whatsappUrl(order.merchant.whatsapp_number, text)} target="_blank" rel="noreferrer">
           <MessageCircleIcon className="size-4 text-primary" aria-hidden /> Hubungi Warung
         </a>

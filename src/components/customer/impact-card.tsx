@@ -50,16 +50,16 @@ export function ImpactCard({ name }: { name: string }) {
     >
       <div className="relative flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-white/85">
-          Dampak {firstName(name) || "kamu"} · <span className="font-extrabold">{badgeLabel(d.badge_tier)}</span>
+          Dampak {firstName(name) || "kamu"} · <span className="font-semibold">{badgeLabel(d.badge_tier)}</span>
         </p>
         <ChevronRightIcon className="size-4 opacity-80 transition-transform group-hover:translate-x-0.5" />
       </div>
       {fresh ? (
-        <p className="relative mt-2 text-[15px] leading-snug font-bold">
+        <p className="relative mt-2 text-[15px] leading-snug font-semibold">
           Selamatkan porsi pertamamu malam ini. Tiap porsi mencegah ±0,5 kg emisi CO₂e.
         </p>
       ) : (
-        <p className="relative mt-2 text-[15px] leading-snug font-bold">
+        <p className="relative mt-2 text-[15px] leading-snug font-semibold">
           Kamu telah menyelamatkan <span className="whitespace-nowrap">{formatKg(d.total_food_saved_grams)}</span> makanan
           & mencegah <span className="whitespace-nowrap">{formatKg(d.total_co2_avoided_grams)}</span> emisi CO₂e
         </p>
@@ -95,7 +95,7 @@ export function GuestImpactBanner() {
           <ShoppingBagIcon className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[15px] leading-snug font-extrabold">Selamatkan makanan, hemat uang</p>
+          <p className="text-[15px] leading-snug font-semibold">Selamatkan makanan, hemat uang</p>
           <p className="mt-0.5 text-xs leading-relaxed text-white/90">
             Porsi surplus warung sekitar kampus, diskon <span className="whitespace-nowrap">50–70%</span> menjelang tutup.
           </p>
@@ -111,7 +111,7 @@ export function GuestImpactBanner() {
             <span>
               <b className="text-sm font-extrabold tabular-nums">{s.active_merchants}</b> warung mitra
             </span>
-            {s.is_demo_data && <span className="font-bold">(data demo)</span>}
+            {s.is_demo_data && <span className="font-semibold">(data demo)</span>}
           </>
         ) : (
           <Skeleton className="h-4 w-48 bg-white/25" />

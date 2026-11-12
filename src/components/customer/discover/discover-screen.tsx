@@ -16,7 +16,6 @@ import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   ArrowDownUpIcon,
-  CheckIcon,
   ChevronRightIcon,
   FlameIcon,
   LocateFixedIcon,
@@ -152,7 +151,7 @@ function GeoPrompt() {
           <LocateFixedIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">Cari surplus paling dekat denganmu</p>
+          <p className="text-sm font-semibold">Cari surplus paling dekat denganmu</p>
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             Izinkan lokasi supaya radius 2 km dihitung dari posisimu. Sekarang kami pakai{" "}
             <b className="text-foreground">{label}</b>.
@@ -164,7 +163,7 @@ function GeoPrompt() {
           Pakai kampus
         </Button>
         <Button
-          className="h-11 rounded-xl font-bold"
+          className="h-11 rounded-xl font-semibold"
           disabled={isLocating}
           onClick={async () => {
             if (await request()) dismiss();
@@ -182,7 +181,7 @@ function SortMenu({ value, onChange }: { value: Sort; onChange: (s: Sort) => voi
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-bold ring-1 ring-border outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-semibold ring-1 ring-border outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-label={`Urutkan: ${SORT_LABELS[value]}`}
       >
         <ArrowDownUpIcon className="size-3.5" />
@@ -233,7 +232,7 @@ function DesktopRail({ sort, onSort }: { sort: Sort; onSort: (s: Sort) => void }
           <MapIcon className="size-5" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">Lihat di peta</span>
+          <span className="block text-sm font-semibold">Lihat di peta</span>
           <span className="block text-xs text-muted-foreground">Semua warung surplus di sekitarmu</span>
         </span>
         <ChevronRightIcon
@@ -277,13 +276,13 @@ function OfflineTicketBanner({ offline }: { offline: boolean }) {
         <TicketIcon className="size-6" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-extrabold">Kamu sedang offline</span>
+        <span className="block text-sm font-semibold">Kamu sedang offline</span>
         <span className="block text-xs text-muted-foreground">
           {ticketCount === 1 ? "1 tiket pengambilan tersimpan" : `${ticketCount} tiket pengambilan tersimpan`} dan tetap
           bisa ditunjukkan ke warung.
         </span>
       </span>
-      <span className="shrink-0 rounded-full bg-deal px-3 py-1.5 text-xs font-bold text-deal-foreground">Lihat tiket</span>
+      <span className="shrink-0 rounded-full bg-deal px-3 py-1.5 text-xs font-semibold text-deal-foreground">Lihat tiket</span>
     </Link>
   );
 }
@@ -315,7 +314,7 @@ export function DiscoverScreen() {
   return (
     <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-4 lg:pb-10 xl:grid-cols-[320px_minmax(0,1fr)]">
       <ShellHeader className="pb-0 lg:sticky lg:top-20 lg:z-10 lg:mt-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin] lg:rounded-3xl lg:bg-card lg:shadow-soft lg:ring-1 lg:ring-border lg:[&>div]:py-5">
-        <h1 className="sr-only lg:not-sr-only lg:mb-4 lg:text-lg! lg:font-extrabold">Cari makanan surplus</h1>
+        <h1 className="sr-only lg:not-sr-only lg:mb-4 lg:text-lg! lg:font-bold">Cari makanan surplus</h1>
         <LocationPill className="lg:hidden" />
         <div className="mt-3 flex items-center gap-2 lg:mt-0">
           <label className="relative flex h-11 min-w-0 flex-1 items-center">
@@ -383,7 +382,7 @@ export function DiscoverScreen() {
           <Button
             variant="ghost"
             size="sm"
-            className="-mr-3 h-9 shrink-0 rounded-full px-3 text-xs font-bold"
+            className="-mr-3 h-9 shrink-0 rounded-full px-3 text-xs font-semibold"
             onClick={() => void query.refetch()}
             disabled={query.isFetching}
             aria-label="Perbarui daftar"
@@ -409,7 +408,7 @@ export function DiscoverScreen() {
             action={
               <div className="flex flex-col items-center gap-2">
                 {bigger && (
-                  <Button className="h-11 rounded-xl px-5 font-bold" onClick={() => setRadius(bigger)}>
+                  <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => setRadius(bigger)}>
                     Perluas ke {formatRadius(bigger)}
                   </Button>
                 )}
@@ -537,9 +536,9 @@ export function DiscoverScreen() {
                 <button
                   type="button"
                   onClick={() => setRadius(bigger)}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-3 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
                 >
-                  <CheckIcon className="size-3.5" /> Sudah lihat semua · Perluas ke {formatRadius(bigger)}
+                  Sudah lihat semua · Perluas ke {formatRadius(bigger)}
                 </button>
               )}
             </section>

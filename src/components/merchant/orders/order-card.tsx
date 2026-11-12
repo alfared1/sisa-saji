@@ -17,7 +17,7 @@ const STATUS_CLS: Record<OrderStatus, string> = {
 
 export function OrderStatusPill({ status, className }: { status: OrderStatus; className?: string }) {
   return (
-    <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-1 text-[11px] leading-none font-bold", STATUS_CLS[status], className)}>
+    <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-1 text-[11px] leading-none font-semibold", STATUS_CLS[status], className)}>
       {ORDER_STATUS_LABELS[status]}
     </span>
   );
@@ -37,7 +37,7 @@ export function CustomerAvatar({ name, className }: { name: string; className?: 
   return (
     <span
       aria-hidden
-      className={cn("inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-sm font-extrabold text-secondary-foreground", className)}
+      className={cn("inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-sm font-semibold text-secondary-foreground", className)}
     >
       {initialsOf(name)}
     </span>
@@ -62,14 +62,14 @@ export function MerchantOrderCard({ order, compact = false }: { order: OrderDeta
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-sm leading-tight font-bold">{order.customer.full_name}</h3>
+              <h3 className="truncate text-sm leading-tight font-semibold">{order.customer.full_name}</h3>
               <p className="mt-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">{order.order_number}</p>
             </div>
             <OrderStatusPill status={order.status} />
           </div>
           <p className="mt-2 text-sm leading-snug text-foreground/85">{itemsSummary(order)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-            <span className="font-bold text-foreground tabular-nums">{formatIdr(order.net_merchant_payout_idr)}</span>
+            <span className="font-semibold text-foreground tabular-nums">{formatIdr(order.net_merchant_payout_idr)}</span>
             {waiting ? (
               <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil" overLabel="Lewat batas" />
             ) : order.status === "COMPLETED" && order.picked_up_at ? (

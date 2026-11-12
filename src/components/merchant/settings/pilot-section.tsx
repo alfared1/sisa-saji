@@ -116,12 +116,12 @@ export function PilotSection({ merchant }: { merchant: MerchantProfile }) {
             }}
           >
             <BaselineField id={baselineId} value={baseline} onChange={setBaseline} />
-            <Button type="submit" className="h-11 rounded-xl px-4 font-bold" disabled={portions === null || saveBaseline.isPending}>
+            <Button type="submit" className="h-11 rounded-xl px-4 font-semibold" disabled={portions === null || saveBaseline.isPending}>
               {saveBaseline.isPending && <Loader2Icon className="animate-spin" aria-hidden />} Simpan
             </Button>
           </form>
         )}
-        <Link href="/uji-coba" className="mt-3 inline-flex h-11 items-center text-sm font-bold text-primary hover:underline">
+        <Link href="/uji-coba" className="mt-3 inline-flex h-11 items-center text-sm font-semibold text-primary hover:underline">
           Lihat hasil uji coba
         </Link>
       </SectionCard>
@@ -156,7 +156,7 @@ export function PilotSection({ merchant }: { merchant: MerchantProfile }) {
           />
         </div>
         <BaselineField id={baselineId} value={baseline} onChange={setBaseline} />
-        <Button type="submit" className="h-11 rounded-xl px-5 font-bold" disabled={!code.trim() || portions === null || join.isPending}>
+        <Button type="submit" className="h-11 rounded-xl px-5 font-semibold" disabled={!code.trim() || portions === null || join.isPending}>
           {join.isPending && <Loader2Icon className="animate-spin" aria-hidden />} Gabung
         </Button>
       </form>

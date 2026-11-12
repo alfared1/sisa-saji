@@ -92,7 +92,7 @@ export function PickupWindowConfirm({
               onClick={() => onChange(c.ms)}
               aria-pressed={active}
               className={cn(
-                "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold tabular-nums ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold tabular-nums ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 active ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
               )}
             >

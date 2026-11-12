@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { BadgePercentIcon, Loader2Icon, ShieldCheckIcon, SlidersHorizontalIcon, UsersIcon, XIcon } from "lucide-react";
+import { BadgePercentIcon, Loader2Icon, ShieldCheckIcon, UsersIcon, XIcon } from "lucide-react";
 import { DISCOUNT_VARIANT_CLASS, DiscountBadge, discountBadgeState } from "@/components/common/discount-badge";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,7 +33,7 @@ export function SelloutGauge({ probability, size = 148 }: { probability: number;
       </svg>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center leading-none">
         <span className="text-3xl font-extrabold tabular-nums">{Math.round(p * 100)}%</span>
-        <span className="mt-1 text-xs font-bold text-muted-foreground">{label}</span>
+        <span className="mt-1 text-xs font-semibold text-muted-foreground">{label}</span>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
   const anchorFirst = curveLabelStride(steps.length) > 1;
   return (
     <figure>
-      <figcaption className="mb-2 text-xs font-bold text-muted-foreground">Kurva harga otomatis</figcaption>
+      <figcaption className="mb-2 text-xs font-semibold text-muted-foreground">Kurva harga otomatis</figcaption>
       <ol className="flex items-end gap-1.5" aria-label="Jadwal diskon">
         {steps.map((s, i) => {
           // Same Hemat / Diskon Kilat colours as the customer-facing badge.
@@ -71,7 +71,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
               </span>
               <span
                 className={cn(
-                  "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-bold text-white tabular-nums transition-[height] duration-500",
+                  "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-semibold text-white tabular-nums transition-[height] duration-500",
                   DISCOUNT_VARIANT_CLASS[variant],
                   i === 0 && "ring-2 ring-foreground/80 ring-offset-2 ring-offset-card",
                 )}
@@ -98,7 +98,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
         })}
         <li className="flex w-9 shrink-0 flex-col items-center gap-1" aria-label={`Tutup pukul ${formatClockId(endIso)}`}>
           <span className="h-[84px] w-px border-l-2 border-dashed border-border" aria-hidden />
-          <span className="text-[10px] font-bold text-urgent tabular-nums">{formatClockId(endIso)}</span>
+          <span className="text-[10px] font-semibold text-urgent tabular-nums">{formatClockId(endIso)}</span>
         </li>
       </ol>
       <p className="mt-2 text-[11px] text-muted-foreground">Angka di batang = perkiraan porsi tersisa.</p>
@@ -124,7 +124,7 @@ export function ManualOverride({
         onClick={() => onChange(Math.min(max, quote.recommended_discount_pct))}
         className="inline-flex h-11 items-center gap-2 rounded-xl px-1 text-sm font-semibold text-foreground/80 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <SlidersHorizontalIcon className="size-4 text-primary" /> Atur diskon manual
+        Atur diskon manual
       </button>
     );
   }
@@ -133,7 +133,7 @@ export function ManualOverride({
   return (
     <div className="rounded-2xl bg-surface p-3 ring-1 ring-border">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-bold">
+        <label htmlFor={id} className="text-sm font-semibold">
           Diskon manual
         </label>
         <button
@@ -215,7 +215,7 @@ export function AiDiscountRecommendationCard({
           <span className="inline-flex size-8 items-center justify-center rounded-xl bg-brand-soft text-primary">
             <BadgePercentIcon className="size-4" aria-hidden />
           </span>
-          <h2 id="ai-card-title" className="text-base font-bold">
+          <h2 id="ai-card-title" className="text-base font-semibold">
             Saran harga
           </h2>
         </div>

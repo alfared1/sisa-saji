@@ -44,7 +44,7 @@ export function MerchantPageHeader({
         )}
         <div className="min-w-0">
           {eyebrow && <div className="mb-1 text-xs font-semibold text-muted-foreground">{eyebrow}</div>}
-          <h1 className="text-[1.6rem] leading-tight font-extrabold tracking-tight lg:text-3xl">{title}</h1>
+          <h1 className="text-[1.6rem] leading-tight font-bold lg:text-3xl">{title}</h1>
           {subtitle && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
@@ -89,7 +89,7 @@ export function SectionCard({
               </span>
             )}
             <div className="min-w-0">
-              <h2 id={headingId} className="text-base leading-tight font-bold">
+              <h2 id={headingId} className="text-base leading-tight font-semibold">
                 {title}
               </h2>
               {description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>}

@@ -83,7 +83,7 @@ function StoreStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold",
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
         isOpen ? "bg-success-soft text-primary" : "bg-muted text-muted-foreground",
         className,
       )}
@@ -162,7 +162,7 @@ export function MerchantShell({
           <Link href="/merchant/dashboard" className="outline-none">
             <Logo />
           </Link>
-          <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-bold text-deal">
+          <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-semibold text-deal">
             Mitra
           </span>
           <ThemeToggle align="start" className="-mr-2 ml-auto size-10" />
@@ -173,7 +173,7 @@ export function MerchantShell({
               <StoreIcon className="size-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold">{storeName}</p>
+              <p className="truncate text-sm font-semibold">{storeName}</p>
               <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
             </div>
           </div>
@@ -197,7 +197,7 @@ export function MerchantShell({
                 <Icon className={cn("size-5", isActive && "text-primary")} />
                 {label}
                 {emphasis && (
-                  <span className="ml-auto rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                  <span className="ml-auto rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
                     QR
                   </span>
                 )}
@@ -212,7 +212,7 @@ export function MerchantShell({
                 type="button"
                 className="flex w-full items-center gap-3 rounded-xl p-2 text-left outline-none hover:bg-sidebar-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50"
               >
-                <span className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                <span className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
                   {initials || "M"}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -235,7 +235,7 @@ export function MerchantShell({
         <div className="flex h-14 items-center gap-2.5 px-4">
           <LogoMark className="size-8" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm leading-tight font-bold">{storeName}</p>
+            <p className="truncate text-sm leading-tight font-semibold">{storeName}</p>
             <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
           </div>
           <ThemeToggle className="-mr-1 size-10" />
@@ -244,7 +244,7 @@ export function MerchantShell({
               <button
                 type="button"
                 aria-label="Akun"
-                className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="inline-flex size-9 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               >
                 {initials || "M"}
               </button>

@@ -271,7 +271,7 @@ export function CheckoutScreen() {
           title="Keranjang masih kosong"
           description="Pilih porsi surplus dari warung terdekat. Hemat sampai 70% dan bantu kurangi makanan terbuang."
           action={
-            <Button asChild className="h-11 rounded-xl px-6 font-bold">
+            <Button asChild className="h-11 rounded-xl px-6 font-semibold">
               <Link href="/discover">Cari makanan</Link>
             </Button>
           }
@@ -284,7 +284,7 @@ export function CheckoutScreen() {
   // Rendered twice: phone pay bar (lg:hidden) and the lg+ summary card (hidden lg:block).
   const payButton = (className: string) => (
     <Button
-      className={cn("rounded-xl px-6 text-base font-extrabold shadow-card", className)}
+      className={cn("rounded-xl px-6 text-base font-semibold shadow-card", className)}
       onClick={submit}
       disabled={checkout.isPending || blocked || !detail.data}
     >
@@ -314,7 +314,7 @@ export function CheckoutScreen() {
             title="Pesananmu"
             icon={StoreIcon}
             action={
-              <Link href={`/warung/${merchant.slug}`} className="text-xs font-bold text-primary hover:underline">
+              <Link href={`/warung/${merchant.slug}`} className="text-xs font-semibold text-primary hover:underline">
                 + Tambah menu
               </Link>
             }
@@ -326,7 +326,7 @@ export function CheckoutScreen() {
                 return (
                   <li key={it.batch_id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0 flex-1">
-                      <p className={cn("line-clamp-2 text-sm font-bold", state !== "ok" && "text-muted-foreground line-through")}>
+                      <p className={cn("line-clamp-2 text-sm font-semibold", state !== "ok" && "text-muted-foreground line-through")}>
                         {it.menu_name}
                       </p>
                       <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
@@ -358,7 +358,7 @@ export function CheckoutScreen() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-9 rounded-full text-xs font-bold text-urgent"
+                        className="h-9 rounded-full text-xs font-semibold text-urgent"
                         onClick={() => removeItem(it.batch_id)}
                       >
                         <Trash2Icon className="size-3.5" /> Hapus
@@ -405,7 +405,7 @@ export function CheckoutScreen() {
           <CheckoutCard title={isPilot ? "Pembayaran" : "Metode Pembayaran"} icon={WalletIcon}>
             {isPilot ? (
               <p className="text-sm leading-relaxed">
-                <b className="font-bold">Bayar langsung di warung</b> saat mengambil, tunai atau QRIS milik warung.{" "}
+                <b className="font-semibold">Bayar langsung di warung</b> saat mengambil, tunai atau QRIS milik warung.{" "}
                 <span className="text-muted-foreground">
                   Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan dan belum menerima voucher.
                 </span>
@@ -445,7 +445,7 @@ export function CheckoutScreen() {
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold text-muted-foreground">{isPilot ? "Bayar di warung" : "Total bayar"}</p>
-              <p className="text-lg leading-tight font-extrabold">
+              <p className="text-lg leading-tight font-bold">
                 <Money value={preview.total_idr} />
               </p>
               <p className="truncate text-[11px] font-semibold text-primary">Hemat {formatIdr(preview.money_saved_idr)}</p>

@@ -64,7 +64,7 @@ export function CheckoutCard({
   return (
     <section className={cn("rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border", className)}>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-extrabold">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
           {Icon && <Icon className="size-4 text-primary" />}
           {title}
         </h2>
@@ -132,7 +132,7 @@ export function SelfPickupInfoCard({
       {merchant && (
         <div className="mt-3 flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold">{merchant.name}</p>
+            <p className="truncate text-sm font-semibold">{merchant.name}</p>
             <p className="mt-0.5 flex items-start gap-1 text-xs text-muted-foreground">
               <MapPinIcon className="mt-px size-3.5 shrink-0" /> {merchant.address}
             </p>
@@ -148,7 +148,7 @@ export function SelfPickupInfoCard({
               </p>
             )}
           </div>
-          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 rounded-full px-3 text-xs font-bold">
+          <Button asChild variant="outline" size="sm" className="h-9 shrink-0 rounded-full px-3 text-xs font-semibold">
             <a href={mapsDirectionsUrl(merchant.lat, merchant.lng)} target="_blank" rel="noreferrer">
               Rute
             </a>
@@ -246,7 +246,7 @@ export function BringOwnContainerToggle({
           <RecycleIcon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <label htmlFor="own-container" className="block text-sm font-bold">
+          <label htmlFor="own-container" className="block text-sm font-semibold">
             Bawa wadah sendiri
           </label>
           <p className="text-xs leading-snug text-muted-foreground">Kurangi sampah plastik sekali pakai.</p>
@@ -278,7 +278,7 @@ export function BringOwnContainerToggle({
             <div className="flex items-center gap-3 rounded-2xl bg-deal-soft p-3 text-left">
               <TicketPercentIcon className="size-5 shrink-0 text-deal" />
               <p className="text-xs leading-snug">
-                Pakai voucher <b className="font-extrabold">BAWABEKAL</b>: potongan{" "}
+                Pakai voucher <b className="font-semibold">BAWABEKAL</b>: potongan{" "}
                 <span className="whitespace-nowrap">Rp 1.500</span> (min. belanja{" "}
                 <span className="whitespace-nowrap">Rp 8.000</span>).
               </p>
@@ -287,7 +287,7 @@ export function BringOwnContainerToggle({
           <div className="mt-1 grid grid-cols-1 gap-2">
             {voucherAvailable && (
               <Button
-                className="h-11 rounded-xl font-bold"
+                className="h-11 rounded-xl font-semibold"
                 onClick={() => {
                   onUseVoucher();
                   setOpen(false);
@@ -334,7 +334,7 @@ export function VoucherRow({
         <span className="min-w-0 flex-1">
           {voucher ? (
             <>
-              <span className="block text-sm font-extrabold">{voucher.code}</span>
+              <span className="block text-sm font-semibold">{voucher.code}</span>
               <span className={cn("block truncate text-xs", ok?.eligible ? "text-primary" : "text-urgent")}>
                 {ok?.eligible
                   ? `Hemat ${formatIdr(voucher.discount_idr)}`
@@ -343,7 +343,7 @@ export function VoucherRow({
             </>
           ) : (
             <>
-              <span className="block text-sm font-bold">Pakai voucher</span>
+              <span className="block text-sm font-semibold">Pakai voucher</span>
               <span className="block text-xs text-muted-foreground">Lihat potongan yang tersedia</span>
             </>
           )}
@@ -411,7 +411,7 @@ export function VoucherSelectorSheet({
                   <span className="text-sm font-extrabold tabular-nums">{(v.discount_idr / 1000).toLocaleString("id-ID")}rb</span>
                 </span>
                 <span className="min-w-0 flex-1 p-3">
-                  <span className="block text-sm font-extrabold tracking-wide">{v.code}</span>
+                  <span className="block text-sm font-semibold tracking-wide">{v.code}</span>
                   <span className="block text-xs text-muted-foreground">{v.title}</span>
                   <span className={cn("mt-1 block text-[11px] font-semibold", e.eligible ? "text-primary" : "text-urgent")}>
                     {e.eligible ? "Bisa dipakai" : `Kurang ${formatIdr(e.shortfall_idr)} lagi`}
@@ -450,7 +450,7 @@ export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod;
             aria-checked={active}
             onClick={() => onChange(m.key)}
             className={cn(
-              "flex h-12 items-center justify-center rounded-2xl text-sm font-extrabold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "flex h-12 items-center justify-center rounded-2xl text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               active ? "bg-brand-soft ring-2 ring-primary" : "bg-card ring-border hover:bg-muted",
               m.tint,
             )}
@@ -503,15 +503,15 @@ export function PriceAndImpactBreakdown({
           </div>
         )}
         <div className="flex items-baseline justify-between gap-2 border-t border-dashed border-border pt-3">
-          <dt className="font-bold">Total bayar</dt>
-          <dd className="text-xl font-extrabold">
+          <dt className="font-semibold">Total bayar</dt>
+          <dd className="text-xl font-bold">
             <Money value={p.total_idr} />
           </dd>
         </div>
       </dl>
       <div className="mt-3 rounded-2xl bg-brand-soft/80 p-3">
-        <p className="text-sm font-extrabold text-secondary-foreground">Kamu hemat {formatIdr(p.money_saved_idr)}</p>
-        <p className="mt-1 text-xs font-bold text-secondary-foreground/80">Total dampak pesanan</p>
+        <p className="text-sm font-semibold text-secondary-foreground">Kamu hemat {formatIdr(p.money_saved_idr)}</p>
+        <p className="mt-1 text-xs font-semibold text-secondary-foreground/80">Total dampak pesanan</p>
         <ImpactLine foodGrams={p.food_saved_grams} className="mt-0.5 text-xs" />
       </div>
       {children}

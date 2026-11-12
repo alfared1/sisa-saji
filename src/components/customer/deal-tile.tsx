@@ -79,13 +79,13 @@ export function DealTile({
             className="absolute bottom-2 left-2 shadow-soft"
           />
           {flash && (
-            <span className="absolute top-2 right-2 animate-float-up rounded-full bg-deal px-2 py-1 text-[10px] font-extrabold text-deal-foreground">
+            <span className="absolute top-2 right-2 animate-float-up rounded-full bg-deal px-2 py-1 text-[10px] font-semibold text-deal-foreground">
               Harga turun!
             </span>
           )}
         </FoodThumb>
         <div className="space-y-1 p-3 pb-3.5">
-          <h3 className="line-clamp-1 text-sm font-bold">{batch.menu_name}</h3>
+          <h3 className="line-clamp-1 text-sm font-semibold">{batch.menu_name}</h3>
           <p className="line-clamp-1 text-xs text-muted-foreground">
             {batch.merchant_name}
             {batch.distance_m !== null && <> · {formatDistance(batch.distance_m)}</>}

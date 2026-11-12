@@ -8,15 +8,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  DownloadIcon,
-  FlaskConicalIcon,
-  HourglassIcon,
-  Loader2Icon,
-  ShieldCheckIcon,
-  TimerOffIcon,
-  XCircleIcon,
-} from "lucide-react";
+import { DownloadIcon, HourglassIcon, Loader2Icon, ShieldCheckIcon, TimerOffIcon, XCircleIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Money } from "@/components/common/money";
 import { QrCodeView } from "@/components/common/qr-code-view";
@@ -144,7 +136,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
             <HourglassIcon className={cn("size-5", !timesUp && "animate-soft-pulse")} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-balance">Selesaikan pembayaran dalam</p>
+            <p className="text-sm font-semibold text-balance">Selesaikan pembayaran dalam</p>
             <p className="text-xs text-balance text-muted-foreground">
               Stok dikunci untukmu sampai {formatClockId(order.payment_expires_at)} WIB
             </p>
@@ -174,7 +166,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           <span className="text-xs font-semibold text-muted-foreground">Sisa-Saji · {order.merchant.name}</span>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Total pembayaran</p>
-        <p className="text-3xl font-extrabold">
+        <p className="text-3xl font-bold">
           <Money value={order.total_customer_paid_idr} />
         </p>
         <div ref={qrRef} className="mt-4">
@@ -194,7 +186,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
             <span
               key={m.key}
               className={cn(
-                "rounded-full px-2.5 py-1 text-[11px] font-bold ring-1",
+                "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
                 m.key === order.payment_method ? "bg-brand-soft text-primary ring-primary/40" : "bg-muted text-foreground/70 ring-transparent",
               )}
             >
@@ -207,7 +199,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
         </p>
         <Button
           variant="outline"
-          className="mt-4 h-11 rounded-xl px-5 font-bold"
+          className="mt-4 h-11 rounded-xl px-5 font-semibold"
           disabled={!order.qris_string}
           onClick={() =>
             downloadQrPng(qrRef.current, `QRIS-${order.order_number}.png`)
@@ -224,14 +216,14 @@ export function PaymentView({ order }: { order: OrderDetail }) {
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       {/* Demo simulator */}
       <section className="rounded-3xl border-2 border-dashed border-amber-300 bg-warning-soft p-4 dark:border-amber-800">
-        <p className="flex items-center gap-1.5 text-xs font-extrabold text-amber-900 dark:text-amber-100">
-          <FlaskConicalIcon className="size-4" /> Mode demo
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-100">
+          Mode demo
         </p>
         <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-100/85">
           Tidak perlu uang sungguhan. Tombol ini mengirim webhook pembayaran bertanda tangan seperti payment gateway asli.
         </p>
         <Button
-          className="mt-3 h-12 w-full rounded-xl bg-foreground text-base font-extrabold text-background hover:bg-foreground/90"
+          className="mt-3 h-12 w-full rounded-xl bg-foreground text-base font-semibold text-background hover:bg-foreground/90"
           onClick={() => pay.mutate()}
           disabled={pay.isPending || timesUp}
         >
@@ -244,10 +236,10 @@ export function PaymentView({ order }: { order: OrderDetail }) {
 
       <Button
         variant="ghost"
-        className="h-11 rounded-xl font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+        className="h-11 rounded-xl font-semibold text-urgent hover:bg-urgent-soft hover:text-urgent"
         onClick={() => setConfirmCancel(true)}
       >
-        <XCircleIcon className="size-4" /> Batalkan pesanan
+        Batalkan pesanan
       </Button>
       </div>
 
@@ -277,7 +269,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
             </DialogDescription>
           </DialogHeader>
           <div className="mt-2 grid gap-2">
-            <Button asChild className="h-11 rounded-xl font-bold">
+            <Button asChild className="h-11 rounded-xl font-semibold">
               <Link href={`/warung/${order.merchant.slug}`}>Pesan ulang di {order.merchant.name}</Link>
             </Button>
             <Button asChild variant="outline" className="h-11 rounded-xl">
