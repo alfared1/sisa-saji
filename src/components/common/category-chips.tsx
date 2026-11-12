@@ -7,7 +7,6 @@ import {
   CupSodaIcon,
   GiftIcon,
   CookieIcon,
-  LayoutGridIcon,
   SaladIcon,
   UtensilsIcon,
 } from "lucide-react";
@@ -38,9 +37,10 @@ export function CategoryChips({
   showAll?: boolean;
   className?: string;
 }) {
-  const chips: { key: MenuCategory | null; label: string; Icon: ComponentType<{ className?: string }> }[] = [
-    ...(showAll ? [{ key: null, label: "Semua", Icon: LayoutGridIcon }] : []),
-    ...categories.map((c) => ({ key: c, label: MENU_CATEGORY_LABELS[c], Icon: CATEGORY_ICONS[c] })),
+  // Text only: the labels are plain words, an icon beside each one only repeats it.
+  const chips: { key: MenuCategory | null; label: string }[] = [
+    ...(showAll ? [{ key: null, label: "Semua" }] : []),
+    ...categories.map((c) => ({ key: c, label: MENU_CATEGORY_LABELS[c] })),
   ];
 
   return (
@@ -49,7 +49,7 @@ export function CategoryChips({
       aria-label="Kategori"
       className={cn("no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-1", className)}
     >
-      {chips.map(({ key, label, Icon }) => {
+      {chips.map(({ key, label }) => {
         const active = value === key;
         return (
           <button
@@ -59,13 +59,12 @@ export function CategoryChips({
             aria-checked={active}
             onClick={() => onChange(key)}
             className={cn(
-              "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition-all outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               active
-                ? "bg-foreground text-background shadow-soft"
+                ? "bg-primary text-primary-foreground"
                 : "bg-card text-foreground/80 ring-1 ring-border hover:bg-muted",
             )}
           >
-            <Icon className="size-4" />
             {label}
           </button>
         );

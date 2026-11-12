@@ -4,7 +4,6 @@ import { useId } from "react";
 import { Controller, useWatch, type UseFormReturn } from "react-hook-form";
 import type { z } from "zod";
 import { MessageCircleIcon } from "lucide-react";
-import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import { LocationPickerMap } from "@/components/map/location-picker-map";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +89,6 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
           render={({ field }) => (
             <div role="radiogroup" aria-label="Kategori warung" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {MENU_CATEGORIES.filter((c) => c !== "MYSTERY_BAG").map((c) => {
-                const Icon = CATEGORY_ICONS[c];
                 const active = (field.value ?? "MAKANAN_BERAT") === c;
                 return (
                   <button
@@ -100,11 +98,10 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
                     aria-checked={active}
                     onClick={() => field.onChange(c)}
                     className={cn(
-                      "flex h-12 items-center gap-2 rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex h-12 items-center rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                       active ? "bg-brand-soft text-secondary-foreground ring-2 ring-primary" : "bg-card ring-border hover:bg-muted",
                     )}
                   >
-                    <Icon className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground")} />
                     <span className="truncate">{MENU_CATEGORY_LABELS[c]}</span>
                   </button>
                 );

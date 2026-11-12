@@ -5,7 +5,6 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { GiftIcon, Loader2Icon } from "lucide-react";
-import { CATEGORY_ICONS } from "@/components/common/category-chips";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,7 +137,6 @@ export function MenuForm({
             render={({ field }) => (
               <div role="radiogroup" aria-label="Kategori menu" className="flex flex-wrap gap-2">
                 {MENU_CATEGORIES.filter((c) => c !== "MYSTERY_BAG").map((c) => {
-                  const Icon = CATEGORY_ICONS[c];
                   const active = field.value === c;
                   return (
                     <button
@@ -148,11 +146,11 @@ export function MenuForm({
                       aria-checked={active}
                       onClick={() => field.onChange(c)}
                       className={cn(
-                        "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                        active ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
+                        "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        active ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
                       )}
                     >
-                      <Icon className="size-4" /> {MENU_CATEGORY_LABELS[c]}
+                      {MENU_CATEGORY_LABELS[c]}
                     </button>
                   );
                 })}
