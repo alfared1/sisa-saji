@@ -16,7 +16,14 @@ import { useNow } from "@/hooks/use-now";
 import { useSetSessionUser } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
 import { OTP_LENGTH } from "@/lib/constants";
-import type { OtpRequestBody, OtpRequestResponse, OtpVerifyBody, OtpVerifyResponse } from "@/lib/contracts";
+import {
+  DEMO_LOGIN_ONLY_REASON,
+  REAL_OTP_REQUIRED_REASON,
+  type OtpRequestBody,
+  type OtpRequestResponse,
+  type OtpVerifyBody,
+  type OtpVerifyResponse,
+} from "@/lib/contracts";
 import { readSession, removeSession, writeSession } from "@/lib/pwa/storage";
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +38,13 @@ import {
   safeNextPath,
   type OtpFlowState,
 } from "../auth-flow";
+
+/** Message of a refusal no code can get past (real OTP delivery needed, or a demo account). */
+function blockingMessage(err: unknown): string | null {
+  if (!(err instanceof ApiClientError)) return null;
+  const reason = (err.details as { reason?: unknown } | undefined)?.reason;
+  return reason === REAL_OTP_REQUIRED_REASON || reason === DEMO_LOGIN_ONLY_REASON ? err.message : null;
+}
 
 function loadFlow(identifier: string): OtpFlowState | null {
   const flow = readSession<OtpFlowState>(OTP_FLOW_KEY);
@@ -51,6 +65,8 @@ export function VerifyForm() {
   const [needsName, setNeedsName] = useState(false);
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Set when the server refuses this account outright: typing more codes cannot help.
+  const [blocked, setBlocked] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const now = useNow(1000);
 
@@ -83,6 +99,13 @@ export function VerifyForm() {
         requestAnimationFrame(() => nameRef.current?.focus());
         return;
       }
+      const block = blockingMessage(err);
+      if (block) {
+        setBlocked(block);
+        setError(null);
+        setCode("");
+        return;
+      }
       setError(err instanceof ApiClientError ? err.message : "Verifikasi gagal. Coba lagi.");
       if (err instanceof ApiClientError && (err.code === "OTP_INVALID" || err.code === "OTP_EXPIRED")) setCode("");
     },
@@ -98,11 +121,19 @@ export function VerifyForm() {
       setError(null);
       toast.success(res.channel === "WHATSAPP" ? "Kode baru dikirim ke WhatsApp." : "Kode baru dikirim ke email.");
     },
-    onError: (err) => setError(err instanceof ApiClientError ? err.message : "Gagal mengirim ulang kode."),
+    onError: (err) => {
+      const block = blockingMessage(err);
+      if (block) {
+        setBlocked(block);
+        setError(null);
+        return;
+      }
+      setError(err instanceof ApiClientError ? err.message : "Gagal mengirim ulang kode.");
+    },
   });
 
   const submit = (otp: string) => {
-    if (otp.length !== OTP_LENGTH || verify.isPending) return;
+    if (otp.length !== OTP_LENGTH || verify.isPending || blocked) return;
     if (needsName && fullName.trim().length < 2) {
       setError("Isi nama lengkap minimal 2 huruf.");
       nameRef.current?.focus();
@@ -147,7 +178,16 @@ export function VerifyForm() {
         </p>
       </div>
 
-      {flow?.dev_code && (
+      {blocked && (
+        <div role="alert" className="space-y-3 rounded-2xl bg-warning-soft px-4 py-3 text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+          <p>{blocked}</p>
+          <Button asChild variant="outline" className="h-10 rounded-xl bg-card font-semibold text-foreground">
+            <Link href={backHref}>Kembali ke halaman masuk</Link>
+          </Button>
+        </div>
+      )}
+
+      {flow?.dev_code && !blocked && (
         <div className="flex items-center gap-3 rounded-2xl border border-dashed border-deal/50 bg-deal-soft p-3">
           <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-deal text-deal-foreground">
             <FlaskConicalIcon className="size-4" />
@@ -209,7 +249,7 @@ export function VerifyForm() {
             inputMode="numeric"
             autoComplete="one-time-code"
             aria-label="Kode OTP"
-            disabled={verify.isPending}
+            disabled={verify.isPending || blocked !== null}
             containerClassName="gap-2"
           >
             <InputOTPGroup className="gap-2 has-aria-invalid:ring-0">
@@ -239,7 +279,7 @@ export function VerifyForm() {
         <Button
           type="submit"
           className="h-12 w-full rounded-xl text-base font-semibold"
-          disabled={verify.isPending || code.length !== OTP_LENGTH}
+          disabled={verify.isPending || blocked !== null || code.length !== OTP_LENGTH}
         >
           {verify.isPending && <Loader2Icon className="animate-spin" />}
           {verify.isPending ? "Memverifikasi…" : needsName ? "Buat akun & masuk" : "Verifikasi & masuk"}
@@ -251,10 +291,10 @@ export function VerifyForm() {
         <button
           type="button"
           onClick={() => resend.mutate()}
-          disabled={remaining > 0 || resend.isPending}
+          disabled={remaining > 0 || resend.isPending || blocked !== null}
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-1 font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-            remaining > 0 || resend.isPending ? "text-muted-foreground" : "text-primary hover:underline",
+            remaining > 0 || resend.isPending || blocked !== null ? "text-muted-foreground" : "text-primary hover:underline",
           )}
         >
           {resend.isPending && <RotateCwIcon className="size-3.5 animate-spin" />}

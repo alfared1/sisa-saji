@@ -4,16 +4,26 @@
  * customer totals and the merchant wallet exactly once (row lock + status guard).
  */
 import "server-only";
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { merchants, orderItems, orders, pickupCodeFailures, users } from "@/db/schema";
-import { BADGE_TIERS, PICKUP_CODE_LENGTH } from "@/lib/constants";
+import { BADGE_TIERS, PAY_AT_WARUNG_EXPIRED_REASON, PICKUP_CODE_LENGTH } from "@/lib/constants";
 import type { OrderDetail } from "@/lib/contracts";
 import { badgeTierForFoodSaved, co2GramsFromFoodGrams } from "@/lib/impact";
 import { verifyPickupToken } from "@/lib/pickup-token";
 import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { abandonPayAtWarungOrder, commitReservation } from "@/server/services/stock";
+import { expireLapsedHolds, isHoldOver, OPEN_PAY_AT_WARUNG } from "./hold";
+
+const LAPSED_TICKET_MESSAGE = "Tiket ini sudah lewat batas waktu dan batal otomatis. Porsinya sudah kembali ke stok.";
+
+/** A pay-at-warung ticket whose hold ended: expire it now (the job may not have run yet) and say so. */
+async function refuseLapsedTicket(db: Db, merchantId: string, orderId: string, now: Date): Promise<void> {
+  if ((await expireLapsedHolds(db, { merchantId, orderId }, now)) > 0) {
+    throw new ApiError("ORDER_STATE_CONFLICT", LAPSED_TICKET_MESSAGE);
+  }
+}
 
 export const PICKUP_GRACE_MINUTES = 30;
 const PICKABLE = ["PAID", "READY_FOR_PICKUP"] as const;
@@ -60,6 +70,24 @@ async function recordCodeFailure(db: Db, merchantId: string, now: Date) {
   await db.insert(pickupCodeFailures).values({ merchantId, createdAt: now });
 }
 
+/** True when this warung's ticket with `code` lapsed (hold ended) within the last few hours. */
+async function hasRecentlyLapsedTicket(db: Db, merchantId: string, code: string, now: Date): Promise<boolean> {
+  const [row] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.merchantId, merchantId),
+        eq(orders.pickupCode, code),
+        eq(orders.status, "EXPIRED"),
+        eq(orders.cancelReason, PAY_AT_WARUNG_EXPIRED_REASON),
+        gt(orders.updatedAt, new Date(now.getTime() - 6 * 60 * 60_000)),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
 function invalid(): never {
   throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak valid atau tidak ditemukan");
 }
@@ -87,6 +115,10 @@ export async function lookupPickup(
       .limit(1);
     if (!o) {
       await recordCodeFailure(db, args.merchantId, now);
+      // The expiry job may already have closed the ticket: say so instead of "invalid code".
+      if (await hasRecentlyLapsedTicket(db, args.merchantId, parsed.code, now)) {
+        throw new ApiError("ORDER_STATE_CONFLICT", LAPSED_TICKET_MESSAGE);
+      }
       invalid();
     }
     orderId = o.id;
@@ -96,9 +128,13 @@ export async function lookupPickup(
     if (!o || o.merchantId !== args.merchantId) invalid();
     if (verifyPickupToken(parsed.token, o.pickupCode, args.pickupQrSecret) !== o.id) invalid();
     if (o.status === "COMPLETED") throw new ApiError("ORDER_STATE_CONFLICT", "Pesanan ini sudah diambil");
+    if (o.status === "EXPIRED" && o.cancelReason === PAY_AT_WARUNG_EXPIRED_REASON) {
+      throw new ApiError("ORDER_STATE_CONFLICT", LAPSED_TICKET_MESSAGE);
+    }
     if (!(PICKABLE as readonly string[]).includes(o.status)) invalid();
     orderId = o.id;
   }
+  await refuseLapsedTicket(db, args.merchantId, orderId, now);
   const [detail] = await loadOrderDetails(db, [orderId], "merchant");
   return detail;
 }
@@ -117,6 +153,7 @@ export async function verifyPickup(
   const now = args.now ?? new Date();
   const isCode = parsePickupInput(args.input).kind === "code";
   if (isCode) await assertCodeEntryAllowed(db, args.merchantId, now);
+  await refuseLapsedTicket(db, args.merchantId, args.orderId, now);
 
   try {
     await completePickup(db, args, now);
@@ -137,13 +174,17 @@ async function completePickup(
   args: { merchantId: string; orderId: string; input: string; proofImageUrl?: string; pickupQrSecret: string },
   now: Date,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx): Promise<"done" | "lapsed"> => {
     const [o] = await tx.select().from(orders).where(eq(orders.id, args.orderId)).for("update").limit(1);
     if (!o || o.merchantId !== args.merchantId) throw new ApiError("NOT_FOUND", "Pesanan tidak ditemukan");
     if (!(PICKABLE as readonly string[]).includes(o.status)) {
       throw new ApiError(
         "ORDER_STATE_CONFLICT",
-        o.status === "COMPLETED" ? "Pesanan ini sudah diambil" : "Pesanan belum dibayar atau sudah dibatalkan",
+        o.status === "COMPLETED"
+          ? "Pesanan ini sudah diambil"
+          : o.cancelReason === PAY_AT_WARUNG_EXPIRED_REASON
+            ? LAPSED_TICKET_MESSAGE
+            : "Pesanan belum dibayar atau sudah dibatalkan",
       );
     }
 
@@ -154,7 +195,15 @@ async function completePickup(
         : verifyPickupToken(parsed.token, o.pickupCode, args.pickupQrSecret) === o.id;
     if (!matches) throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak cocok dengan pesanan ini");
 
-    if (now.getTime() > o.pickupDeadlineAt.getTime() + PICKUP_GRACE_MINUTES * 60_000) {
+    // Pilot "bayar di warung": the customer pays the warung at this moment.
+    const payAtWarung = o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
+    // A free pay-at-warung hold ends exactly at its deadline; paid orders get a grace period.
+    if (payAtWarung && isHoldOver(o.pickupDeadlineAt, now)) {
+      // The hold ended a moment ago: expire it here (committed), so the message below is true.
+      await abandonPayAtWarungOrder(tx, o.id, "EXPIRED", PAY_AT_WARUNG_EXPIRED_REASON, now);
+      return "lapsed";
+    }
+    if (!payAtWarung && now.getTime() > o.pickupDeadlineAt.getTime() + PICKUP_GRACE_MINUTES * 60_000) {
       throw new ApiError("PICKUP_WINDOW_CLOSED", "Batas waktu pengambilan sudah lewat");
     }
 
@@ -166,8 +215,6 @@ async function completePickup(
     const co2Grams = co2GramsFromFoodGrams(foodGrams);
     const moneySaved = o.subtotalOriginalIdr - o.subtotalRecoveryIdr + o.voucherDiscountIdr;
     const points = Math.floor(o.totalCustomerPaidIdr / 1000);
-    // Pilot "bayar di warung": the customer pays the warung at this moment.
-    const payAtWarung = o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
 
     const [done] = await tx
       .update(orders)
@@ -211,7 +258,9 @@ async function completePickup(
         .set({ walletBalanceIdr: sql`${merchants.walletBalanceIdr} + ${o.netMerchantPayoutIdr}`, updatedAt: now })
         .where(eq(merchants.id, o.merchantId));
     }
+    return "done";
   });
+  if (outcome === "lapsed") throw new ApiError("PICKUP_WINDOW_CLOSED", LAPSED_TICKET_MESSAGE);
 }
 
 export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
@@ -226,21 +275,27 @@ export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
  * (exactly once, in the same transaction as the status change). The customer gets
  * no impact / points credit — the food was not rescued by them. Stock stays sold.
  *
- * Pilot "bayar di warung" tickets were never paid: they expire without a payout and
- * their reserved portions go back to the batch (abandonPayAtWarungOrder).
+ * Pilot "bayar di warung" tickets were never paid: they expire without a payout as soon
+ * as their short hold ends (pickup_deadline_at, no grace; see hold.ts) and their reserved
+ * portions go back to the batch (abandonPayAtWarungOrder).
  */
 export async function closeUnclaimedOrders(db: Db, now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - PICKUP_GRACE_MINUTES * 60_000);
   const stale = await db
     .select({ id: orders.id, paymentMethod: orders.paymentMethod, paidAt: orders.paidAt })
     .from(orders)
-    .where(and(inArray(orders.status, [...PICKABLE]), sql`${orders.pickupDeadlineAt} < ${cutoff}`))
+    .where(
+      or(
+        and(inArray(orders.status, [...PICKABLE]), sql`${orders.pickupDeadlineAt} < ${cutoff}`),
+        and(OPEN_PAY_AT_WARUNG, lte(orders.pickupDeadlineAt, now)),
+      ),
+    )
     .orderBy(orders.pickupDeadlineAt)
     .limit(500);
   let closed = 0;
   for (const { id, paymentMethod, paidAt } of stale) {
     if (paymentMethod === "BAYAR_DI_WARUNG" && !paidAt) {
-      const done = await db.transaction((tx) => abandonPayAtWarungOrder(tx, id, "EXPIRED", UNCLAIMED_ORDER_REASON, now));
+      const done = await db.transaction((tx) => abandonPayAtWarungOrder(tx, id, "EXPIRED", PAY_AT_WARUNG_EXPIRED_REASON, now));
       if (done) closed++;
       continue;
     }

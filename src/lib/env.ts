@@ -63,6 +63,48 @@ export function isOtpDevMode(): boolean {
   return v === undefined ? !isProduction() : v === "true";
 }
 
+/** Resend (https://resend.com) credentials for OTP email; null when not configured. */
+export function getResendConfig(): { apiKey: string; from: string } | null {
+  const apiKey = read("RESEND_API_KEY", z.string().min(8).optional());
+  const from = read(
+    "OTP_EMAIL_FROM",
+    z
+      .string()
+      .regex(/^(?:[^<>]*<\s*[^\s@<>]+@[^\s@<>]+\s*>|[^\s@<>]+@[^\s@<>]+)$/, "use name@domain or Name <name@domain>")
+      .optional(),
+  );
+  if (!apiKey && !from) return null;
+  // Half a setup would silently turn email login off: say what is missing instead.
+  if (!apiKey || !from) {
+    const missing = apiKey ? "OTP_EMAIL_FROM" : "RESEND_API_KEY";
+    const other = apiKey ? "RESEND_API_KEY" : "OTP_EMAIL_FROM";
+    throw new Error(`Invalid environment variable ${missing}: required together with ${other} for OTP email. See .env.example.`);
+  }
+  return { apiKey, from };
+}
+
+/** Fonnte (https://fonnte.com) device token for OTP over WhatsApp; null when not configured. */
+export function getFonnteToken(): string | null {
+  return read("FONNTE_TOKEN", z.string().min(8).optional()) ?? null;
+}
+
+/** Channels that can deliver an OTP to a real person right now (none in dev mode). */
+export function getRealOtpChannels(): { email: boolean; whatsapp: boolean } {
+  if (isOtpDevMode()) return { email: false, whatsapp: false };
+  return { email: getResendConfig() !== null, whatsapp: getFonnteToken() !== null };
+}
+
+/**
+ * True when login codes really reach the account owner: OTP_DEV_MODE is off and at least
+ * one provider (Resend email or Fonnte WhatsApp) is configured. While false, the code is
+ * shown on screen, so anyone who knows a phone number or email could log in as that
+ * person: real warung (pilot) must not join, and real people's accounts stay locked.
+ */
+export function isRealOtpDelivery(): boolean {
+  const c = getRealOtpChannels();
+  return c.email || c.whatsapp;
+}
+
 /** "simulator" (default) enables /orders/:id/simulate-payment for demos. */
 export function getPaymentProvider(): "simulator" | "midtrans" | "xendit" {
   return read("PAYMENT_PROVIDER", z.enum(["simulator", "midtrans", "xendit"]).default("simulator"));

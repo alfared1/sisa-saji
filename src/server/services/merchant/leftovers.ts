@@ -1,7 +1,9 @@
 /**
  * Nightly leftover reports: after closing, the warung records where the portions that
  * still did not sell went (given away, animal feed or maggot, compost, thrown away).
- * Pilot results compare the thrown-away part with the baseline the owner gave on joining.
+ * Pilot results compare the thrown-away part with the baseline the owner gave on joining,
+ * which asks how many portions were usually THROWN AWAY per night before Sisa-Saji, so both
+ * sides measure the same thing. Reports and baseline are self-reported by the warung.
  */
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
@@ -92,7 +94,10 @@ export async function saveLeftoverReport(
   return getLeftoverReport(db, merchantId, body.report_date, now);
 }
 
-/** Waste reduction in percent, or null when there is no baseline waste to compare with. */
+/**
+ * Waste reduction in percent: 1 − discarded ÷ (baseline thrown away per night × nights), or
+ * null when there is no baseline waste to compare with. Negative when more was thrown away.
+ */
 export function wasteReductionPct(baselinePortionNights: number, discarded: number): number | null {
   if (baselinePortionNights <= 0) return null;
   return Math.round((1 - discarded / baselinePortionNights) * 100);

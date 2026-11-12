@@ -213,6 +213,18 @@ describe("PATCH /merchant/surplus/:id/stock", () => {
     await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ status: "CANCELLED" }));
     await expectApiError(patchBatchStock(db, merchant.id, batch.id, StockPatchBody.parse({ delta: 1 })), "BATCH_CLOSED");
   });
+
+  it("caps the resulting stock, not each step, when a limit is given (demo warung)", async () => {
+    const { batch } = await publish(5, 120);
+    const limit = { maxAvailable: 30, message: "batas demo" };
+    const patch = (body: Record<string, number>) =>
+      patchBatchStock(db, merchant.id, batch.id, StockPatchBody.parse(body), new Date(), limit);
+
+    expect((await patch({ delta: 25 })).available_stock).toBe(30);
+    await expectApiError(patch({ delta: 1 }), "VALIDATION_ERROR");
+    await expectApiError(patch({ available_stock: 31 }), "VALIDATION_ERROR");
+    expect((await patch({ delta: -10 })).available_stock).toBe(20);
+  });
 });
 
 describe("PATCH /merchant/surplus/:id (cancel / auto discount)", () => {

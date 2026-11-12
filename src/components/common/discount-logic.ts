@@ -5,6 +5,8 @@
  *  - "Hemat N%"         emerald, the normal case.
  *  - "Diskon Kilat N%"  amber/orange when the discount is ≥ 70 % OR the batch
  *                       closes in < 45 minutes; it pulses only under 45 minutes.
+ *                       Map pins have no room for two words plus the number, so
+ *                       they use the short form "Kilat N%" (same term, same colour).
  *
  * Colours (WCAG): the spec hues #10B981 / #F97316 only reach 2,5:1 / 2,8:1
  * against white text, which fails AA even for large text (3:1). The badge fill
@@ -38,7 +40,7 @@ export type DiscountBadgeState = {
   pct: number;
   /** "Hemat 50%" / "Diskon Kilat 70%". */
   label: string;
-  /** Short label for tight spots (map pins): "Hemat 50%" / "Flash 70%". */
+  /** Short label for tight spots (map pins): "Hemat 50%" / "Kilat 70%". */
   shortLabel: string;
 };
 
@@ -63,7 +65,7 @@ export function discountBadgeState(pct: number, minutesToClose: number | null = 
     pulse: closingSoon,
     pct: p,
     label: flash ? `Diskon Kilat ${p}%` : `Hemat ${p}%`,
-    shortLabel: flash ? `Flash ${p}%` : `Hemat ${p}%`,
+    shortLabel: flash ? `Kilat ${p}%` : `Hemat ${p}%`,
   };
 }
 

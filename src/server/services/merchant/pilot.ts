@@ -2,18 +2,22 @@
  * Field pilot: real warung join with the team's invite code (PILOT_INVITE_CODE).
  * Pilot warung are paid at the counter (see orders/checkout.ts) and only their
  * verified pickups and leftover reports feed the public pilot results (getPilotStats),
- * never demo data.
+ * never demo data. Joining needs real OTP delivery (see joinPilot).
  */
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { and, asc, eq, gte, ne, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { merchants, orderItems, orders } from "@/db/schema";
-import type { MerchantMeResponse, PilotStats } from "@/lib/contracts";
-import { getPilotInviteCode } from "@/lib/env";
+import { merchants, orderItems, orders, users } from "@/db/schema";
+import type { MerchantMeResponse, PilotAvailability, PilotStats } from "@/lib/contracts";
+import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_REASON, isDemoAccount } from "@/lib/demo-accounts";
+import { getPilotInviteCode, isRealOtpDelivery } from "@/lib/env";
 import { ApiError } from "@/server/http";
 import { getMerchantMe, loadMerchant } from "@/server/services/merchant/profile";
 import { pilotLeftoverTotals, wasteReductionPct } from "./leftovers";
+
+/** `error.details.reason` when joining is refused because login codes are still shown on screen. */
+export const PILOT_REAL_OTP_REQUIRED = "REAL_OTP_REQUIRED";
 
 function sameCode(given: string, expected: string): boolean {
   const a = Buffer.from(given.trim().toUpperCase());
@@ -21,9 +25,33 @@ function sameCode(given: string, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+async function ownerIsDemoAccount(db: Db, ownerUserId: string): Promise<boolean> {
+  const [owner] = await db
+    .select({ email: users.email, phoneNumber: users.phoneNumber })
+    .from(users)
+    .where(eq(users.id, ownerUserId))
+    .limit(1);
+  return owner ? isDemoAccount(owner) : false;
+}
+
+/** What the settings card needs to show the join form, or why it cannot. */
+export async function getPilotAvailability(db: Db, merchantId: string): Promise<PilotAvailability> {
+  const m = await loadMerchant(db, merchantId);
+  return {
+    invite_open: Boolean(getPilotInviteCode()),
+    real_otp_delivery: isRealOtpDelivery(),
+    demo_locked: await ownerIsDemoAccount(db, m.ownerUserId),
+  };
+}
+
 /**
  * Joins the pilot. `baselineLeftoverPortions` is the owner's estimate of portions usually
- * left over per night before Sisa-Saji; the waste reduction is measured against it.
+ * THROWN AWAY per night before Sisa-Saji (self-reported); the nightly reports' discarded
+ * portions are compared with it.
+ *
+ * Refused while login codes are shown on screen (OTP_DEV_MODE, no WhatsApp/email provider):
+ * a real warung's account would then be open to anyone who knows its phone number. Also
+ * refused for the shared demo accounts.
  */
 export async function joinPilot(
   db: Db,
@@ -36,6 +64,16 @@ export async function joinPilot(
   if (!expected) throw new ApiError("FORBIDDEN", "Uji coba belum dibuka.");
   const m = await loadMerchant(db, merchantId);
   if (!m.isPilot) {
+    if (await ownerIsDemoAccount(db, m.ownerUserId)) {
+      throw new ApiError("FORBIDDEN", DEMO_LOCKED_MESSAGE, { reason: DEMO_LOCKED_REASON });
+    }
+    if (!isRealOtpDelivery()) {
+      throw new ApiError(
+        "FORBIDDEN",
+        "Uji coba lapangan butuh kode masuk lewat WhatsApp/email asli. Selama kode masuk masih tampil di layar, warung sungguhan belum bisa bergabung supaya akunnya aman.",
+        { reason: PILOT_REAL_OTP_REQUIRED },
+      );
+    }
     if (!sameCode(code, expected)) throw new ApiError("VALIDATION_ERROR", "Kode undangan uji coba tidak cocok.", [
       { path: "code", message: "Kode tidak cocok" },
     ]);
@@ -47,12 +85,15 @@ export async function joinPilot(
   return getMerchantMe(db, merchantId);
 }
 
-/** Sets the baseline for a pilot warung that has none yet. It cannot be changed afterwards. */
+/**
+ * Sets the baseline (portions usually thrown away per night before the pilot) for a pilot
+ * warung that has none yet. It cannot be changed afterwards.
+ */
 export async function setPilotBaseline(db: Db, merchantId: string, portions: number, now: Date = new Date()): Promise<MerchantMeResponse> {
   const m = await loadMerchant(db, merchantId);
   if (!m.isPilot) throw new ApiError("FORBIDDEN", "Warungmu belum ikut uji coba.");
   if (m.pilotBaselineLeftoverPortions !== null) {
-    throw new ApiError("CONFLICT", "Angka sisa sebelum uji coba sudah diisi dan tidak bisa diubah.");
+    throw new ApiError("CONFLICT", "Angka porsi dibuang sebelum uji coba sudah diisi dan tidak bisa diubah.");
   }
   await db.update(merchants).set({ pilotBaselineLeftoverPortions: portions, updatedAt: now }).where(eq(merchants.id, merchantId));
   return getMerchantMe(db, merchantId);
@@ -139,6 +180,8 @@ export async function getPilotStats(db: Db): Promise<PilotStats> {
   const sum = (key: "donated" | "animal_feed" | "compost" | "discarded" | "nights") =>
     leftoverRows.reduce((acc, r) => acc + r[key], 0);
   // Waste reduction only over warung that gave a baseline, so both sides cover the same nights.
+  // Like for like: the baseline is portions usually thrown away per night, compared with the
+  // portions reported as discarded (not with everything left over).
   let baselineNights = 0;
   let discardedWithBaseline = 0;
   for (const p of pilots) {

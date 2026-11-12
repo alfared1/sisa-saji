@@ -12,9 +12,16 @@ import * as schema from "./schema";
  */
 export function createDb(databaseUrl: string, options: { max?: number } = {}) {
   const pool = new Pool({ connectionString: databaseUrl, max: options.max ?? 10 });
-  const db = drizzle(pool, { schema, casing: "snake_case" });
-  return { db, pool };
+  return { db: dbOnPool(pool), pool };
 }
+
+/** A Drizzle client on an existing pool (with this module's schema). */
+export function dbOnPool(pool: Pool) {
+  return drizzle(pool, { schema, casing: "snake_case" });
+}
+
+/** The schema module this client was built with (changes when dev hot reload re-runs it). */
+export const SCHEMA_REF: object = schema;
 
 export type Db = ReturnType<typeof createDb>["db"];
 /** A transaction handle from db.transaction(). */

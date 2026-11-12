@@ -531,9 +531,18 @@ export const otpCodes = pgTable(
     attempts: integer().notNull().default(0),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     consumedAt: timestamp({ withTimezone: true }),
+    /**
+     * SHA-256 of the requesting client's IP address (never the address itself), for the
+     * per-client limit once codes are really sent. Null for older rows and in dev mode.
+     */
+    clientKey: varchar({ length: 64 }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("idx_otp_identifier").on(t.identifier, t.createdAt.desc())],
+  (t) => [
+    index("idx_otp_identifier").on(t.identifier, t.createdAt.desc()),
+    index("idx_otp_client_key").on(t.clientKey, t.createdAt.desc()),
+    index("idx_otp_created_at").on(t.createdAt.desc()),
+  ],
 );
 
 /* ------------------------------------------------------------------ */

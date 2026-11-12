@@ -5,16 +5,10 @@ import { ChartColumnIcon, CheckIcon, GiftIcon } from "lucide-react";
 import type { TonightPrediction } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { roundPortions } from "../lib/logic";
+import { confidenceText, selloutText } from "./forecast-text";
 
 function clock(hhmm: string) {
   return hhmm.slice(0, 5).replace(":", ".");
-}
-
-/** Confidence score in words a warung owner can act on. */
-function confidenceText(score: number): string {
-  if (score >= 0.75) return "Perkiraan ini cukup bisa dipegang, polanya mirip beberapa minggu terakhir.";
-  if (score >= 0.5) return "Perkiraan kasar dari riwayat beberapa minggu terakhir.";
-  return "Masih kasar, riwayat surplus warungmu belum banyak.";
 }
 
 /** Tonight's surplus forecast for the warung dashboard, in the owner's language. */
@@ -60,7 +54,6 @@ export function AiPredictionAlertCard({
   const portions = roundPortions(prediction.predicted_surplus_portions);
   const menus = [...prediction.per_menu].sort((a, b) => b.predicted_surplus_portions - a.predicted_surplus_portions);
   const top = menus.find((m) => !publishedMenuIds.has(m.menu_id)) ?? menus[0];
-  const selloutOutOfTen = Math.round(prediction.sellout_probability_at_50pct * 10);
 
   return (
     <section
@@ -73,8 +66,7 @@ export function AiPredictionAlertCard({
         Sekitar {portions} porsi kemungkinan belum laku, paling banyak sekitar pukul {clock(prediction.peak_hour)}.
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-white/85">
-        {confidenceText(prediction.confidence_score)} Kalau dijual dengan diskon 50%, biasanya {selloutOutOfTen} dari 10 malam
-        habis.
+        {confidenceText(prediction.confidence_score)} {selloutText(prediction.sellout_probability_at_50pct)}
       </p>
       {prediction.rain_forecast_mm !== null && (
         <p className="mt-1 text-sm text-white/85">

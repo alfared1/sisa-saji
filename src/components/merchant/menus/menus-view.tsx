@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PencilIcon, PlusIcon, UtensilsCrossedIcon } from "lucide-react";
 import { FoodThumb } from "@/components/customer/food-thumb";
+import { DemoLockNotice } from "@/components/common/demo-lock-notice";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState, errorMessage } from "@/components/common/error-state";
 import { ListSkeleton } from "@/components/common/list-skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
 import { MENU_CATEGORY_LABELS, type MenuCreateBody, type MenuUpdateBody, type MenuView, type MerchantMeResponse } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
@@ -45,7 +47,20 @@ export function menuPatch(before: MenuView, after: MenuFormOutput): MenuUpdateBo
   return patch;
 }
 
-function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit: () => void; onToggle: (v: boolean) => void; toggling: boolean }) {
+function MenuCard({
+  menu,
+  onEdit,
+  onToggle,
+  toggling,
+  locked,
+}: {
+  menu: MenuView;
+  onEdit: () => void;
+  onToggle: (v: boolean) => void;
+  toggling: boolean;
+  /** Shared demo warung: menus are read-only (publishing still works). */
+  locked: boolean;
+}) {
   const floorPct = Math.round((menu.min_recovery_price_idr / menu.original_price_idr) * 100);
   return (
     <li className={cn("flex flex-col rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border transition-opacity", !menu.is_active && "opacity-70")}>
@@ -63,9 +78,9 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
             {menu.is_mystery_bag ? "Paket Kejutan" : MENU_CATEGORY_LABELS[menu.category]}
           </p>
         </div>
-        <label className="flex h-11 shrink-0 cursor-pointer items-center gap-2 text-xs font-semibold">
+        <label className={cn("flex h-11 shrink-0 items-center gap-2 text-xs font-semibold", locked ? "cursor-not-allowed" : "cursor-pointer")}>
           <span className={menu.is_active ? "text-primary" : "text-muted-foreground"}>{menu.is_active ? "Aktif" : "Nonaktif"}</span>
-          <Switch checked={menu.is_active} disabled={toggling} onCheckedChange={onToggle} aria-label={`${menu.is_active ? "Nonaktifkan" : "Aktifkan"} ${menu.menu_name}`} />
+          <Switch checked={menu.is_active} disabled={locked || toggling} onCheckedChange={onToggle} aria-label={`${menu.is_active ? "Nonaktifkan" : "Aktifkan"} ${menu.menu_name}`} />
         </label>
       </div>
       {menu.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{menu.description}</p>}
@@ -95,7 +110,8 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-card text-sm font-semibold ring-1 ring-border outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          disabled={locked}
+          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-2xl bg-card text-sm font-semibold ring-1 ring-border outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-card"
         >
           <PencilIcon className="size-4" /> Ubah
         </button>
@@ -115,12 +131,18 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
 }
 
 /** /merchant/menus — menu catalogue with create/edit sheet. */
+const noopSubscribe = () => () => {};
+
 export function MerchantMenusView() {
   const params = useSearchParams();
   const router = useRouter();
   const qc = useQueryClient();
   const me = useMerchantMe();
+  // The shell may already have /merchant/me cached when this page hydrates: render the
+  // skeleton first, like the server did, so React does not report a hydration mismatch.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const locked = useSession().user?.is_demo ?? false;
   const [editing, setEditing] = useState<Editing>(() => (params.get("baru") === "1" ? { mode: "create" } : null));
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -177,6 +199,7 @@ export function MerchantMenusView() {
           key={m.id}
           menu={m}
           toggling={togglingId === m.id}
+          locked={locked}
           onEdit={() => setEditing({ mode: "edit", menu: m })}
           onToggle={(v) => update.mutate({ id: m.id, body: { is_active: v } })}
         />
@@ -190,17 +213,21 @@ export function MerchantMenusView() {
         title="Menu"
         subtitle="Katalog dasar untuk publikasi surplus. Harga minimum melindungi modal kamu."
         actions={
-          <button
-            type="button"
-            onClick={() => setEditing({ mode: "create" })}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <PlusIcon className="size-4" /> Tambah menu
-          </button>
+          locked ? undefined : (
+            <button
+              type="button"
+              onClick={() => setEditing({ mode: "create" })}
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-soft outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <PlusIcon className="size-4" /> Tambah menu
+            </button>
+          )
         }
       />
 
-      {me.isPending ? (
+      {locked && <DemoLockNotice hint="Menu yang ada tetap bisa dipublikasikan sebagai surplus." className="mb-4" />}
+
+      {!hydrated || me.isPending ? (
         <ListSkeleton count={3} />
       ) : me.isError ? (
         <ErrorState error={me.error} onRetry={() => void me.refetch()} />
@@ -222,7 +249,7 @@ export function MerchantMenusView() {
         </div>
       )}
 
-      <Sheet open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
+      <Sheet open={editing !== null && !locked} onOpenChange={(o) => !o && setEditing(null)}>
         <SheetContent
           side={isDesktop ? "right" : "bottom"}
           className={cn("overflow-hidden", isDesktop ? "data-[side=right]:sm:max-w-lg" : "max-h-[92dvh] rounded-t-3xl pb-[env(safe-area-inset-bottom)]")}

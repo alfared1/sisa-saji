@@ -1,7 +1,7 @@
 /**
  * Background jobs (blueprint §2.2.D / §2.3), run by scripts/worker.ts.
  *
- *   every 1 min   runMinuteJobs        expire unpaid checkouts, close unclaimed paid orders
+ *   every 1 min   runMinuteJobs        expire unpaid checkouts, close unclaimed paid orders and lapsed "bayar di warung" tickets
  *                                       (no-show), activate due SCHEDULED batches, close
  *                                       ended batches, end lapsed premium, prune presence,
  *                                       merchant "publish tonight?" reminders

@@ -1,15 +1,19 @@
 import { devices, request as pwRequest } from "@playwright/test";
 import { expect, test } from "../fixtures";
+import { PAY_AT_WARUNG_HOLD_MINUTES } from "../../src/lib/constants";
 import type { CheckoutResponse, PilotStats } from "../../src/lib/contracts";
 import { DEMO_MERCHANT_SLUG, E2E_BASE_URL, E2E_PILOT_CODE } from "../env";
 import { db, loginContextAs, ok, pickBatch, registerCustomer } from "../helpers";
 
 /**
- * Field pilot end to end: a real warung joins with the invite code, a customer orders
- * and sees "bayar di warung", the warung verifies the pickup and is told what to
- * charge, reports the night's leftovers, and /uji-coba counts both.
+ * Field pilot end to end. The e2e server shows login codes on screen (OTP_DEV_MODE), so a
+ * warung cannot join the pilot there: the settings card explains why and the API refuses.
+ * The warung is then made a pilot warung directly in the database (as the team would after
+ * turning on real WhatsApp/email delivery); a customer orders and sees "bayar di warung"
+ * with its short hold, the warung verifies the pickup and is told what to charge, reports
+ * the night's leftovers, and /uji-coba counts both.
  */
-test("pilot warung: join with the code, pay at the warung, verified pickup shows on /uji-coba", async ({ page, context, browser }) => {
+test("pilot warung: joining needs real OTP, pay at the warung, verified pickup shows on /uji-coba", async ({ page, context, browser }) => {
   // A seeded Bogor warung (not the shared demo warung) with live surplus tonight.
   const customer = await pwRequest.newContext({ baseURL: E2E_BASE_URL });
   await registerCustomer(customer, "Pembeli Uji Coba");
@@ -20,15 +24,27 @@ test("pilot warung: join with the code, pay at the warung, verified pickup shows
     [ownerEmail, batch.merchant_slug],
   );
 
-  // Owner joins the pilot from Pengaturan.
+  // While login codes are shown on screen, the owner cannot join: the card says why, the API refuses.
   await loginContextAs(context, ownerEmail);
   await page.goto("/merchant/settings");
   const pilot = page.getByRole("region", { name: "Uji coba lapangan" });
-  await pilot.getByLabel("Kode undangan").fill(E2E_PILOT_CODE.toLowerCase());
-  await pilot.getByLabel(/biasanya berapa porsi tersisa/).fill("10");
-  await pilot.getByRole("button", { name: "Gabung" }).click();
+  await expect(pilot.getByText("Belum bisa bergabung")).toBeVisible();
+  await expect(pilot.getByText(/butuh kode masuk yang dikirim lewat WhatsApp atau email/)).toBeVisible();
+  await expect(pilot.getByLabel("Kode undangan")).toHaveCount(0);
+  const refused = await page.request.post("/api/v1/merchant/pilot", {
+    data: { code: E2E_PILOT_CODE, baseline_leftover_portions: 10 },
+  });
+  expect(refused.status()).toBe(403);
+  expect((await refused.json()).error.details).toEqual({ reason: "REAL_OTP_REQUIRED" });
+
+  // The team enables it once real delivery runs; the baseline counts portions thrown away.
+  await db().query(
+    `update merchants set is_pilot = true, pilot_joined_at = now(), pilot_baseline_leftover_portions = 10 where slug = $1`,
+    [batch.merchant_slug],
+  );
+  await page.reload();
   await expect(pilot.getByText(/Warungmu ikut uji coba/)).toBeVisible();
-  await expect(pilot.getByText(/Sebelum uji coba: sekitar 10 porsi/)).toBeVisible();
+  await expect(pilot.getByText(/Sebelum uji coba: sekitar 10 porsi dibuang per/)).toBeVisible();
 
   // Customer orders: a ticket right away, paid at the warung, no service fee.
   const { order } = await ok<CheckoutResponse>(
@@ -39,6 +55,8 @@ test("pilot warung: join with the code, pay at the warung, verified pickup shows
   expect(order.status).toBe("READY_FOR_PICKUP");
   expect(order.payment_method).toBe("BAYAR_DI_WARUNG");
   expect(order.platform_commission_idr).toBe(0);
+  // The free hold is short: at most PAY_AT_WARUNG_HOLD_MINUTES after checkout.
+  expect(Date.parse(order.pickup_deadline_at) - Date.parse(order.created_at)).toBeLessThanOrEqual(PAY_AT_WARUNG_HOLD_MINUTES * 60_000);
 
   const phoneCtx = await browser.newContext({ ...devices["Pixel 7"], baseURL: E2E_BASE_URL, storageState: await customer.storageState() });
   const phone = await phoneCtx.newPage();

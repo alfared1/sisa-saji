@@ -12,6 +12,7 @@ import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { receivePaymentWebhook, signWebhookBody, newGatewayRef } from "@/server/services/payment/webhook";
 import { abandonPayAtWarungOrder, abandonPendingOrder } from "@/server/services/stock";
+import { expireLapsedHolds } from "./hold";
 
 type OrderListInput = z.output<typeof OrderListQuery>;
 type ReviewInput = z.output<typeof ReviewBody>;
@@ -19,8 +20,12 @@ type ReviewInput = z.output<typeof ReviewBody>;
 export const ACTIVE_STATUSES: OrderStatus[] = ["PENDING_PAYMENT", "PAID", "READY_FOR_PICKUP"];
 export const UNPAID_EXPIRY_REASON = "Pembayaran tidak diselesaikan dalam 10 menit";
 
-/** Lazily expires the given user's unpaid orders past payment_expires_at (the worker does it for everyone). */
+/**
+ * Lazily expires the given user's unpaid orders past payment_expires_at and lapsed
+ * "bayar di warung" tickets (the worker does it for everyone).
+ */
 async function expireStaleFor(db: Db, where: { customerId?: string; orderId?: string }, now: Date) {
+  await expireLapsedHolds(db, where, now);
   const conds = [eq(orders.status, "PENDING_PAYMENT"), lte(orders.paymentExpiresAt, now)];
   if (where.customerId) conds.push(eq(orders.customerId, where.customerId));
   if (where.orderId) conds.push(eq(orders.id, where.orderId));
@@ -80,11 +85,19 @@ async function ownedOrder(db: Db, orderId: string, userId: string) {
 }
 
 export async function cancelOrder(db: Db, orderId: string, userId: string, now: Date = new Date()): Promise<OrderDetail> {
+  await ownedOrder(db, orderId, userId);
+  // A lapsed order expires first, so it counts as not collected rather than cancelled.
+  await expireStaleFor(db, { orderId }, now);
   const o = await ownedOrder(db, orderId, userId);
   // Pilot tickets are paid at the warung, so they stay cancellable until the pickup.
   const payAtWarung = o.status === "READY_FOR_PICKUP" && o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
   if (o.status !== "PENDING_PAYMENT" && !payAtWarung) {
-    throw new ApiError("ORDER_STATE_CONFLICT", "Hanya pesanan yang belum dibayar yang bisa dibatalkan");
+    throw new ApiError(
+      "ORDER_STATE_CONFLICT",
+      o.status === "EXPIRED" || o.status === "CANCELLED"
+        ? "Pesanan ini sudah tidak aktif."
+        : "Hanya pesanan yang belum dibayar yang bisa dibatalkan",
+    );
   }
   const done = await db.transaction((tx) =>
     payAtWarung

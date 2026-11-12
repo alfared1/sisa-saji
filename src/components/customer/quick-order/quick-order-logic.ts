@@ -3,19 +3,24 @@
  * QRIS). Pure helpers, unit-tested in tests/unit/qo-logic.test.ts.
  */
 import type { BatchCard, CheckoutBody, ErrorCode } from "@/lib/contracts";
+import { PAY_AT_WARUNG_MAX_PORTIONS } from "@/lib/constants";
 import { CART_MAX_QTY_PER_ITEM } from "@/stores/cart";
 import { QUICK_ORDER_PARAM } from "./quick-order-param";
 
 export { QUICK_ORDER_PARAM };
 
-/** Highest quantity the stepper allows: 1..min(available, 10). */
-export function quickOrderMaxQty(available: number): number {
-  return Math.max(1, Math.min(Math.floor(available), CART_MAX_QTY_PER_ITEM));
+/**
+ * Highest quantity the stepper allows: 1..min(available, 10), and at most
+ * PAY_AT_WARUNG_MAX_PORTIONS on a pilot warung's "bayar di warung" ticket.
+ */
+export function quickOrderMaxQty(available: number, isPilot = false): number {
+  const cap = isPilot ? PAY_AT_WARUNG_MAX_PORTIONS : CART_MAX_QTY_PER_ITEM;
+  return Math.max(1, Math.min(Math.floor(available), cap));
 }
 
 /** Clamps a stepper value into 1..max. */
-export function clampQuickOrderQty(qty: number, available: number): number {
-  return Math.min(Math.max(1, Math.floor(qty)), quickOrderMaxQty(available));
+export function clampQuickOrderQty(qty: number, available: number, isPilot = false): number {
+  return Math.min(Math.max(1, Math.floor(qty)), quickOrderMaxQty(available, isPilot));
 }
 
 /** Path of the warung page that reopens the sheet for `batchId` after login. */

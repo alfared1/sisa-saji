@@ -111,6 +111,38 @@ export function unpaidOrderHref(code: string, details: unknown): string | null {
   return null;
 }
 
+/**
+ * Stepper max for one line of a "bayar di warung" ticket: at most `cap` portions on the
+ * whole ticket (PAY_AT_WARUNG_MAX_PORTIONS), so the other lines' portions count too.
+ */
+export function ticketLineMax(
+  items: readonly { batch_id: string; quantity: number }[],
+  batchId: string,
+  lineMax: number,
+  cap: number,
+): number {
+  const others = items.reduce((s, i) => (i.batch_id === batchId ? s : s + i.quantity), 0);
+  return Math.max(0, Math.min(lineMax, cap - others));
+}
+
+/**
+ * Quantities that bring a cart down to `cap` portions, trimming the last lines first
+ * (a line may drop to 0 = remove it). Empty when the cart is already within the cap.
+ */
+export function trimToTicketCap(
+  items: readonly { batch_id: string; quantity: number }[],
+  cap: number,
+): { batch_id: string; quantity: number }[] {
+  let over = items.reduce((s, i) => s + i.quantity, 0) - cap;
+  const out: { batch_id: string; quantity: number }[] = [];
+  for (let k = items.length - 1; k >= 0 && over > 0; k--) {
+    const cut = Math.min(over, items[k].quantity);
+    out.push({ batch_id: items[k].batch_id, quantity: items[k].quantity - cut });
+    over -= cut;
+  }
+  return out;
+}
+
 /** 400 VALIDATION_ERROR per-buyer cap: [{ path: "items", batch_id, max_quantity }]. */
 export function perBuyerCaps(code: string, details: unknown): { batch_id: string; max_quantity: number }[] {
   if (code !== "VALIDATION_ERROR" || !Array.isArray(details)) return [];

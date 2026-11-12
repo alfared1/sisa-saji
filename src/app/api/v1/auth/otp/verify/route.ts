@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { getDb } from "@/db";
 import { OtpVerifyBody, type OtpVerifyResponse } from "@/lib/contracts";
+import { isOtpDevMode } from "@/lib/env";
 import { setSessionCookie } from "@/server/auth/session";
 import { handle, ok, parseJson } from "@/server/http";
 import { verifyOtp } from "@/server/services/auth/otp";
@@ -9,7 +10,9 @@ import { verifyOtp } from "@/server/services/auth/otp";
 export const POST = handle(async (req) => {
   await connection();
   const body = await parseJson(req, OtpVerifyBody);
-  const { user, isNewUser } = await verifyOtp(getDb(), body);
-  await setSessionCookie(user.id);
+  const devMode = isOtpDevMode();
+  const { user, isNewUser } = await verifyOtp(getDb(), body, { devMode });
+  // Outside dev mode the code was really delivered (requestOtp refuses otherwise).
+  await setSessionCookie(user.id, { realOtp: !devMode });
   return ok<OtpVerifyResponse>({ user, is_new_user: isNewUser });
 });

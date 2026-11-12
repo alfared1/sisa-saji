@@ -54,7 +54,7 @@ Contoh: `DEMO_PORT=3001 npm run demo` (bash), `set DEMO_PORT=3001 && npm run dem
 
 ### Akun demo
 
-Login memakai OTP. Di mode demo kodenya **ditampilkan di layar** (belum ada provider WhatsApp/SMS).
+Login memakai OTP. Di mode demo (`OTP_DEV_MODE=true`) kodenya **ditampilkan di layar**. Kedua akun demo dipakai bersama oleh semua pengunjung, jadi nama, profil warung, rekening, jam, buka/tutup, menu, dan uji coba di akun ini dikunci; publikasi surplus, pesanan, scan, dan ulasan tetap bisa dicoba.
 
 | Peran | Email | Nomor HP | Catatan |
 | :--- | :--- | :--- | :--- |
@@ -227,12 +227,14 @@ Build Vercel (`vercel-build`) hanya menjalankan migrasi, tidak seed. Setelah per
 
 Mode ini untuk menguji Sisa-Saji di warung nyata di tengah data demo, dengan hasil yang dipisahkan dan bisa dipertanggungjawabkan.
 
+**Aktifkan kode masuk asli dulu** (lihat [Kode masuk lewat WhatsApp/email](#kode-masuk-lewat-whatsappemail)). Selama kode OTP tampil di layar, siapa pun yang tahu nomor HP pemilik warung bisa masuk sebagai dia, jadi aplikasi menolak warung bergabung ke uji coba dan menolak login OTP ke akun warung uji coba dan pembelinya.
+
 1. Isi `PILOT_INVITE_CODE` (min. 8 karakter) di `.env` atau environment Vercel, lalu bagikan kodenya ke warung yang ikut.
-2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan**, memasukkan kodenya, dan mengisi perkiraan berapa porsi biasanya tersisa per malam sebelum memakai Sisa-Saji (angka pembanding, tidak bisa diubah setelah disimpan). Warung mendapat label "Warung uji coba".
-3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Porsi disimpan sampai batas waktu ambil, dan pembeli bisa membatalkan sebelum mengambil.
+2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan**, memasukkan kodenya, dan mengisi perkiraan berapa porsi biasanya **dibuang** per malam sebelum memakai Sisa-Saji (angka pembanding, tidak bisa diubah setelah disimpan). Warung mendapat label "Warung uji coba".
+3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Tiket menahan porsi paling lama 60 menit (`PAY_AT_WARUNG_HOLD_MINUTES`) dan tidak pernah melewati batas waktu ambil; lewat dari itu tiket kedaluwarsa dan porsinya kembali ke stok. Pembeli bisa membatalkan sebelum mengambil, dan warung bisa membatalkan tiket yang belum dibayar dari layar Pesanan: "Stok habis" kapan saja, "Tidak datang" baru di 15 menit terakhir masa tahan (`PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES`), karena pembatalan itu dihitung sebagai tiket tidak diambil pembeli. Satu tiket paling banyak 3 porsi.
 4. Warung memindai QR atau kode `SJ-XXXX` seperti biasa. Layar verifikasi menampilkan jumlah yang harus ditagih.
 5. Setiap malam setelah tutup, warung mengisi kartu **Sisa setelah tutup** di dasbor: porsi yang tetap tidak laku dibagikan, jadi pakan ternak atau maggot, dikompos, atau dibuang. Laporan bisa diisi untuk tadi malam atau malam ini (`PUT /api/v1/merchant/leftovers`).
-6. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, per hari, dan **porsi yang dibuang turun berapa persen** dibanding sebelum uji coba: 1 − dibuang ÷ (perkiraan awal × jumlah malam laporan).
+6. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, per hari, dan **porsi yang dibuang turun berapa persen** dibanding sebelum uji coba: 1 − dibuang ÷ (perkiraan porsi dibuang per malam × jumlah malam laporan). Kedua angka dilaporkan sendiri oleh warung.
 
 Halaman **`/tentang`** merangkum produk untuk juri atau calon mitra dalam satu halaman (masalah, cara kerja, dampak, teknologi, model bisnis, SDGs, sumber), dengan tombol "Coba sebagai pembeli" dan "Coba sebagai warung" yang langsung masuk ke akun demo (`POST /api/v1/auth/demo`, hanya aktif selama aplikasi memakai data demo).
 
@@ -257,6 +259,21 @@ npm run test:e2e            # Playwright: 38 test dalam 16 file, di build produk
 
 ---
 
+### Kode masuk lewat WhatsApp/email
+
+Sebelum mengundang warung sungguhan, kode OTP harus benar-benar dikirim ke pemilik akun, bukan ditampilkan di layar:
+
+1. **Email (Resend):** buat API key di [resend.com](https://resend.com), verifikasi domain pengirim, lalu isi `RESEND_API_KEY` dan `OTP_EMAIL_FROM` (mis. `Sisa-Saji <kode@domainmu.id>`).
+2. **WhatsApp (Fonnte):** hubungkan nomor WhatsApp pengirim di [fonnte.com](https://fonnte.com), lalu isi `FONNTE_TOKEN` dengan token perangkatnya.
+3. Set `OTP_DEV_MODE=false` dan deploy ulang. Cukup satu penyedia; kanal yang belum punya penyedia menjawab "Kode lewat WhatsApp belum tersedia. Masuk dengan email dulu." (atau sebaliknya).
+4. Cek: minta kode untuk nomor/email sendiri. Kode tidak boleh muncul di layar dan harus masuk ke WhatsApp/email. Setelah itu **Pengaturan → Uji coba lapangan** baru menerima kode undangan.
+
+Begitu pengiriman asli aktif, semua sesi yang dibuka saat kode masih tampil di layar otomatis tidak berlaku lagi (semua orang perlu masuk ulang sekali, kecuali akun demo). Jadi akun yang sempat diambil alih orang lain selama mode demo tidak terbawa ke uji coba. Sebelum bergabung, kartu uji coba juga menampilkan rekening pencairan warung supaya pemilik bisa memeriksanya.
+
+Batas supaya pengiriman tidak disalahgunakan (biaya dan risiko nomor pengirim diblokir WhatsApp): 5 kode per nomor/email per 10 menit, 10 kode per perangkat (alamat IP, disimpan sebagai hash) per 10 menit, dan 300 kode per jam untuk seluruh aplikasi (`OTP_MAX_*` di `src/lib/constants.ts`). Nomor dan email akun demo tidak pernah dikirimi kode (nomornya bisa saja milik orang lain); akun demo hanya dibuka lewat tombol "Masuk dengan akun demo".
+
+Kode dan token tidak pernah ditulis ke log; kode yang gagal terkirim langsung dinonaktifkan. Di Vercel, variabel ini diisi di Project Settings → Environment Variables. Catatan: dengan `OTP_DEV_MODE=false`, tombol "Masuk dengan akun demo" tetap jalan selama aplikasi memakai data demo.
+
 ## Konfigurasi (`.env`)
 
 Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
@@ -268,7 +285,9 @@ Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
 | `SESSION_SECRET` | produksi | Tanda tangan cookie sesi `ss_session` (JWT), min. 32 karakter |
 | `PICKUP_QR_SECRET` | produksi | HMAC token QR pengambilan, min. 32 karakter |
 | `PAYMENT_WEBHOOK_SECRET` | produksi | HMAC-SHA512 webhook pembayaran, min. 32 karakter |
-| `OTP_DEV_MODE` | – | `true` = kode OTP tampil di layar (demo) |
+| `OTP_DEV_MODE` | – | `true` = kode OTP tampil di layar (demo). Wajib `false` sebelum ada warung sungguhan |
+| `RESEND_API_KEY`, `OTP_EMAIL_FROM` | – | Kirim kode OTP lewat email (Resend). Keduanya harus diisi |
+| `FONNTE_TOKEN` | – | Kirim kode OTP lewat WhatsApp (Fonnte) |
 | `PAYMENT_PROVIDER` | – | `simulator` (satu-satunya provider saat ini) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push; push nonaktif bila kosong |
 | `PILOT_INVITE_CODE` | – | Kode undangan uji coba lapangan (min. 8 karakter). Kosong = uji coba tertutup |
@@ -301,7 +320,7 @@ Mengganti secret membuat semua sesi logout dan QR tiket lama tidak berlaku; seed
 12. **Komisi platform dibayar pembeli** sebagai biaya layanan Rp 1.500, bukan dipotong dari warung (`net_merchant_payout_idr = subtotal_recovery_idr`).
 13. **Peta memakai Leaflet + OpenStreetMap**, bukan MapLibre: lebih ringan, tanpa API key, cukup untuk peta radius 2 km.
 14. **Service worker ditulis tangan** (`public/sw.js`) alih-alih plugin PWA, supaya caching tiket offline dan Web Push bisa dikontrol penuh dengan Next.js 16.
-15. **OTP mode development**: kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`) karena belum ada provider WhatsApp/SMS.
+15. **OTP mode development**: di versi demo kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`). Pengiriman asli lewat Resend (email) dan Fonnte (WhatsApp) sudah tersedia dan aktif setelah variabelnya diisi dan `OTP_DEV_MODE=false`. Selama mode demo, akun warung uji coba dan pembelinya tidak bisa dibuka lewat OTP.
 16. **Pembayaran tersimulasi**: QRIS dinamis berformat EMVCo + CRC16 dan webhook bertanda tangan HMAC-SHA512 asli, tetapi pembayarannya dipicu tombol "Simulasi Bayar (Demo)" (`PAYMENT_PROVIDER=simulator`).
 17. **Fair-use checkout**: maksimal 1 pesanan belum dibayar per warung dan 2 secara total, serta batas porsi per pembeli per batch `max(3, ceil(stok awal / 2))`. Tujuannya mencegah satu akun mengunci seluruh stok surplus.
 18. **Pesanan tidak diambil** sampai 30 menit setelah batas waktu menjadi `EXPIRED`. Warung tetap dibayar sekali, dan pembeli tidak mendapat kredit dampak.

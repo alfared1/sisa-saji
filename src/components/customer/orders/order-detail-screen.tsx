@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
+import { buyerCancelText, isCancelledByWarung } from "@/lib/constants";
 import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useTicketsStore } from "@/stores/tickets";
@@ -76,15 +77,20 @@ function DetailSkeleton() {
   );
 }
 
+function closedTitle(order: OrderDetail): string {
+  if (order.status === "EXPIRED") return order.payment_method === "BAYAR_DI_WARUNG" ? "Tiket kedaluwarsa" : "Pesanan kedaluwarsa";
+  return isCancelledByWarung(order.cancel_reason) ? "Dibatalkan oleh warung" : "Pesanan dibatalkan";
+}
+
 function ClosedView({ order }: { order: OrderDetail }) {
   const expired = order.status === "EXPIRED";
   return (
     <div className="flex flex-col gap-4 px-4 pt-2 pb-10">
       <EmptyState
         icon={expired ? TimerOffIcon : BanIcon}
-        title={expired ? "Pesanan kedaluwarsa" : "Pesanan dibatalkan"}
+        title={closedTitle(order)}
         description={
-          order.cancel_reason ??
+          buyerCancelText(order.cancel_reason) ??
           (expired
             ? "Pembayaran tidak diterima sebelum batas waktu, jadi porsinya kami kembalikan ke warung."
             : "Pesanan ini sudah dibatalkan dan stoknya dikembalikan ke warung.")
@@ -154,7 +160,12 @@ export function OrderDetailScreen({ id }: { id: string }) {
     if (live.status === "READY_FOR_PICKUP" && prev === "PENDING_PAYMENT") {
       toast.success("Pembayaran diterima", { id: "paid", description: "Tunjukkan tiket ini ke warung." });
     }
-    if (live.status === "EXPIRED") toast.error("Waktu pembayaran habis", { id: "expired" });
+    if (live.status === "EXPIRED") {
+      toast.error(prev === "READY_FOR_PICKUP" ? "Batas waktu tiket sudah lewat" : "Waktu pembayaran habis", { id: "expired" });
+    }
+    if (live.status === "CANCELLED" && isCancelledByWarung(live.cancel_reason)) {
+      toast.error("Warung membatalkan tiketmu", { id: "cancelled-by-warung", description: buyerCancelText(live.cancel_reason) ?? undefined });
+    }
     if (live.status === "COMPLETED") {
       markCelebrated(live.id);
       void qc.invalidateQueries({ queryKey: customerKeys.impact });

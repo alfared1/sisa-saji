@@ -5,6 +5,7 @@ import { CountdownBadge } from "@/components/common/countdown-badge";
 import { ORDER_STATUS_LABELS, type OrderDetail, type OrderStatus } from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { CancelTicketButton, isCancellableTicket } from "./cancel-ticket";
 
 const STATUS_CLS: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "bg-warning-soft text-amber-800 dark:text-amber-200",
@@ -52,8 +53,19 @@ export function portionsOf(order: Pick<OrderDetail, "items">): number {
   return order.items.reduce((s, i) => s + i.quantity, 0);
 }
 
-/** Merchant-side order card (no pickup codes — the customer shows theirs). */
-export function MerchantOrderCard({ order, compact = false }: { order: OrderDetail; compact?: boolean }) {
+/**
+ * Merchant-side order card (no pickup codes — the customer shows theirs). With `actions`,
+ * an open "bayar di warung" ticket gets a "Batalkan tiket" button.
+ */
+export function MerchantOrderCard({
+  order,
+  compact = false,
+  actions = false,
+}: {
+  order: OrderDetail;
+  compact?: boolean;
+  actions?: boolean;
+}) {
   const waiting = order.status === "PAID" || order.status === "READY_FOR_PICKUP";
   return (
     <article className={cn("rounded-2xl bg-card ring-1 ring-border", compact ? "p-3" : "p-4")}>
@@ -97,6 +109,18 @@ export function MerchantOrderCard({ order, compact = false }: { order: OrderDeta
               </span>
             )}
           </div>
+          {(order.status === "CANCELLED" || order.status === "EXPIRED") && order.cancel_reason && (
+            <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{order.cancel_reason}</p>
+          )}
+          {actions && isCancellableTicket(order) && (
+            <div className="mt-2 -mb-1 flex flex-col items-start gap-1 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <p className="text-xs text-muted-foreground">
+                Batal otomatis jam {formatClockId(order.pickup_deadline_at)} bila tidak diambil.
+              </p>
+              {/* Stacked on phones: the ghost button's label lines up with the text above. */}
+              <CancelTicketButton order={order} className="-ml-3 sm:ml-0" />
+            </div>
+          )}
         </div>
       </div>
     </article>

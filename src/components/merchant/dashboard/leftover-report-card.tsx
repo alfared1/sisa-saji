@@ -106,9 +106,11 @@ function LeftoverForm({ view, onDate }: { view: LeftoverReportView; onDate: (d: 
           </>
         )}
       </p>
-      {view.is_pilot && view.baseline_leftover_portions !== null && (
-        <p className="mt-1 text-xs text-muted-foreground">
-          Sebelum uji coba, sekitar {view.baseline_leftover_portions} porsi tersisa per malam.
+      {view.is_pilot && (
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          {view.baseline_leftover_portions !== null &&
+            `Sebelum uji coba, sekitar ${view.baseline_leftover_portions} porsi dibuang per malam. Hasil uji coba membandingkannya dengan angka "Dibuang" di sini. `}
+          Laporan ini kamu isi sendiri dan tampil di halaman hasil uji coba sebagai laporan warung.
         </p>
       )}
 

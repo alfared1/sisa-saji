@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { CampusPicker } from "@/components/common/campus-picker";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { DemoLockNotice } from "@/components/common/demo-lock-notice";
 import { ThemeSwitcher } from "@/components/common/theme-switcher";
 import { ShellHeader } from "@/components/shell/customer-shell";
 import { Button } from "@/components/ui/button";
@@ -281,7 +282,7 @@ export function ProfileScreen() {
                   )}
                 </div>
               </div>
-              {!editing && (
+              {!editing && !user.is_demo && (
                 <Button
                   variant="outline"
                   size="icon-lg"
@@ -293,7 +294,15 @@ export function ProfileScreen() {
                 </Button>
               )}
             </div>
-            {editing && <ProfileEditor user={user} onDone={() => setEditing(false)} />}
+            {/* Shared demo account: name and campus are locked for everybody (API: 403 DEMO_LOCKED). */}
+            {user.is_demo ? (
+              <DemoLockNotice
+                message="Akun demo dipakai bersama, jadi nama dan kampusnya dikunci supaya tetap rapi untuk semua pengunjung."
+                className="mx-4 mb-4"
+              />
+            ) : (
+              editing && <ProfileEditor user={user} onDone={() => setEditing(false)} />
+            )}
           </section>
         )}
 
@@ -315,10 +324,10 @@ export function ProfileScreen() {
               <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" />
             ) : (
               <LinkRow
-                href={user ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}
+                href={user && !user.is_demo ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}
                 icon={StoreIcon}
                 label="Daftar jadi Mitra Warung"
-                hint="Jual porsi surplus, kurangi makanan terbuang"
+                hint={user?.is_demo ? "Pakai nomor HP-mu sendiri" : "Jual porsi surplus, kurangi makanan terbuang"}
               />
             )}
             <LinkRow

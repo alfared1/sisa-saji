@@ -98,7 +98,7 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
                     aria-checked={active}
                     onClick={() => field.onChange(c)}
                     className={cn(
-                      "flex h-12 items-center rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex h-12 items-center rounded-2xl px-3 text-left text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
                       active ? "bg-brand-soft text-secondary-foreground ring-2 ring-primary" : "bg-card ring-border hover:bg-muted",
                     )}
                   >
@@ -222,7 +222,7 @@ export function HoursSection({ form, idPrefix = "hrs" }: { form: ProfileForm; id
           <input
             id={id(f.name)}
             type="time"
-            className="mt-1 h-11 w-full rounded-xl bg-transparent text-2xl font-extrabold tabular-nums outline-none focus-visible:bg-muted"
+            className="mt-1 h-11 w-full rounded-xl bg-transparent text-2xl font-extrabold tabular-nums outline-none focus-visible:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             aria-invalid={e[f.name] ? true : undefined}
             {...register(f.name)}
           />
@@ -266,7 +266,7 @@ export function BankSection({
                   aria-checked={field.value === b}
                   onClick={() => field.onChange(field.value === b ? "" : b)}
                   className={cn(
-                    "h-10 truncate rounded-full px-3 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "h-10 truncate rounded-full px-3 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
                     field.value === b ? "bg-foreground text-background ring-foreground" : "bg-card ring-border hover:bg-muted",
                   )}
                 >
@@ -295,7 +295,8 @@ export function BankSection({
             <FieldError>{e.bank_account_number.message}</FieldError>
           ) : savedNumberMasked ? (
             <p id={id("acc-hint")} className="text-[11px] text-muted-foreground">
-              Tersimpan: <span className="tabular-nums">{savedNumberMasked}</span>. Isi untuk mengganti
+              Tersimpan: <span className="tabular-nums">{savedNumberMasked}</span>
+              <span className="in-[fieldset:disabled]:hidden">. Isi untuk mengganti</span>
             </p>
           ) : null}
         </div>

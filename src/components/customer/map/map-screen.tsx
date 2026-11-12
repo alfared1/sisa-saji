@@ -34,6 +34,7 @@ import {
   StoreIcon,
   XIcon,
 } from "lucide-react";
+import { FLASH_RESCUE_MIN_PCT, FLASH_RESCUE_URGENT_MINUTES } from "@/components/common/discount-logic";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { ListSkeleton } from "@/components/common/list-skeleton";
@@ -160,8 +161,8 @@ function MapLegend({ scope }: { scope: MapScope }) {
           <FlashSwatch />
         </span>
         <span>
-          <span className="font-semibold text-flash dark:text-flash-accent">Pin oranye berdenyut</span> = Diskon Kilat,
-          tutup &lt; 45 menit
+          <span className="font-semibold text-flash dark:text-flash-accent">Pin oranye &ldquo;Kilat&rdquo;</span> = diskon{" "}
+          {FLASH_RESCUE_MIN_PCT}%+ atau tutup &lt; {FLASH_RESCUE_URGENT_MINUTES} menit (berdenyut)
         </span>
       </li>
       <li className="flex items-center gap-2">
@@ -193,7 +194,8 @@ function PhoneLegendChip({ scope }: { scope: MapScope }) {
             <FlashSwatch />
           </span>
           <span>
-            <span className="font-semibold text-flash dark:text-flash-accent">Oranye berdenyut</span> = tutup &lt; 45 menit
+            <span className="font-semibold text-flash dark:text-flash-accent">Kilat</span> = diskon {FLASH_RESCUE_MIN_PCT}%+ atau
+            tutup &lt; {FLASH_RESCUE_URGENT_MINUTES} menit
           </span>
         </li>
       )}
@@ -373,7 +375,8 @@ export function MapScreen() {
       data-shell-width="full"
       data-map-scope={scope}
       // `isolate` keeps the floating header and map buttons (z-500/600, above Leaflet's panes) under the sheets.
-      className="relative isolate flex h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-hidden lg:-mb-16 lg:h-[calc(100dvh-4rem-1px)] lg:flex-row"
+      // Full height minus the tab bar (phones) or top nav (lg+), and minus the demo strip when it shows (--demo-notice-h, see DemoNoticeHeight).
+      className="relative isolate flex h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom)-var(--demo-notice-h,0px))] flex-col overflow-hidden lg:-mb-16 lg:h-[calc(100dvh-4rem-1px-var(--demo-notice-h,0px))] lg:flex-row"
     >
       <h1 className="sr-only lg:hidden">Peta surplus</h1>
       {/* Floating header (phones) */}

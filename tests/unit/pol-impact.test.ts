@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatCo2Kg, formatFoodWeight, impactFigures, impactText } from "@/components/common/impact-text";
+import { discountBadgeState } from "@/components/common/discount-logic";
 import { pinBadge, pinClassName, pinHtml } from "@/components/map/types";
 
 describe("impact text", () => {
@@ -41,13 +42,18 @@ describe("map pins use the discount badge rule", () => {
   const inMin = (m: number) => new Date(NOW + m * 60_000).toISOString();
   const base = { id: "x", lat: 0, lng: 0, name: "Warung", discount_pct: 50, stock: 3, closes_at: inMin(120) };
 
-  it("Hemat (emerald) normally, Flash (orange) at ≥ 70 %, pulsing only < 45 min", () => {
+  it("Hemat (emerald) normally, Diskon Kilat (orange) at ≥ 70 %, pulsing only < 45 min", () => {
     expect(pinBadge(base, NOW)).toMatchObject({ variant: "hemat", pulse: false, shortLabel: "Hemat 50%" });
-    expect(pinBadge({ ...base, discount_pct: 70 }, NOW)).toMatchObject({ variant: "flash", pulse: false });
+    expect(pinBadge({ ...base, discount_pct: 70 }, NOW)).toMatchObject({
+      variant: "flash",
+      pulse: false,
+      label: "Diskon Kilat 70%",
+      shortLabel: "Kilat 70%",
+    });
     expect(pinBadge({ ...base, closes_at: inMin(30) }, NOW)).toMatchObject({
       variant: "flash",
       pulse: true,
-      shortLabel: "Flash 50%",
+      shortLabel: "Kilat 50%",
     });
     expect(pinBadge({ ...base, stock: 0 }, NOW)).toBeNull();
     expect(pinBadge({ ...base, discount_pct: 0 }, NOW)).toBeNull();
@@ -56,9 +62,26 @@ describe("map pins use the discount badge rule", () => {
   it("renders the short label in badge colours with pulse class", () => {
     const b = pinBadge({ ...base, closes_at: inMin(30) }, NOW);
     const html = pinHtml({ ...base, closes_at: inMin(30) }, "urgent", b);
-    expect(html).toContain("Flash 50%");
+    expect(html).toContain("Kilat 50%");
+    expect(html).not.toContain("Flash");
     expect(html).toContain("#C2410C");
     expect(pinClassName("urgent", b, false)).toBe("ss-pin ss-pin--urgent ss-pin--flash ss-pin--pulse");
     expect(pinHtml(base, "deal", pinBadge(base, NOW))).toContain("#047857");
+  });
+
+  it("the pin short label uses the same term as the full badge and stays short", () => {
+    for (const [pct, minutes] of [
+      [50, null],
+      [70, null],
+      [100, null],
+      [30, 10],
+      [99, 5],
+    ] as const) {
+      const s = discountBadgeState(pct, minutes);
+      // Short form is the last word(s) of the full label, never another term ("Flash").
+      expect(s.label.endsWith(s.shortLabel)).toBe(true);
+      expect(s.shortLabel).toMatch(/^(Hemat|Kilat) \d{1,3}%$/);
+      expect(s.shortLabel.length).toBeLessThanOrEqual(10);
+    }
   });
 });

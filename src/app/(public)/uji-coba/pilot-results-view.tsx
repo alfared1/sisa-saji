@@ -51,6 +51,9 @@ function LeftoverSection({ l }: { l: PilotStats["leftovers"] }) {
       <h2 id="sampah-title" className="text-lg font-bold">
         Sampah warung
       </h2>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        Dilaporkan sendiri oleh warung, tidak diperiksa tim Sisa-Saji.
+      </p>
       {l.nights_reported === 0 ? (
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Belum ada laporan sisa. Setiap malam setelah tutup, warung mencatat porsi yang tetap tidak laku: dibagikan, jadi pakan,
@@ -66,7 +69,8 @@ function LeftoverSection({ l }: { l: PilotStats["leftovers"] }) {
             <p className="text-base font-semibold">Perbandingan dengan sebelum uji coba belum tersedia.</p>
           )}
           <p className="mt-1 text-sm text-muted-foreground">
-            Dibanding sebelum ikut uji coba, dari {l.nights_reported} malam laporan.
+            Dibanding porsi yang biasanya dibuang per malam sebelum ikut uji coba, menurut laporan warung dari{" "}
+            {l.nights_reported} malam.
           </p>
           <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
             {LEFTOVER_DESTINATIONS.map((k) => (
@@ -115,7 +119,8 @@ export function PilotResultsView() {
         <h1 className="mt-2 text-3xl leading-tight font-bold sm:text-4xl">Hasil uji coba di warung sungguhan</h1>
         <p className="mt-3 max-w-prose text-base leading-relaxed text-muted-foreground">
           Angka di halaman ini hanya berasal dari warung yang ikut uji coba lapangan. Data contoh di aplikasi demo tidak
-          ikut dihitung.
+          ikut dihitung. Pesanan dihitung dari pengambilan yang diverifikasi di aplikasi, sedangkan angka sampah dilaporkan
+          sendiri oleh warung.
         </p>
 
         {stats.isPending ? (
@@ -166,7 +171,8 @@ export function PilotResultsView() {
                       <p className="text-xs text-muted-foreground">Bergabung {dateLabel(w.joined_at)}</p>
                       {w.waste_reduction_pct !== null && (
                         <p className="text-xs text-muted-foreground">
-                          Porsi dibuang {wasteChangeText(w.waste_reduction_pct)} ({w.nights_reported} malam laporan)
+                          Porsi dibuang {wasteChangeText(w.waste_reduction_pct)}, menurut laporan warung ({w.nights_reported}{" "}
+                          malam)
                         </p>
                       )}
                     </div>
@@ -218,12 +224,17 @@ export function PilotResultsView() {
               .
             </li>
             <li>
-              Saat bergabung, pemilik warung memperkirakan berapa porsi biasanya tersisa per malam. Angka ini tidak bisa diubah
-              setelah disimpan.
+              Saat bergabung, pemilik warung memperkirakan berapa porsi biasanya dibuang per malam sebelum memakai Sisa-Saji.
+              Angka ini tidak bisa diubah setelah disimpan.
             </li>
             <li>
-              Porsi dibuang turun = 1 − (porsi dibuang ÷ (perkiraan sebelum uji coba × jumlah malam laporan)), hanya dari warung
-              yang mengisi perkiraan. Porsi yang dibagikan, jadi pakan, atau dikompos tidak dihitung sebagai dibuang.
+              Setiap malam, warung melaporkan sendiri ke mana porsi yang tidak laku pergi. Tim Sisa-Saji tidak memeriksa angka
+              ini di lapangan.
+            </li>
+            <li>
+              Porsi dibuang turun = 1 − (porsi dibuang ÷ (perkiraan dibuang sebelum uji coba × jumlah malam laporan)), hanya dari
+              warung yang mengisi perkiraan. Kedua sisi hanya menghitung porsi yang dibuang. Porsi yang dibagikan, jadi pakan,
+              atau dikompos tidak dihitung sebagai dibuang.
             </li>
           </ul>
         </section>

@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDemoLogin } from "@/hooks/use-demo-login";
 import { useGlobalStats } from "@/hooks/use-global-stats";
 import { ApiClientError, api } from "@/lib/api/client";
-import { OtpRequestBody, type OtpRequestResponse } from "@/lib/contracts";
+import { DEMO_LOGIN_ONLY_REASON, OtpRequestBody, REAL_OTP_REQUIRED_REASON, type OtpRequestResponse } from "@/lib/contracts";
 import { writeSession } from "@/lib/pwa/storage";
 import { cn } from "@/lib/utils";
 import {
@@ -85,6 +85,12 @@ export function LoginForm() {
   };
 
   const apiError = request.error instanceof ApiClientError ? request.error.message : request.error ? "Gagal mengirim kode." : null;
+  // Not a mistake by the user: this account needs real WhatsApp/email delivery, which this
+  // deployment does not have, or it is a shared demo account that opens with the demo
+  // button. Shown as a note, not an error; sending again stays off until the input changes.
+  const noteReason =
+    request.error instanceof ApiClientError ? (request.error.details as { reason?: unknown } | undefined)?.reason : undefined;
+  const needsRealOtp = noteReason === REAL_OTP_REQUIRED_REASON || noteReason === DEMO_LOGIN_ONLY_REASON;
   const copy = COPY[role];
 
   // lg+: the form sits in a card, vertically centred by the auth layout.
@@ -156,6 +162,7 @@ export function LoginForm() {
               onChange={(e) => {
                 setValue(e.target.value);
                 if (fieldError) setFieldError(null);
+                if (needsRealOtp) request.reset();
               }}
               aria-invalid={fieldError ? true : undefined}
               aria-describedby={fieldError ? "identifier-error" : "identifier-hint"}
@@ -173,13 +180,18 @@ export function LoginForm() {
           )}
         </div>
 
-        {apiError && (
-          <Alert variant="destructive" className="rounded-2xl">
-            <AlertDescription>{apiError}</AlertDescription>
-          </Alert>
-        )}
+        {apiError &&
+          (needsRealOtp ? (
+            <p role="alert" className="rounded-2xl bg-warning-soft px-4 py-3 text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+              {apiError}
+            </p>
+          ) : (
+            <Alert variant="destructive" className="rounded-2xl">
+              <AlertDescription>{apiError}</AlertDescription>
+            </Alert>
+          ))}
 
-        <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={request.isPending}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={request.isPending || needsRealOtp}>
           {request.isPending ? <Loader2Icon className="animate-spin" /> : null}
           {request.isPending ? "Mengirim kode…" : "Kirim kode OTP"}
         </Button>

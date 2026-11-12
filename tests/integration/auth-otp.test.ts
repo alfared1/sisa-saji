@@ -34,7 +34,7 @@ async function request(body: Parameters<typeof OtpRequestBody.parse>[0], devMode
 }
 
 async function verify(body: Parameters<typeof OtpVerifyBody.parse>[0], now?: Date) {
-  return verifyOtp(db, OtpVerifyBody.parse(body), now);
+  return verifyOtp(db, OtpVerifyBody.parse(body), { devMode: true, now });
 }
 
 async function expectApiError(p: Promise<unknown>, code: string) {
@@ -83,10 +83,49 @@ describe("POST /auth/otp/request", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("omits dev_code when no provider is configured and dev mode is off", async () => {
-    const res = await request({ phone_number: freshPhone() }, false);
-    expect(res.sent).toBe(true);
-    expect(res.dev_code).toBeUndefined();
+  it("dev mode off without a provider: OTP_DELIVERY_FAILED and no usable code is left", async () => {
+    const phone = freshPhone();
+    const noProviders = { providers: { resend: null, fonnteToken: null } };
+    const err = await expectApiError(
+      requestOtp(db, OtpRequestBody.parse({ phone_number: phone }), { devMode: false, delivery: noProviders }),
+      "OTP_DELIVERY_FAILED",
+    );
+    expect(err.status).toBe(503);
+    expect(err.message).not.toMatch(/\d{6}/);
+    const rows = await db.select().from(otpCodes).where(eq(otpCodes.identifier, toE164(phone)));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("dev mode off with a provider: the code goes out, never back in the response", async () => {
+    const phone = freshPhone();
+    let sentText = "";
+    const fakeFetch = (async (_url: string, init: RequestInit) => {
+      sentText = new URLSearchParams(init.body as URLSearchParams).get("message") ?? "";
+      return Response.json({ status: true });
+    }) as unknown as typeof fetch;
+    const res = await requestOtp(db, OtpRequestBody.parse({ phone_number: phone }), {
+      devMode: false,
+      delivery: { providers: { resend: null, fonnteToken: "fonnte-token-123" }, fetch: fakeFetch },
+    });
+    expect(res).toEqual({ sent: true, channel: "WHATSAPP", expires_in_seconds: OTP_TTL_SECONDS });
+    const code = sentText.match(/\d{6}/)?.[0];
+    expect(code).toBeDefined();
+    const ok = await verifyOtp(db, OtpVerifyBody.parse({ phone_number: phone, code, full_name: "Pemilik Asli" }), { devMode: false });
+    expect(ok.isNewUser).toBe(true);
+  });
+
+  it("dev mode off and the provider fails: the stored code is retired", async () => {
+    const phone = freshPhone();
+    const failing = (async () => new Response("down", { status: 502 })) as unknown as typeof fetch;
+    await expectApiError(
+      requestOtp(db, OtpRequestBody.parse({ phone_number: phone }), {
+        devMode: false,
+        delivery: { providers: { resend: null, fonnteToken: "fonnte-token-123" }, fetch: failing },
+      }),
+      "OTP_DELIVERY_FAILED",
+    );
+    const [row] = await db.select().from(otpCodes).where(eq(otpCodes.identifier, toE164(phone)));
+    expect(row.consumedAt).not.toBeNull();
   });
 
   it(`rate limits after ${OTP_MAX_REQUESTS_PER_WINDOW} requests per 10 minutes`, async () => {

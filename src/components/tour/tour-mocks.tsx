@@ -36,6 +36,7 @@ import { PriceTag } from "@/components/common/price-tag";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { StockBadge } from "@/components/common/stock-badge";
 import { FoodThumb } from "@/components/customer/food-thumb";
+import { BADGE_LABELS } from "@/components/customer/lib/format";
 import { useGlobalStats } from "@/hooks/use-global-stats";
 import { CAMPUSES, PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/constants";
 import type { MenuCategory } from "@/lib/contracts";
@@ -350,10 +351,11 @@ function AmbilMock() {
 /** Sample progress: 3,2 kg saved, between Penyelamat and Juara Pangan. */
 const DEMO_SAVED_KG = 3.2;
 
+/** Same names as the real Dampak screen (BADGE_LABELS), so the tour never shows a level that does not exist. */
 const LEVELS = [
-  { label: "Pemula", state: "done" },
-  { label: "Penyelamat", state: "current" },
-  { label: "Juara", state: "next" },
+  { label: BADGE_LABELS.SURPLUS_ROOKIE, state: "done" },
+  { label: BADGE_LABELS.SURPLUS_SAVER, state: "current" },
+  { label: BADGE_LABELS.SURPLUS_HERO, state: "next" },
 ] as const;
 
 function DampakMock() {
@@ -380,7 +382,9 @@ function DampakMock() {
           <div className="w-full px-1 py-0.5">
             <div className="flex items-baseline justify-between text-[11px] font-semibold">
               <span className="tabular-nums">{fmtNumber(DEMO_SAVED_KG, 1)} kg</span>
-              <span className="text-muted-foreground">Hero di {fmtNumber(HERO_KG, 1)} kg</span>
+              <span className="text-muted-foreground">
+                {BADGE_LABELS.SURPLUS_HERO} di {fmtNumber(HERO_KG, 1)} kg
+              </span>
             </div>
             <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (DEMO_SAVED_KG / HERO_KG) * 100)}%` }} />
@@ -390,7 +394,7 @@ function DampakMock() {
                 <li key={l.label} className="flex flex-1 items-center gap-1 last:flex-none">
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold",
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap",
                       l.state === "done" && "bg-brand-soft text-brand-strong",
                       l.state === "current" && "bg-primary text-primary-foreground",
                       l.state === "next" && "bg-muted text-muted-foreground",

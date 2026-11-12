@@ -9,6 +9,8 @@ import {
   quickOrderReturnPath,
 } from "@/components/customer/quick-order/quick-order-logic";
 import { safeNextPath } from "@/app/(public)/auth/auth-flow";
+import { ticketLineMax, trimToTicketCap } from "@/components/customer/lib/checkout-logic";
+import { PAY_AT_WARUNG_MAX_PORTIONS } from "@/lib/constants";
 
 const BATCH_ID = "3f1c2a4e-1111-4222-8333-944455556666";
 
@@ -24,6 +26,33 @@ describe("quick order stepper bounds", () => {
     expect(clampQuickOrderQty(3, 4)).toBe(3);
     expect(clampQuickOrderQty(9, 4)).toBe(4);
     expect(clampQuickOrderQty(15, 30)).toBe(10);
+  });
+
+  it("caps a pilot warung's bayar-di-warung ticket at PAY_AT_WARUNG_MAX_PORTIONS", () => {
+    expect(quickOrderMaxQty(25, true)).toBe(PAY_AT_WARUNG_MAX_PORTIONS);
+    expect(quickOrderMaxQty(2, true)).toBe(2);
+    expect(clampQuickOrderQty(8, 25, true)).toBe(PAY_AT_WARUNG_MAX_PORTIONS);
+  });
+});
+
+describe("bayar-di-warung ticket cap in the cart", () => {
+  const cart = [
+    { batch_id: "a", quantity: 2 },
+    { batch_id: "b", quantity: 2 },
+  ];
+  it("counts the other lines towards the per-ticket cap", () => {
+    expect(ticketLineMax(cart, "a", 10, 3)).toBe(1);
+    expect(ticketLineMax([{ batch_id: "a", quantity: 1 }], "a", 10, 3)).toBe(3);
+    expect(ticketLineMax(cart, "a", 10, 1)).toBe(0);
+  });
+
+  it("trims the last lines first down to the cap", () => {
+    expect(trimToTicketCap(cart, 3)).toEqual([{ batch_id: "b", quantity: 1 }]);
+    expect(trimToTicketCap(cart, 1)).toEqual([
+      { batch_id: "b", quantity: 0 },
+      { batch_id: "a", quantity: 1 },
+    ]);
+    expect(trimToTicketCap(cart, 4)).toEqual([]);
   });
 });
 

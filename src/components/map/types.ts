@@ -89,7 +89,7 @@ function escapeHtml(s: string): string {
 
 /**
  * Discount badge of an open pin — the same "Hemat N%" / "Diskon Kilat N%"
- * rule as <DiscountBadge /> (Flash at ≥ 70 % or < 45 min to close; pulses
+ * rule as <DiscountBadge /> (Diskon Kilat at ≥ 70 % or < 45 min to close; pulses
  * only < 45 min). Null for closed / sold-out pins and pins without discount.
  */
 export function pinBadge(
@@ -100,7 +100,7 @@ export function pinBadge(
   return discountBadgeState(marker.discount_pct, minutesUntil(marker.closes_at, nowMs));
 }
 
-/** Leaflet DivIcon class names: state + Hemat/Flash variant + pulse. */
+/** Leaflet DivIcon class names: state + hemat/flash (Diskon Kilat) variant + pulse. */
 export function pinClassName(state: PinState, badge: DiscountBadgeState | null, selected: boolean): string {
   return [
     "ss-pin",
@@ -115,7 +115,7 @@ export function pinClassName(state: PinState, badge: DiscountBadgeState | null, 
 
 /**
  * HTML for the Leaflet DivIcon: discount bubble + "Sisa 3". With `badge`
- * (see pinBadge) the bubble reads "Hemat 50%" / "Flash 70%" in the badge
+ * (see pinBadge) the bubble reads "Hemat 50%" / "Kilat 70%" in the badge
  * colours; without it, the legacy "-60%" coloured by urgency state.
  */
 export function pinHtml(marker: SurplusMapMarker, state: PinState, badge: DiscountBadgeState | null = null): string {

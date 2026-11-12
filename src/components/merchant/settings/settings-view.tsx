@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -18,6 +18,7 @@ import {
   SunMoonIcon,
 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { DemoLockNotice } from "@/components/common/demo-lock-notice";
 import { ErrorState } from "@/components/common/error-state";
 import { ThemeSwitcher } from "@/components/common/theme-switcher";
 import { VerifiedBadge } from "@/components/common/verified-badge";
@@ -27,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/hooks/use-session";
 import { MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { useMerchantMe, useUpdateMerchant } from "../lib/queries";
 import { ZOD_ID_OPTIONS } from "../lib/zod-id";
 import {
@@ -42,7 +44,8 @@ import {
 import { MerchantPage, MerchantPageHeader, SectionCard } from "../ui";
 import { PilotSection } from "./pilot-section";
 
-function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
+/** `locked`: the shared demo warung, whose profile the API refuses to change (fields stay readable). */
+function SettingsForm({ merchant, locked }: { merchant: MerchantProfile; locked: boolean }) {
   const update = useUpdateMerchant();
   const form = useForm<ProfileInput, unknown, ProfileOutput>({
     resolver: zodResolver(MerchantOnboardingBody, ZOD_ID_OPTIONS),
@@ -64,6 +67,9 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4 lg:space-y-6">
+      {locked && <DemoLockNotice hint="Publikasi surplus dan pemindaian pesanan tetap bisa dicoba." />}
+      {/* A disabled fieldset turns off every input and chip button; the map pin needs pointer-events off. */}
+      <fieldset disabled={locked} className={cn("min-w-0 space-y-4 lg:space-y-6", locked && "[&_.leaflet-container]:pointer-events-none")}>
       <SectionCard title="Profil warung" icon={StoreIcon}>
         <ProfileSection form={form} idPrefix="set" />
       </SectionCard>
@@ -76,6 +82,7 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
       <SectionCard title="Pencairan dana" icon={LandmarkIcon} description="Nomor rekening tidak ditampilkan ulang demi keamanan.">
         <BankSection form={form} idPrefix="set" savedNumberMasked={merchant.bank_account_number_masked} />
       </SectionCard>
+      </fieldset>
 
       {(dirty || update.isPending) && (
         <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex animate-in items-center justify-between gap-3 rounded-2xl bg-card/95 p-3 shadow-float ring-1 ring-border backdrop-blur fade-in-0 slide-in-from-bottom-2 lg:bottom-6">
@@ -97,6 +104,8 @@ function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
   );
 }
 
+const noopSubscribe = () => () => {};
+
 /** /merchant/settings — edit profile, location, hours, bank; open/close; appearance; logout. */
 export function MerchantSettingsView() {
   const me = useMerchantMe();
@@ -105,12 +114,17 @@ export function MerchantSettingsView() {
   const router = useRouter();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const m = me.data?.merchant;
+  const demoLocked = user?.is_demo ?? false;
+  // The server always renders the skeleton (no session there), but the client's query cache
+  // may already hold /merchant/me from the shell when this page hydrates: keep the first
+  // client render identical to the server's, or React reports a hydration mismatch.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   return (
     <MerchantPage>
       <MerchantPageHeader title="Pengaturan warung" backHref="/merchant/dashboard" subtitle={user ? `Masuk sebagai ${user.full_name} · ${user.phone_number ?? user.email ?? ""}` : undefined} />
 
-      {me.isPending ? (
+      {!hydrated || me.isPending ? (
         <div className="space-y-4">
           <Skeleton className="h-24 rounded-3xl" />
           <Skeleton className="h-96 rounded-3xl" />
@@ -120,16 +134,23 @@ export function MerchantSettingsView() {
       ) : (
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
           <div className="min-w-0">
-            <SettingsForm key={m.id} merchant={m} />
+            <SettingsForm key={m.id} merchant={m} locked={demoLocked} />
           </div>
           <aside className="space-y-4 lg:sticky lg:top-6">
             <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5" aria-label="Status warung">
-              <label className="flex cursor-pointer items-center justify-between gap-3">
+              <label className={cn("flex items-center justify-between gap-3", demoLocked ? "cursor-not-allowed" : "cursor-pointer")}>
                 <span>
                   <span className="block text-sm font-semibold">Warung {m.is_open ? "buka" : "tutup"}</span>
-                  <span className="block text-xs text-muted-foreground">{m.is_open ? "Surplus tampil di aplikasi pembeli." : "Surplus disembunyikan dari pembeli."}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {demoLocked ? "Akun demo: buka dan tutup warung dikunci." : m.is_open ? "Surplus tampil di aplikasi pembeli." : "Surplus disembunyikan dari pembeli."}
+                  </span>
                 </span>
-                <Switch checked={m.is_open} onCheckedChange={(v) => update.mutate({ is_open: v }, { onSuccess: () => toast.success(v ? "Warung dibuka" : "Warung ditutup") })} aria-label="Buka atau tutup warung" />
+                <Switch
+                  checked={m.is_open}
+                  disabled={demoLocked}
+                  onCheckedChange={(v) => update.mutate({ is_open: v }, { onSuccess: () => toast.success(v ? "Warung dibuka" : "Warung ditutup") })}
+                  aria-label="Buka atau tutup warung"
+                />
               </label>
             </section>
 

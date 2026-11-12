@@ -35,6 +35,64 @@ export const PAYMENT_TTL_SECONDS = 600; // 10-minute stock lock / QRIS validity
 export const PICKUP_CODE_LENGTH = 4;
 export const PICKUP_CODE_PREFIX = "SJ-";
 
+/**
+ * Pilot "bayar di warung" tickets reserve portions without any payment, so the hold is
+ * short: the ticket expires (portions back on the shelf) this long after checkout, and
+ * never later than the batch's pickup end time.
+ */
+export const PAY_AT_WARUNG_HOLD_MINUTES = 60;
+/** Most portions one buyer may hold on an open "bayar di warung" ticket (one ticket per warung). */
+export const PAY_AT_WARUNG_MAX_PORTIONS = 3;
+/** Tickets a buyer let lapse (or the warung marked "tidak datang") within the window before new tickets are refused. */
+export const PAY_AT_WARUNG_NO_SHOW_LIMIT = 2;
+export const PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS = 7;
+/** cancel_reason of a pay-at-warung ticket nobody collected before its hold ended. */
+export const PAY_AT_WARUNG_EXPIRED_REASON = "Tiket tidak diambil sebelum batas waktu, jadi porsinya dikembalikan ke warung.";
+/**
+ * Why a warung may cancel an unpaid "bayar di warung" ticket. `reason` is the stored
+ * cancel_reason (the warung reads it); `buyer` is how the buyer's own ticket says it.
+ */
+export const MERCHANT_TICKET_CANCEL_REASONS = {
+  NO_SHOW: {
+    label: "Tidak datang",
+    reason: "Warung membatalkan tiket karena pembeli tidak datang.",
+    buyer: "Warung membatalkan tiketmu karena kamu belum datang. Ini dihitung sebagai tiket tidak diambil.",
+  },
+  OUT_OF_STOCK: {
+    label: "Stok habis",
+    reason: "Warung membatalkan tiket karena stoknya habis.",
+    buyer: "Stok warung habis, jadi tiketmu dibatalkan. Ini tidak dihitung sebagai tiket tidak diambil.",
+  },
+} as const;
+export type MerchantTicketCancelReason = keyof typeof MERCHANT_TICKET_CANCEL_REASONS;
+
+/**
+ * "Tidak datang" is only true near the end of the hold: the buyer was promised the portions
+ * until the hold end, and the cancel counts towards their no-show limit. It opens in the last
+ * PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES, and never before half of the hold has passed.
+ * ("Stok habis" is allowed at any time.)
+ */
+export const PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES = 15;
+export function noShowCancelOpensAt(createdAt: string | Date, holdEnd: string | Date): Date {
+  const start = new Date(createdAt).getTime();
+  const end = new Date(holdEnd).getTime();
+  return new Date(Math.max(end - PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES * 60_000, start + (end - start) / 2));
+}
+
+/** True when the warung cancelled the order (one of MERCHANT_TICKET_CANCEL_REASONS). */
+export function isCancelledByWarung(cancelReason: string | null | undefined): boolean {
+  return Object.values(MERCHANT_TICKET_CANCEL_REASONS).some((r) => r.reason === cancelReason);
+}
+
+/** The stored cancel_reason as the buyer's own ticket says it (unchanged when not a ticket reason). */
+export function buyerCancelText(cancelReason: string | null | undefined): string | null {
+  if (!cancelReason) return null;
+  if (cancelReason === PAY_AT_WARUNG_EXPIRED_REASON) {
+    return "Tiketmu tidak diambil sebelum batas waktu, jadi porsinya dikembalikan ke warung. Ini dihitung sebagai tiket tidak diambil.";
+  }
+  return Object.values(MERCHANT_TICKET_CANCEL_REASONS).find((r) => r.reason === cancelReason)?.buyer ?? cancelReason;
+}
+
 /** Dynamic Discount Optimizer bounds. */
 export const DISCOUNT_BASELINE_PCT = 50;
 export const DISCOUNT_MIN_PCT = 40;
@@ -96,6 +154,13 @@ export const OTP_TTL_SECONDS = 300;
 export const OTP_MAX_ATTEMPTS = 5;
 /** Max OTP requests per identifier per 10 minutes. */
 export const OTP_MAX_REQUESTS_PER_WINDOW = 5;
+/**
+ * Once codes are really sent (WhatsApp/email cost money and a flood gets the sender
+ * number banned): max requests per client (IP address) per 10 minutes, and for the
+ * whole app per hour. Not applied in dev mode, where nothing is sent.
+ */
+export const OTP_MAX_REQUESTS_PER_CLIENT_WINDOW = 10;
+export const OTP_MAX_SENDS_PER_HOUR = 300;
 
 /** Presence: a device counts as "active" for this long after its last ping. */
 export const PRESENCE_ACTIVE_MINUTES = 30;

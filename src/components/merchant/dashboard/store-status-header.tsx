@@ -5,6 +5,7 @@ import { ExternalLinkIcon, SettingsIcon, StoreIcon, WalletIcon } from "lucide-re
 import { Switch } from "@/components/ui/switch";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { EventSourceStatus } from "@/hooks/use-event-source";
+import { useSession } from "@/hooks/use-session";
 import type { MerchantProfile } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,8 @@ export function StoreStatusHeader({
   liveStatus: EventSourceStatus;
 }) {
   const update = useUpdateMerchant();
+  // The shared demo warung cannot be closed by one visitor for everybody else (API: 403 DEMO_LOCKED).
+  const locked = useSession().user?.is_demo ?? false;
   const isOpen = merchant.is_open;
   const firstName = ownerName.split(/\s+/)[0] ?? ownerName;
 
@@ -98,21 +101,24 @@ export function StoreStatusHeader({
         <div className="grid grid-cols-2 gap-2 lg:flex lg:items-stretch">
           <label
             className={cn(
-              "flex min-h-16 cursor-pointer items-center justify-between gap-2 rounded-2xl px-3.5 py-2 ring-1 transition-colors lg:min-w-48",
+              "flex min-h-16 items-center justify-between gap-2 rounded-2xl px-3.5 py-2 ring-1 transition-colors lg:min-w-48",
+              locked ? "cursor-not-allowed" : "cursor-pointer",
               isOpen ? "bg-success-soft ring-primary/25" : "bg-muted ring-border",
             )}
           >
             <span className="min-w-0">
-              <span className="block text-[11px] font-semibold text-muted-foreground">Status</span>
+              <span className="block text-[11px] font-semibold text-muted-foreground">{locked ? "Status dikunci" : "Status"}</span>
               <span className={cn("block text-lg leading-tight font-bold", isOpen ? "text-primary" : "text-foreground/70")}>
                 {isOpen ? "Buka" : "Tutup"}
               </span>
             </span>
             <Switch
               checked={isOpen}
-              disabled={update.isPending}
+              disabled={locked || update.isPending}
               onCheckedChange={(v) => update.mutate({ is_open: v })}
               aria-label={isOpen ? "Tutup warung" : "Buka warung"}
+              aria-description={locked ? "Akun demo: buka dan tutup warung dikunci." : undefined}
+              title={locked ? "Akun demo: buka dan tutup warung dikunci." : undefined}
               className="mr-1 scale-125"
             />
           </label>

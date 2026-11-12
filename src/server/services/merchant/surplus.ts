@@ -386,6 +386,7 @@ export async function patchBatchStock(
   batchId: string,
   body: StockPatchInput,
   now: Date = new Date(),
+  limit?: { maxAvailable: number; message: string },
 ): Promise<MerchantBatchView> {
   const updated = await db.transaction(async (tx) => {
     const b = await lockOwnedBatch(tx, merchantId, batchId);
@@ -399,6 +400,13 @@ export async function patchBatchStock(
       ]);
     }
     if (target > 500) throw new ApiError("VALIDATION_ERROR", "Stok maksimal 500 porsi");
+    // A cap on the resulting stock (demo warung), so repeated small deltas cannot exceed it.
+    // Lowering stock that is already above the cap stays allowed.
+    if (limit && target > limit.maxAvailable && target > b.availableStock) {
+      throw new ApiError("VALIDATION_ERROR", limit.message, [
+        { path: body.delta !== undefined ? "delta" : "available_stock", message: limit.message },
+      ]);
+    }
 
     const [{ paid }] = await tx
       .select({ paid: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)::int` })

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ApiClientError, api } from "@/lib/api/client";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useNow } from "@/hooks/use-now";
+import { PAY_AT_WARUNG_NO_SHOW_LIMIT, PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS } from "@/lib/constants";
 import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr, wibTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,11 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
         Tunai atau QRIS milik warung, saat kamu mengambil. Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan.
       </p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        Tidak jadi datang? Batalkan saja, supaya porsinya bisa dibeli orang lain. Bila {PAY_AT_WARUNG_NO_SHOW_LIMIT} tiket
+        tidak kamu ambil dalam {PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS} hari, untuk sementara kamu tidak bisa memesan di warung uji
+        coba.
+      </p>
       <Button
         variant="ghost"
         className="mt-2 -ml-2 h-10 rounded-xl px-2 text-sm font-semibold text-urgent hover:bg-urgent-soft hover:text-urgent"
@@ -70,9 +76,28 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
   );
 }
 
-export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
+/**
+ * Countdown to the pickup deadline. For a "bayar di warung" ticket that deadline is the end
+ * of its short hold (PAY_AT_WARUNG_HOLD_MINUTES): after it the ticket is cancelled
+ * automatically, so the banner says so instead of "call the warung".
+ */
+export function PickupDeadlineBanner({ deadlineIso, payAtWarung = false }: { deadlineIso: string; payAtWarung?: boolean }) {
   const c = useCountdown(deadlineIso);
   const over = c.ready && c.isOver;
+  const title = over
+    ? payAtWarung
+      ? "Batas waktu tiket sudah lewat"
+      : "Batas pengambilan sudah lewat"
+    : payAtWarung
+      ? `Ambil dan bayar sebelum jam ${formatClockId(deadlineIso)}`
+      : `Segera ambil pesanan kamu sebelum jam ${formatClockId(deadlineIso)}`;
+  const hint = over
+    ? payAtWarung
+      ? "Tiket batal otomatis dan porsinya dikembalikan ke warung."
+      : "Hubungi warung bila masih dalam perjalanan."
+    : payAtWarung
+      ? "Lewat dari itu, tiket batal otomatis."
+      : "Waktu tersisa";
   return (
     <section
       className={cn(
@@ -90,12 +115,8 @@ export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
           <AlarmClockIcon className={cn("size-5", c.isUrgent && "animate-soft-pulse")} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm leading-snug font-semibold">
-            {over
-              ? "Batas pengambilan sudah lewat"
-              : `Segera ambil pesanan kamu sebelum jam ${formatClockId(deadlineIso)}`}
-          </p>
-          <p className="text-xs text-white/85">{over ? "Hubungi warung bila masih dalam perjalanan." : "Waktu tersisa"}</p>
+          <p className="text-sm leading-snug font-semibold">{title}</p>
+          <p className="text-xs text-white/85">{hint}</p>
         </div>
         {!over && (
           <span className="shrink-0 rounded-2xl bg-white/20 px-2.5 py-1.5 text-lg font-extrabold tabular-nums" role="timer">
@@ -202,7 +223,9 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
 export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
   const payAtWarung = order.payment_method === "BAYAR_DI_WARUNG" && !order.paid_at;
   const steps = [
-    "Datang ke warung sebelum batas waktu.",
+    payAtWarung
+      ? `Datang ke warung sebelum jam ${formatClockId(order.pickup_deadline_at)}. Porsinya disimpan untukmu sampai jam itu, kecuali stok warung habis.`
+      : "Datang ke warung sebelum batas waktu.",
     `Tunjukkan QR atau sebutkan kode ${pickupCodeLabel(order)} ke kasir.`,
     ...(payAtWarung ? [`Bayar ${formatIdr(order.total_customer_paid_idr)} langsung ke warung, tunai atau QRIS warung.`] : []),
     "Warung memverifikasi kode, lalu menyerahkan pesananmu.",
@@ -211,7 +234,7 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-        <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} />
+        <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} payAtWarung={payAtWarung} />
         <DigitalPickupPass order={order} savedOffline={savedOffline} />
         {payAtWarung && <PayAtWarungCard order={order} />}
       </div>

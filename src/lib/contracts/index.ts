@@ -24,6 +24,8 @@ export const ERROR_CODES = [
   "RATE_LIMITED",
   "OTP_INVALID",
   "OTP_EXPIRED",
+  /** The OTP could not be sent (provider down, or no provider for this channel). Nothing to type. */
+  "OTP_DELIVERY_FAILED",
   "MERCHANT_REQUIRED",
   "OUT_OF_STOCK",
   "BATCH_CLOSED",
@@ -135,6 +137,18 @@ export type OtpRequestResponse = {
   /** Only when OTP_DEV_MODE is on (no real WhatsApp/email provider configured). */
   dev_code?: string;
 };
+/**
+ * `error.details.reason` of the 403 from /auth/otp/request and /auth/otp/verify while
+ * OTP_DEV_MODE is on, for accounts of real people (field pilot warung and their buyers):
+ * the code would be shown on screen, so these accounts need real WhatsApp/email delivery.
+ */
+export const REAL_OTP_REQUIRED_REASON = "REAL_OTP_REQUIRED";
+/**
+ * `error.details.reason` of the 403 from /auth/otp/request when codes are really sent and
+ * the number or email is a shared demo account: those open with the one-tap demo login
+ * (/auth/demo), never with a code sent to whoever owns that number.
+ */
+export const DEMO_LOGIN_ONLY_REASON = "DEMO_LOGIN_ONLY";
 
 /** POST /api/v1/auth/otp/verify — public. Sets the session cookie. */
 export const OtpVerifyBody = z
@@ -168,6 +182,12 @@ export type SessionUser = {
   loyalty_points: number;
   merchant_id: string | null;
   merchant_slug: string | null;
+  /**
+   * One of the shared demo accounts anyone can open with one tap. Changes to its identity,
+   * warung profile, payout details, menus, opening state and pilot status are refused
+   * (403 FORBIDDEN, details.reason = "DEMO_LOCKED"), so the demo stays tidy for everybody.
+   */
+  is_demo: boolean;
 };
 export type OtpVerifyResponse = { user: SessionUser; is_new_user: boolean };
 
@@ -178,7 +198,7 @@ export type DemoLoginBody = z.input<typeof DemoLoginBody>;
 export type AuthMeResponse = { user: SessionUser | null };
 /** POST /api/v1/auth/logout → { ok: true } */
 
-/** PATCH /api/v1/profile */
+/** PATCH /api/v1/profile (403 DEMO_LOCKED for the shared demo accounts). */
 export const ProfileUpdateBody = z.object({
   full_name: z.string().trim().min(2).max(120).optional(),
   campus_or_area: z.string().trim().max(100).nullable().optional(),
@@ -231,16 +251,35 @@ export const MAX_NIGHTLY_PORTIONS = 500;
 const nightlyPortions = z.coerce.number().int().min(0).max(MAX_NIGHTLY_PORTIONS);
 
 /**
+ * GET /api/v1/merchant/pilot: whether this warung can join the field pilot right now.
+ * Joining is refused (403) while any of these is false; the settings card explains why.
+ */
+export type PilotAvailability = {
+  /** PILOT_INVITE_CODE is set on the server. */
+  invite_open: boolean;
+  /**
+   * Login codes really reach the account owner by WhatsApp or email (OTP_DEV_MODE off and a
+   * provider configured). Without it anyone could log in as a real warung with its phone number.
+   */
+  real_otp_delivery: boolean;
+  /** Shared demo account: pilot status is locked (403 DEMO_LOCKED). */
+  demo_locked: boolean;
+};
+
+/**
  * POST /api/v1/merchant/pilot: join the field pilot with the team's invite code, stating how
- * many portions were usually left over per night before Sisa-Saji. → MerchantMeResponse
+ * many portions were usually THROWN AWAY per night before Sisa-Saji (not everything left over:
+ * the nightly reports' "discarded" count is compared with it). Self-reported by the warung.
+ * 403 while PilotAvailability is not all clear. → MerchantMeResponse
  */
 export const PilotJoinBody = z.object({
   code: z.string().trim().min(1).max(64),
+  /** Portions usually thrown away per night before joining (column name kept for compatibility). */
   baseline_leftover_portions: nightlyPortions,
 });
 export type PilotJoinBody = z.input<typeof PilotJoinBody>;
 
-/** PATCH /api/v1/merchant/pilot: set the baseline once, for a warung that joined without one. → MerchantMeResponse */
+/** PATCH /api/v1/merchant/pilot: set the thrown-away baseline once, for a warung that joined without one. → MerchantMeResponse */
 export const PilotBaselineBody = z.object({ baseline_leftover_portions: nightlyPortions });
 export type PilotBaselineBody = z.input<typeof PilotBaselineBody>;
 
@@ -277,6 +316,7 @@ export type LeftoverReportView = {
   report: (LeftoverCounts & { updated_at: string }) | null;
   /** Counts toward the public pilot results. */
   is_pilot: boolean;
+  /** Portions usually thrown away per night before the pilot (self-reported), or null. */
   baseline_leftover_portions: number | null;
 };
 
@@ -301,12 +341,15 @@ export type PilotStats = {
   /**
    * Nightly leftover reports from pilot warung, on or after the night they joined. Portions
    * that were given away, fed to animals or composted still did not end up as waste.
+   * Self-reported by the warung; not checked by the team.
    */
   leftovers: LeftoverCounts & {
     nights_reported: number;
     /**
      * Fewer portions thrown away than before Sisa-Saji, in percent: 1 − discarded ÷
-     * (baseline × nights reported), over warung that gave a baseline. Null until one has.
+     * (baseline × nights reported), over warung that gave a baseline. Both sides count only
+     * portions thrown away (the baseline asks how many were usually thrown away per night).
+     * Null until one has.
      */
     waste_reduction_pct: number | null;
   };
@@ -317,7 +360,7 @@ export type PilotStats = {
     orders_completed: number;
     portions_rescued: number;
     food_saved_grams: number;
-    /** Owner's estimate of portions left over per night before joining. */
+    /** Owner's estimate of portions thrown away per night before joining (self-reported). */
     baseline_leftover_portions: number | null;
     nights_reported: number;
     /** Average portions thrown away per reported night. */
@@ -625,7 +668,7 @@ export type OrdersResponse = { orders: OrderDetail[] };
 /** GET /api/v1/orders/:id → { order: OrderDetail } (customer owner or the order's merchant). */
 export type OrderResponse = { order: OrderDetail };
 
-/** POST /api/v1/orders/:id/cancel — customer, only PENDING_PAYMENT. → OrderResponse */
+/** POST /api/v1/orders/:id/cancel — customer: PENDING_PAYMENT, or an open "bayar di warung" ticket. → OrderResponse */
 
 /**
  * POST /api/v1/orders/:id/simulate-payment — customer, demo only
@@ -666,11 +709,19 @@ export const VerifyPickupBody = z.object({
 });
 export type VerifyPickupBody = z.input<typeof VerifyPickupBody>;
 
+/**
+ * POST /api/v1/merchant/orders/:id/cancel — merchant. Cancels an open, unpaid "bayar di
+ * warung" ticket (pilot warung): NO_SHOW = "Tidak datang", OUT_OF_STOCK = "Stok habis".
+ * The portions go back to the batch and the buyer sees the reason. → OrderResponse
+ */
+export const MerchantTicketCancelBody = z.object({ reason: z.enum(["NO_SHOW", "OUT_OF_STOCK"]) });
+export type MerchantTicketCancelBody = z.input<typeof MerchantTicketCancelBody>;
+
 /* ================================================================== */
 /* Merchant                                                            */
 /* ================================================================== */
 
-/** POST /api/v1/merchant/onboarding — logged-in user without a warung (becomes MERCHANT). */
+/** POST /api/v1/merchant/onboarding — logged-in user without a warung (becomes MERCHANT). 403 DEMO_LOCKED for demo accounts. */
 export const MerchantOnboardingBody = z.object({
   merchant_name: z.string().trim().min(3).max(150),
   merchant_category: z.enum(MENU_CATEGORIES).default("MAKANAN_BERAT"),
@@ -688,7 +739,7 @@ export const MerchantOnboardingBody = z.object({
 });
 export type MerchantOnboardingBody = z.input<typeof MerchantOnboardingBody>;
 
-/** PATCH /api/v1/merchant/me */
+/** PATCH /api/v1/merchant/me (403 DEMO_LOCKED for the shared demo warung). */
 export const MerchantUpdateBody = MerchantOnboardingBody.partial().extend({
   is_open: z.boolean().optional(),
 });
@@ -742,7 +793,7 @@ export type MenuView = {
   is_active: boolean;
 };
 
-/** POST /api/v1/merchant/menus → { menu: MenuView } */
+/** POST /api/v1/merchant/menus → { menu: MenuView } (403 DEMO_LOCKED for the shared demo warung) */
 export const MenuCreateBody = z
   .object({
     menu_name: z.string().trim().min(2).max(150),
@@ -759,7 +810,7 @@ export const MenuCreateBody = z
     path: ["min_recovery_price_idr"],
   });
 export type MenuCreateBody = z.input<typeof MenuCreateBody>;
-/** PATCH /api/v1/merchant/menus/:id → { menu: MenuView } */
+/** PATCH /api/v1/merchant/menus/:id → { menu: MenuView } (403 DEMO_LOCKED for the shared demo warung) */
 export const MenuUpdateBody = z.object({
   menu_name: z.string().trim().min(2).max(150).optional(),
   category: z.enum(MENU_CATEGORIES).optional(),

@@ -30,6 +30,7 @@ import type {
   PaymentMethod,
   VouchersResponse,
 } from "@/lib/contracts";
+import { PAY_AT_WARUNG_HOLD_MINUTES, PAY_AT_WARUNG_MAX_PORTIONS } from "@/lib/constants";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { selectCartEarliestEnd, useCartStore, type CartItem } from "@/stores/cart";
@@ -37,7 +38,14 @@ import { useStoresHydrated } from "@/stores/hydration";
 import { useLocationStore } from "@/stores/location";
 import { QtyStepper } from "../bits";
 import { useBatchStream } from "../hooks/use-batch-stream";
-import { checkoutErrorAction, perBuyerCaps, previewTotals, unpaidOrderHref } from "../lib/checkout-logic";
+import {
+  checkoutErrorAction,
+  perBuyerCaps,
+  previewTotals,
+  ticketLineMax,
+  trimToTicketCap,
+  unpaidOrderHref,
+} from "../lib/checkout-logic";
 import { generatePickupSlots } from "../lib/pickup-slots";
 import { cartPatchFromBatch, customerKeys } from "../lib/queries";
 import {
@@ -133,6 +141,26 @@ export function CheckoutScreen() {
   const isPilot = detail.data?.is_pilot ?? false;
   const voucher = isPilot ? null : (vouchers.data?.vouchers.find((v) => v.code === voucherCode) ?? null);
   const preview = previewTotals({ items, voucher, serviceFeeIdr: isPilot ? 0 : undefined });
+  const holdNote = isPilot
+    ? `Porsi disimpan untukmu ${PAY_AT_WARUNG_HOLD_MINUTES} menit setelah pesan`
+    : "Stok dikunci 10 menit setelah kamu lanjut bayar";
+
+  // A "bayar di warung" ticket holds at most PAY_AT_WARUNG_MAX_PORTIONS portions (server rule):
+  // bring a bigger cart down before the buyer presses pay.
+  useEffect(() => {
+    if (!isPilot) return;
+    const cut = trimToTicketCap(useCartStore.getState().items, PAY_AT_WARUNG_MAX_PORTIONS);
+    for (const c of cut) {
+      if (c.quantity <= 0) removeItem(c.batch_id);
+      else updateItem(c.batch_id, { quantity: c.quantity });
+    }
+    if (cut.length) {
+      toast(`Satu tiket bayar di warung paling banyak ${PAY_AT_WARUNG_MAX_PORTIONS} porsi`, {
+        id: "ticket-cap",
+        description: "Jumlah porsi di keranjang sudah disesuaikan.",
+      });
+    }
+  }, [isPilot, items, removeItem, updateItem]);
 
   const slots = useMemo(
     () =>
@@ -349,7 +377,9 @@ export function CheckoutScreen() {
                       <QtyStepper
                         value={it.quantity}
                         min={0}
-                        max={it.max_quantity}
+                        max={
+                          isPilot ? ticketLineMax(items, it.batch_id, it.max_quantity, PAY_AT_WARUNG_MAX_PORTIONS) : it.max_quantity
+                        }
                         size="sm"
                         label={it.menu_name}
                         onChange={(v) => changeQty(it, v)}
@@ -368,6 +398,11 @@ export function CheckoutScreen() {
                 );
               })}
             </ul>
+            {isPilot && (
+              <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                Maksimal {PAY_AT_WARUNG_MAX_PORTIONS} porsi per tiket bayar di warung.
+              </p>
+            )}
           </CheckoutCard>
 
           <SelfPickupInfoCard
@@ -431,8 +466,7 @@ export function CheckoutScreen() {
                 <p className="mt-2 text-center text-xs font-semibold text-urgent">Hapus menu yang tidak tersedia untuk lanjut.</p>
               )}
               <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-                <LockIcon className="size-3" aria-hidden />{" "}
-                {isPilot ? "Porsi disimpan untukmu sampai batas waktu ambil" : "Stok dikunci 10 menit setelah kamu lanjut bayar"}
+                <LockIcon className="size-3" aria-hidden /> {holdNote}
               </p>
             </div>
           </PriceAndImpactBreakdown>
@@ -452,6 +486,7 @@ export function CheckoutScreen() {
             </div>
             {payButton("h-12 shrink-0")}
           </div>
+          {isPilot && !blocked && <p className="mt-2 text-center text-[11px] text-muted-foreground">{holdNote}</p>}
           {blocked && (
             <p className="mt-2 text-center text-xs font-semibold text-urgent">Hapus menu yang tidak tersedia untuk lanjut.</p>
           )}

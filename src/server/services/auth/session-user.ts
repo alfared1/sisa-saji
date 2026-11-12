@@ -1,12 +1,13 @@
 /**
- * SessionUser view loader that takes an explicit db (testable). Same mapping as
- * loadSessionUser() in src/server/auth/session.ts, which uses the app singleton.
+ * SessionUser view loader that takes an explicit db (testable). loadSessionUser() in
+ * src/server/auth/session.ts calls it with the app singleton.
  */
 import "server-only";
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { merchants, users } from "@/db/schema";
 import type { SessionUser } from "@/lib/contracts";
+import { isDemoAccount } from "@/lib/demo-accounts";
 import type { DbOrTx } from "@/server/services/stock";
 
 export async function sessionUserView(db: Db | DbOrTx, userId: string): Promise<SessionUser | null> {
@@ -31,5 +32,6 @@ export async function sessionUserView(db: Db | DbOrTx, userId: string): Promise<
     loyalty_points: u.loyaltyPoints,
     merchant_id: row.merchantId,
     merchant_slug: row.merchantSlug,
+    is_demo: isDemoAccount(u),
   };
 }

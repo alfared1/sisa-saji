@@ -155,8 +155,9 @@ function QuickOrderBody({
   const desktop = useResponsiveSheetVariant() === "dialog";
   const countdown = useCountdown(batch.pickup_end_time);
   const [rawQty, setQty] = useState(1);
-  const qty = clampQuickOrderQty(rawQty, batch.available_stock);
-  const max = quickOrderMaxQty(batch.available_stock);
+  const pilot = Boolean(batch.merchant_is_pilot);
+  const qty = clampQuickOrderQty(rawQty, batch.available_stock, pilot);
+  const max = quickOrderMaxQty(batch.available_stock, pilot);
 
   const soldOut = batch.available_stock <= 0;
   const closed = countdown.ready && countdown.isOver;

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, ChevronDownIcon } from "lucide-react";
 import { DemoLoginButtons } from "@/components/common/demo-login-buttons";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-switcher";
@@ -18,6 +18,10 @@ import {
 import { CO2E_SOURCE } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 import { ImpactStats } from "../welcome/welcome-view";
+import { LICENCE_URL, PHOTO_CREDITS } from "./photo-credits";
+
+/** Credit links stay visibly links on touch screens (no hover there). */
+const CREDIT_LINK = "underline decoration-muted-foreground/50 underline-offset-2 hover:text-foreground hover:decoration-foreground";
 
 const KM = DEFAULT_SEARCH_RADIUS_M / 1000;
 const CO2_PER_PORTION_KG = (DEFAULT_PORTION_WEIGHT_GRAMS / 1000) * CO2E_PER_KG_FOOD;
@@ -255,12 +259,28 @@ export function AboutView() {
               </a>
             </li>
             <li>
-              Foto buram untuk menu yang belum punya foto, dari Wikimedia Commons: Fei Tan (CC BY 2.0), Cendy00, Abdul
-              Hanif Arromy, dan Indonesiagood (CC BY 4.0), serta AndriFB, Andy Li, dan Herry Wibisono (CC0). Rincian di{" "}
-              <a href="/food-placeholders/CREDITS.md" className="underline-offset-2 hover:underline">
-                daftar foto
-              </a>
-              .
+              Foto buram untuk menu yang belum punya foto, dari Wikimedia Commons. Semuanya dipotong, diperkecil, dan
+              diburamkan.
+              <details className="group mt-1">
+                <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+                  Kredit {PHOTO_CREDITS.length} foto
+                  <ChevronDownIcon className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <ul className="mt-2 space-y-1.5">
+                  {PHOTO_CREDITS.map((c) => (
+                    <li key={c.sourceUrl}>
+                      <span className="text-foreground">{c.usedFor}:</span>{" "}
+                      <a href={c.sourceUrl} target="_blank" rel="noreferrer" className={`break-words ${CREDIT_LINK}`}>
+                        {c.title.replace(/\.jpg$/i, "")}
+                      </a>
+                      , oleh {c.author},{" "}
+                      <a href={LICENCE_URL[c.licence]} target="_blank" rel="noreferrer" className={CREDIT_LINK}>
+                        {c.licence}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </li>
           </ul>
         </section>

@@ -1,11 +1,14 @@
 import { InfoIcon } from "lucide-react";
 import { isDemoData } from "@/lib/env";
 import { cn } from "@/lib/utils";
+import { DemoNoticeHeight } from "./demo-notice-height";
 
 /**
  * One honest line at the top of the app on demo deployments: the warung,
  * ratings, "Mitra Terverifikasi" badges and payments are sample data.
- * Server component, so the flag never ships as client config.
+ * Server component, so the flag never ships as client config. Its height is
+ * published as `--demo-notice-h` (DemoNoticeHeight) so full-height screens
+ * such as /map stay clear of the tab bar.
  */
 export function DemoNotice({ audience, className }: { audience: "pembeli" | "mitra"; className?: string }) {
   if (!isDemoData()) return null;
@@ -24,6 +27,7 @@ export function DemoNotice({ audience, className }: { audience: "pembeli" | "mit
           ? "Warung, rating, dan pembayaran di sini contoh, kecuali warung berlabel “Warung uji coba” yang sungguhan dan dibayar langsung di tempat."
           : "Pesanan dan pembayaran di sini hanya contoh. Saldo warung tidak bisa dicairkan. Warung uji coba menerima bayaran langsung dari pembeli."}
       </p>
+      <DemoNoticeHeight />
     </aside>
   );
 }

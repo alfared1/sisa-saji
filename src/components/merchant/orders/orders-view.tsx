@@ -16,6 +16,8 @@ import { merchantKeys, useMerchantReady } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
 import { LiveDot } from "../dashboard/store-status-header";
 import { MerchantPage, MerchantPageHeader } from "../ui";
+import { PAY_AT_WARUNG_HOLD_MINUTES } from "@/lib/constants";
+import { isCancellableTicket } from "./cancel-ticket";
 import { MerchantOrderCard, portionsOf } from "./order-card";
 
 type Tab = "active" | "today" | "history";
@@ -41,12 +43,12 @@ function groupByDate(orders: OrderDetail[]): [string, OrderDetail[]][] {
   return [...map.entries()].map(([d, list]) => [d, list.sort((a, b) => shownAt(b) - shownAt(a))]);
 }
 
-function OrderList({ orders }: { orders: OrderDetail[] }) {
+function OrderList({ orders, actions = false }: { orders: OrderDetail[]; actions?: boolean }) {
   return (
     <ul className="grid gap-2.5 lg:grid-cols-2">
       {orders.map((o) => (
         <li key={o.id}>
-          <MerchantOrderCard order={o} />
+          <MerchantOrderCard order={o} actions={actions} />
         </li>
       ))}
     </ul>
@@ -163,7 +165,16 @@ export function MerchantOrdersView() {
                 <h2 id="waiting-h" className="mb-2 text-sm font-semibold">
                   Menunggu diambil <span className="text-muted-foreground tabular-nums">({waiting.length})</span>
                 </h2>
-                <OrderList orders={[...waiting].sort((a, b) => Date.parse(a.pickup_deadline_at) - Date.parse(b.pickup_deadline_at))} />
+                {waiting.some(isCancellableTicket) && (
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Tiket bayar di warung menahan porsi paling lama {PAY_AT_WARUNG_HOLD_MINUTES} menit, lalu batal otomatis bila
+                    tidak diambil. Bila pembeli belum datang mendekati batas waktu, kamu bisa membatalkan tiketnya.
+                  </p>
+                )}
+                <OrderList
+                  actions
+                  orders={[...waiting].sort((a, b) => Date.parse(a.pickup_deadline_at) - Date.parse(b.pickup_deadline_at))}
+                />
               </section>
             )}
             {unpaid.length > 0 && (

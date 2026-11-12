@@ -22,8 +22,10 @@ import { PriceTag } from "@/components/common/price-tag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useNow } from "@/hooks/use-now";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
 import type { PublishBody, PublishResponse, QuoteAiResponse } from "@/lib/contracts";
+import { DEMO_MAX_BATCH_STOCK } from "@/lib/demo-accounts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { STOCK_MAX, STOCK_MIN, checkPickupEnd, clampInt, defaultPickupEnd, priceForDiscount, roundPortions } from "../lib/logic";
@@ -189,7 +191,12 @@ export function SurplusPublisherView() {
     null;
   const menu = menus.find((m) => m.id === menuId) ?? null;
   const predictedForMenu = menuId ? predicted.get(menuId) : undefined;
-  const stock = stockChoice ?? clampInt(predictedForMenu && predictedForMenu >= 1 ? roundPortions(predictedForMenu) : DEFAULT_STOCK, STOCK_MIN, STOCK_MAX);
+  // The shared demo warung publishes at most DEMO_MAX_BATCH_STOCK portions per batch (server rule).
+  const stockMax = useSession().user?.is_demo ? DEMO_MAX_BATCH_STOCK : STOCK_MAX;
+  const stock = Math.min(
+    stockChoice ?? clampInt(predictedForMenu && predictedForMenu >= 1 ? roundPortions(predictedForMenu) : DEFAULT_STOCK, STOCK_MIN, stockMax),
+    stockMax,
+  );
   const closeTime = me.data?.merchant.operational_close_time ?? "22:00";
   const endMs = endChoice ?? (now !== null ? defaultPickupEnd(closeTime, now).endMs : null);
   const windowCheck = endMs !== null && now !== null ? checkPickupEnd(endMs, now) : null;
@@ -351,7 +358,7 @@ export function SurplusPublisherView() {
             }
           >
             <div className="mx-auto max-w-sm py-1">
-              <Stepper value={stock} onChange={setStockChoice} min={STOCK_MIN} max={STOCK_MAX} label="Jumlah porsi" unit="porsi" />
+              <Stepper value={stock} onChange={setStockChoice} min={STOCK_MIN} max={stockMax} label="Jumlah porsi" unit="porsi" />
             </div>
             <div className="mt-3 flex flex-wrap justify-center gap-2" role="group" aria-label="Pilih cepat jumlah porsi">
               {[3, 5, 10, 15, 20].map((n) => (

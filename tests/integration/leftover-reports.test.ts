@@ -1,7 +1,8 @@
 /**
  * Nightly leftover reports and the waste reduction in the pilot results: a warung records
  * where the portions that still did not sell went, and /uji-coba compares the thrown-away
- * part with the baseline the owner gave when joining.
+ * part with the baseline the owner gave when joining, which is itself the number of
+ * portions usually THROWN AWAY per night (like for like, not all leftovers).
  */
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -26,7 +27,11 @@ let db: Db;
 let close: () => Promise<void>;
 let pilot: typeof merchants.$inferSelect;
 let other: typeof merchants.$inferSelect;
-const previousCode = process.env.PILOT_INVITE_CODE;
+const previousEnv = {
+  PILOT_INVITE_CODE: process.env.PILOT_INVITE_CODE,
+  OTP_DEV_MODE: process.env.OTP_DEV_MODE,
+  FONNTE_TOKEN: process.env.FONNTE_TOKEN,
+};
 const now = new Date();
 const today = wibDate(now);
 const yesterday = wibDate(new Date(now.getTime() - DAY_MS));
@@ -37,9 +42,15 @@ beforeAll(async () => {
   [pilot] = await db.select().from(merchants).where(eq(merchants.slug, "soto-kuning-mang-oyo-dramaga"));
   [other] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
   process.env.PILOT_INVITE_CODE = CODE;
+  // Joining the pilot needs real OTP delivery (a configured provider, dev mode off).
+  process.env.OTP_DEV_MODE = "false";
+  process.env.FONNTE_TOKEN = "test-fonnte-token";
 });
 afterAll(async () => {
-  process.env.PILOT_INVITE_CODE = previousCode;
+  for (const [k, v] of Object.entries(previousEnv)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
   await reseed(db); // leave no pilot warung or reports behind for the other suites
   await close();
 });
@@ -113,7 +124,7 @@ describe("waste reduction in the pilot results", () => {
     expect(wasteReductionPct(0, 3)).toBeNull();
   });
 
-  it("counts only pilot warung, only nights since joining, against the baseline given on joining", async () => {
+  it("counts only pilot warung, only nights since joining, thrown-away portions against the thrown-away baseline", async () => {
     // A report from the night before joining, and one from a warung outside the pilot.
     await report(pilot.id, { report_date: yesterday, donated: 0, animal_feed: 0, compost: 0, discarded: 9 });
     await report(other.id, { report_date: today, donated: 0, animal_feed: 0, compost: 0, discarded: 50 });
@@ -123,6 +134,8 @@ describe("waste reduction in the pilot results", () => {
     await expectCode(setPilotBaseline(db, pilot.id, 3, now), "CONFLICT");
     await expectCode(setPilotBaseline(db, other.id, 3, now), "FORBIDDEN");
 
+    // 10 portions left tonight, 3 of them thrown away. Against a baseline of 10 thrown away
+    // per night that is 70% less waste; the 7 given away, fed or composted are not waste.
     await report(pilot.id, { report_date: today, donated: 4, animal_feed: 2, compost: 1, discarded: 3 });
 
     const stats = await getPilotStats(db);

@@ -17,6 +17,7 @@ const DEMO_USER: SessionUser = {
   loyalty_points: 0,
   merchant_id: null,
   merchant_slug: null,
+  is_demo: true,
 };
 
 /** MerchantShell rendered as if on /merchant/dashboard (dev gallery). */
