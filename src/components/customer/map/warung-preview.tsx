@@ -78,7 +78,6 @@ export function IdleWarungPreview({ warung }: { warung: WarungMapPin }) {
         category={warung.category}
         alt=""
         className="size-20 shrink-0 rounded-2xl grayscale"
-        iconClassName="size-7"
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">

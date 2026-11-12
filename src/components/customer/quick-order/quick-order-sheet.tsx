@@ -269,7 +269,7 @@ function QuickOrderBody({
             mystery={batch.is_mystery_bag}
             alt={batch.menu_name}
             className={cn("size-28 shrink-0 rounded-2xl", desktop && "size-44 rounded-3xl", blocked && "grayscale")}
-            iconClassName={desktop ? "size-14" : "size-10"}
+            noPhotoLabel
           />
           {/* Dialog: right padding keeps the badge / title clear of the close button. */}
           <div className={cn("min-w-0 flex-1", desktop && "pt-1 pr-8")}>

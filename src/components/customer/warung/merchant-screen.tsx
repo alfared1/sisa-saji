@@ -254,7 +254,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
               imageUrl={m.banner_url}
               alt={`Foto ${m.name}`}
               className="h-32 w-full lg:col-span-2 lg:h-60 lg:rounded-3xl lg:shadow-card lg:ring-1 lg:ring-border xl:h-72"
-              iconClassName="size-12 lg:size-20"
+              noPhotoLabel
             >
               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent" />
               {window_ && m.is_open && (

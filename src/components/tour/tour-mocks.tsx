@@ -142,7 +142,7 @@ function SambutMock() {
       </Coachmark>
 
       <div className={cn(CARD, "p-2.5 shadow-soft")}>
-        <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="h-28 rounded-xl" iconClassName="size-12">
+        <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="h-28 rounded-xl">
           <DiscountBadge pct={50} minutesToClose={null} className="absolute top-2 left-2" />
         </FoodThumb>
         <p className="mt-2 truncate text-[13px] font-semibold">{TIMBEL}</p>
@@ -185,7 +185,7 @@ function DealCard({ deal: d, coach }: { deal: Deal; coach: string }) {
     <div className={cn(CARD, "p-2.5 shadow-soft")}>
       {/* The badge sits beside the photo, not inside it: FoodThumb clips its children. */}
       <div className="relative">
-        <FoodThumb category={d.category} alt={d.name} className="h-28 rounded-xl" iconClassName="size-11" />
+        <FoodThumb category={d.category} alt={d.name} className="h-28 rounded-xl" />
         <Coachmark label={coach} radius="rounded-full" align="start" className="absolute top-2 left-2">
           <DiscountBadge pct={d.pct} minutesToClose={null} size="sm" />
         </Coachmark>
@@ -207,7 +207,7 @@ function DealCard({ deal: d, coach }: { deal: Deal; coach: string }) {
 function DealRow({ deal: d }: { deal: Deal }) {
   return (
     <div className={cn(CARD, "flex gap-2.5 p-2.5 shadow-soft")}>
-      <FoodThumb category={d.category} alt={d.name} className="size-[68px] shrink-0 rounded-xl" iconClassName="size-7" />
+      <FoodThumb category={d.category} alt={d.name} className="size-[68px] shrink-0 rounded-xl" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold">{d.name}</p>
         <p className="truncate text-[11px] text-muted-foreground">
@@ -291,7 +291,7 @@ function PesanMock() {
       {/* Bottom margin = room for the callout above "Bayar QRIS" (sized in on-screen px via --z). */}
       <div className={cn(CARD, "mb-[calc(72px/var(--z))] p-2.5")}>
         <div className="flex gap-2.5">
-          <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="size-14 shrink-0 rounded-xl" iconClassName="size-6" />
+          <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="size-14 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-[13px] leading-snug font-semibold">{TIMBEL}</p>
             <p className="truncate text-[11px] text-muted-foreground">{DEMO_WARUNG}</p>

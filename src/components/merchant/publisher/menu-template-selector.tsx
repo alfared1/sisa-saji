@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckIcon, PlusIcon } from "lucide-react";
-import { FoodIllustration } from "@/components/common/food-illustration";
+import { FoodThumb } from "@/components/customer/food-thumb";
 import type { MenuView } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -48,16 +48,13 @@ export function MenuTemplateSelector({
                     : "bg-card ring-border hover:bg-muted/60",
               )}
             >
-              <span
-                className={cn(
-                  "inline-flex size-11 shrink-0 items-center justify-center rounded-xl",
-                  m.is_mystery_bag ? "bg-deal-soft" : "bg-food",
-                  selected && "bg-card",
-                )}
-                aria-hidden
-              >
-                <FoodIllustration kind={m.is_mystery_bag ? "MYSTERY_BAG" : m.category} className="size-6" />
-              </span>
+              <FoodThumb
+                category={m.category}
+                mystery={m.is_mystery_bag}
+                imageUrl={m.image_url}
+                alt=""
+                className="size-11 shrink-0 rounded-xl"
+              />
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 block text-sm leading-tight font-semibold">{m.menu_name}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">

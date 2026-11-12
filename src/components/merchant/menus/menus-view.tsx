@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PencilIcon, PlusIcon, UtensilsCrossedIcon } from "lucide-react";
-import { FoodIllustration } from "@/components/common/food-illustration";
+import { FoodThumb } from "@/components/customer/food-thumb";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState, errorMessage } from "@/components/common/error-state";
 import { ListSkeleton } from "@/components/common/list-skeleton";
@@ -50,16 +50,13 @@ function MenuCard({ menu, onEdit, onToggle, toggling }: { menu: MenuView; onEdit
   return (
     <li className={cn("flex flex-col rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border transition-opacity", !menu.is_active && "opacity-70")}>
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "inline-flex size-12 shrink-0 items-center justify-center rounded-2xl",
-            menu.is_mystery_bag ? "bg-deal-soft" : "bg-food",
-            !menu.is_active && "grayscale",
-          )}
-          aria-hidden
-        >
-          <FoodIllustration kind={menu.is_mystery_bag ? "MYSTERY_BAG" : menu.category} className="size-7" />
-        </span>
+        <FoodThumb
+          category={menu.category}
+          mystery={menu.is_mystery_bag}
+          imageUrl={menu.image_url}
+          alt=""
+          className={cn("size-12 shrink-0 rounded-2xl", !menu.is_active && "grayscale")}
+        />
         <div className="min-w-0 flex-1">
           <h3 className="text-base leading-snug font-semibold">{menu.menu_name}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">

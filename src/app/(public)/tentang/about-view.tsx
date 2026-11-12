@@ -254,6 +254,14 @@ export function AboutView() {
                 Perserikatan Bangsa-Bangsa. Goal 12: Ensure sustainable consumption and production patterns.
               </a>
             </li>
+            <li>
+              Foto buram untuk menu yang belum punya foto, dari Wikimedia Commons: Fei Tan (CC BY 2.0), Cendy00, Abdul
+              Hanif Arromy, dan Indonesiagood (CC BY 4.0), serta AndriFB, Andy Li, dan Herry Wibisono (CC0). Rincian di{" "}
+              <a href="/food-placeholders/CREDITS.md" className="underline-offset-2 hover:underline">
+                daftar foto
+              </a>
+              .
+            </li>
           </ul>
         </section>
       </div>

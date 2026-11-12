@@ -5,7 +5,6 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { Loader2Icon } from "lucide-react";
-import { FoodIllustration } from "@/components/common/food-illustration";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,9 +108,6 @@ export function MenuForm({
               field.value ? "bg-deal-soft ring-deal/40" : "bg-card ring-border",
             )}
           >
-            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-card ring-1 ring-deal/30">
-              <FoodIllustration kind="MYSTERY_BAG" className="size-6" />
-            </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">Paket Kejutan (Mystery Bag)</span>
               <span className="block text-xs text-muted-foreground">Isi campuran sisa hari itu. Biasanya paling cepat habis.</span>

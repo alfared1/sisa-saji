@@ -65,7 +65,6 @@ export function MerchantCard({
         imageUrl={merchant.logo_url}
         alt=""
         className={cn("shrink-0 rounded-2xl", variant === "sheet" ? "size-20" : "size-[4.5rem]", soldOut && "grayscale")}
-        iconClassName="size-7"
       />
 
       <div className="min-w-0 flex-1">

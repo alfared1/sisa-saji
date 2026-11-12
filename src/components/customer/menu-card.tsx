@@ -75,6 +75,7 @@ export function DynamicPriceMenuCard({
         mystery={batch.is_mystery_bag}
         alt={batch.menu_name}
         className={cn("size-26 shrink-0 rounded-2xl", inactive && "grayscale")}
+        noPhotoLabel={!soldOut}
       >
         {soldOut && (
           <span className="absolute inset-0 flex items-center justify-center bg-foreground/45 text-xs font-semibold text-background uppercase">

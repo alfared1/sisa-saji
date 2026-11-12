@@ -93,7 +93,7 @@ function DealPreview() {
   return (
     <div className="rounded-3xl bg-card p-3 shadow-card ring-1 ring-border" aria-hidden>
       <div className="flex gap-3">
-        <FoodThumb category="MAKANAN_BERAT" alt="" className="size-20 shrink-0 rounded-2xl" iconClassName="size-8" />
+        <FoodThumb category="MAKANAN_BERAT" alt="" className="size-20 shrink-0 rounded-2xl" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{EXAMPLE.name}</p>
           <p className="truncate text-xs text-muted-foreground">Warung contoh · 240 m</p>
