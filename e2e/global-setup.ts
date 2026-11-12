@@ -14,6 +14,7 @@ import { appendFileSync, existsSync, rmSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import {
+  E2E_PILOT_CODE,
   E2E_BASE_URL,
   E2E_DATABASE_URL,
   E2E_DB_PORT,
@@ -39,6 +40,9 @@ export const serverEnv = (): NodeJS.ProcessEnv => ({
   // connections interleave statements ("portal does not exist", empty results, foreign
   // statements inside an open transaction). One pooled connection queues them instead.
   DB_POOL_MAX: "1",
+  // Field pilot: specs join a warung with this code; the disposable e2e DB may be reseeded over pilot data.
+  PILOT_INVITE_CODE: E2E_PILOT_CODE,
+  SEED_WIPE_PILOT: "1",
 });
 
 function log(msg: string) {

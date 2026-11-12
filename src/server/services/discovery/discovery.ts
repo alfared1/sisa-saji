@@ -58,6 +58,7 @@ type LiveRow = {
   lat: number;
   lng: number;
   is_verified: boolean;
+  is_pilot: boolean;
   tier: MerchantTier;
   rating_avg: string | number;
   total_reviews: number;
@@ -118,7 +119,7 @@ async function queryLiveRows(
            b.auto_discount_enabled, b.pickup_start_time, b.pickup_end_time,
            m.id AS merchant_id, m.slug AS merchant_slug, m.merchant_name, m.merchant_category,
            m.address, m.latitude AS lat, m.longitude AS lng, m.merchant_verified AS is_verified,
-           m.subscription_tier AS tier, m.rating_avg, m.total_reviews, m.logo_url, m.is_open,
+           m.is_pilot, m.subscription_tier AS tier, m.rating_avg, m.total_reviews, m.logo_url, m.is_open,
            ${distance} AS distance_m
     FROM surplus_batches b
     JOIN merchants m ON m.id = b.merchant_id
@@ -158,6 +159,7 @@ function toBatchCard(r: LiveRow, now: Date): BatchCard {
     merchant_id: r.merchant_id,
     merchant_slug: r.merchant_slug,
     merchant_name: r.merchant_name,
+    merchant_is_pilot: r.is_pilot,
     distance_m: roundDistance(r.distance_m),
   };
 }
@@ -198,6 +200,7 @@ function groupByMerchant(rows: LiveRow[], now: Date): MerchantSummary[] {
           lng: Number(r.lng),
           distance_m: roundDistance(r.distance_m),
           is_verified: r.is_verified,
+          is_pilot: r.is_pilot,
           tier: r.tier,
           rating_avg: Number(r.rating_avg),
           total_reviews: Number(r.total_reviews),
@@ -420,6 +423,7 @@ export async function getMerchantDetail(
       lng: mm.longitude,
       distance_m: roundDistance(m.distance),
       is_verified: mm.merchantVerified,
+      is_pilot: mm.isPilot,
       tier: mm.subscriptionTier,
       rating_avg: Number(mm.ratingAvg),
       total_reviews: mm.totalReviews,

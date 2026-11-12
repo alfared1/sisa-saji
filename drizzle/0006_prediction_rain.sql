@@ -1,0 +1,1 @@
+ALTER TABLE "merchant_surplus_predictions" ADD COLUMN "rain_forecast_mm" numeric(5, 1);

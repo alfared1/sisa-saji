@@ -25,7 +25,7 @@ export async function ensureLiveBatches(): Promise<void> {
   console.log(`[e2e] only ${rows[0].n} open batches left — re-seeding`);
   const res = spawnSync(process.execPath, [path.join(ROOT, "node_modules", "tsx", "dist", "cli.mjs"), "scripts/db-seed.ts"], {
     cwd: ROOT,
-    env: { ...process.env, DATABASE_URL: E2E_DATABASE_URL },
+    env: { ...process.env, DATABASE_URL: E2E_DATABASE_URL, SEED_WIPE_PILOT: "1" },
     stdio: "inherit",
   });
   if (res.status !== 0) throw new Error("[e2e] re-seed failed");

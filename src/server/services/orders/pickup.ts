@@ -13,6 +13,7 @@ import { badgeTierForFoodSaved, co2GramsFromFoodGrams } from "@/lib/impact";
 import { verifyPickupToken } from "@/lib/pickup-token";
 import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
+import { abandonPayAtWarungOrder, commitReservation } from "@/server/services/stock";
 
 export const PICKUP_GRACE_MINUTES = 30;
 const PICKABLE = ["PAID", "READY_FOR_PICKUP"] as const;
@@ -165,12 +166,15 @@ async function completePickup(
     const co2Grams = co2GramsFromFoodGrams(foodGrams);
     const moneySaved = o.subtotalOriginalIdr - o.subtotalRecoveryIdr + o.voucherDiscountIdr;
     const points = Math.floor(o.totalCustomerPaidIdr / 1000);
+    // Pilot "bayar di warung": the customer pays the warung at this moment.
+    const payAtWarung = o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
 
     const [done] = await tx
       .update(orders)
       .set({
         status: "COMPLETED",
         pickedUpAt: now,
+        ...(payAtWarung ? { paidAt: now } : {}),
         pickupProofImageUrl: args.proofImageUrl ?? null,
         totalFoodSavedGrams: foodGrams,
         totalCo2AvoidedGrams: co2Grams,
@@ -179,6 +183,8 @@ async function completePickup(
       .where(and(eq(orders.id, o.id), inArray(orders.status, [...PICKABLE])))
       .returning({ id: orders.id });
     if (!done) throw new ApiError("ORDER_STATE_CONFLICT", "Status pesanan sudah berubah");
+    // Pay-at-warung portions stayed reserved until now: they are sold at the counter.
+    if (payAtWarung) await commitReservation(tx, o.id, now);
 
     const [u] = await tx
       .update(users)
@@ -198,10 +204,13 @@ async function completePickup(
       if (rank(badge) > rank(u.badge)) await tx.update(users).set({ badgeTier: badge }).where(eq(users.id, o.customerId));
     }
 
-    await tx
-      .update(merchants)
-      .set({ walletBalanceIdr: sql`${merchants.walletBalanceIdr} + ${o.netMerchantPayoutIdr}`, updatedAt: now })
-      .where(eq(merchants.id, o.merchantId));
+    // The warung already holds the cash for a pay-at-warung order; only online payments are paid out.
+    if (!payAtWarung) {
+      await tx
+        .update(merchants)
+        .set({ walletBalanceIdr: sql`${merchants.walletBalanceIdr} + ${o.netMerchantPayoutIdr}`, updatedAt: now })
+        .where(eq(merchants.id, o.merchantId));
+    }
   });
 }
 
@@ -216,17 +225,25 @@ export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
  * the customer's duty, so the warung is still credited net_merchant_payout_idr
  * (exactly once, in the same transaction as the status change). The customer gets
  * no impact / points credit — the food was not rescued by them. Stock stays sold.
+ *
+ * Pilot "bayar di warung" tickets were never paid: they expire without a payout and
+ * their reserved portions go back to the batch (abandonPayAtWarungOrder).
  */
 export async function closeUnclaimedOrders(db: Db, now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - PICKUP_GRACE_MINUTES * 60_000);
   const stale = await db
-    .select({ id: orders.id })
+    .select({ id: orders.id, paymentMethod: orders.paymentMethod, paidAt: orders.paidAt })
     .from(orders)
     .where(and(inArray(orders.status, [...PICKABLE]), sql`${orders.pickupDeadlineAt} < ${cutoff}`))
     .orderBy(orders.pickupDeadlineAt)
     .limit(500);
   let closed = 0;
-  for (const { id } of stale) {
+  for (const { id, paymentMethod, paidAt } of stale) {
+    if (paymentMethod === "BAYAR_DI_WARUNG" && !paidAt) {
+      const done = await db.transaction((tx) => abandonPayAtWarungOrder(tx, id, "EXPIRED", UNCLAIMED_ORDER_REASON, now));
+      if (done) closed++;
+      continue;
+    }
     const done = await db.transaction(async (tx) => {
       const [o] = await tx
         .update(orders)

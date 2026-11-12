@@ -38,6 +38,8 @@ export interface Prediction {
   /** "HH:MM" (WIB). */
   peakHour: string;
   modelVersion: string;
+  /** Evening rain forecast (mm) used by the lgbm model; null for heuristic rows. */
+  rainForecastMm: number | null;
   proactiveNotifSent: boolean;
   /** "stored" = read from merchant_surplus_predictions, "computed" = on-the-fly heuristic. */
   source: "stored" | "computed";
@@ -58,6 +60,7 @@ function fromRow(r: PredictionRow): Prediction {
     confidenceScore: Number(r.confidenceScore),
     peakHour: r.predictedPeakSurplusHour.slice(0, 5),
     modelVersion: r.modelVersion,
+    rainForecastMm: r.rainForecastMm === null ? null : Number(r.rainForecastMm),
     proactiveNotifSent: r.proactiveNotifSent,
     source: "stored",
   };
@@ -122,6 +125,7 @@ export async function computeHeuristicPrediction(
     confidenceScore: est.confidenceScore,
     peakHour: await merchantStartHour(db, merchantId),
     modelVersion: HEURISTIC_MODEL_VERSION,
+    rainForecastMm: null,
     proactiveNotifSent: false,
     source: "computed",
   };

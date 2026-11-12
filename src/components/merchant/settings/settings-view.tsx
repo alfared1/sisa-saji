@@ -30,6 +30,7 @@ import {
   type ProfileOutput,
 } from "../profile/profile-fields";
 import { MerchantPage, MerchantPageHeader, SectionCard } from "../ui";
+import { PilotSection } from "./pilot-section";
 
 function SettingsForm({ merchant }: { merchant: MerchantProfile }) {
   const update = useUpdateMerchant();
@@ -121,6 +122,8 @@ export function MerchantSettingsView() {
                 <Switch checked={m.is_open} onCheckedChange={(v) => update.mutate({ is_open: v }, { onSuccess: () => toast.success(v ? "Warung dibuka" : "Warung ditutup") })} aria-label="Buka atau tutup warung" />
               </label>
             </section>
+
+            <PilotSection merchant={m} />
 
             <section className="space-y-3 rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5" aria-label="Langganan">
               <div className="flex items-center justify-between gap-2">

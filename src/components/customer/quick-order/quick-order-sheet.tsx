@@ -181,6 +181,7 @@ function QuickOrderBody({
       },
     ],
     voucher: null,
+    serviceFeeIdr: batch.merchant_is_pilot ? 0 : undefined,
   });
   const foodGrams = qty * batch.portion_weight_grams;
 
@@ -208,7 +209,12 @@ function QuickOrderBody({
       // whose CTA would place a duplicate PENDING_PAYMENT order.
       onClose();
       router.push(`/orders/${order.id}`);
-      toast.success("Stok dikunci 10 menit. Scan QRIS untuk bayar.", { id: "qo-ok" });
+      toast.success(
+        order.payment_method === "BAYAR_DI_WARUNG"
+          ? "Pesanan tercatat. Bayar langsung di warung saat mengambil."
+          : "Stok dikunci 10 menit. Scan QRIS untuk bayar.",
+        { id: "qo-ok" },
+      );
     },
     onError: (err) => {
       if (!(err instanceof ApiClientError)) {
@@ -335,7 +341,15 @@ function QuickOrderBody({
         {!blocked && (
           <div className="mt-3 flex items-baseline justify-between text-sm">
             <span className="text-muted-foreground">
-              Total bayar <span className="text-xs">(termasuk biaya layanan {formatIdr(totals.service_fee_idr)})</span>
+              {batch.merchant_is_pilot ? (
+                <>
+                  Bayar di warung <span className="text-xs">(uji coba, tanpa biaya layanan)</span>
+                </>
+              ) : (
+                <>
+                  Total bayar <span className="text-xs">(termasuk biaya layanan {formatIdr(totals.service_fee_idr)})</span>
+                </>
+              )}
             </span>
             <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
           </div>

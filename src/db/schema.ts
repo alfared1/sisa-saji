@@ -88,6 +88,8 @@ export const paymentMethodType = pgEnum("payment_method_type", [
   "OVO",
   "DANA",
   "SURPLUS_PAY",
+  /** Pilot warung: the customer pays the warung directly (cash or its own QRIS) at pickup. */
+  "BAYAR_DI_WARUNG",
 ]);
 
 const timestamps = {
@@ -161,6 +163,12 @@ export const merchants = pgTable(
     subscriptionTier: merchantTier().notNull().default("REGULAR"),
     subscriptionExpiresAt: timestamp({ withTimezone: true }),
     staticQrisPayload: text(),
+    /**
+     * Real warung in the field pilot (joined with the pilot invite code). Their orders are
+     * paid at the warung and counted in the public pilot results, apart from demo data.
+     */
+    isPilot: boolean().notNull().default(false),
+    pilotJoinedAt: timestamp({ withTimezone: true }),
     bankCode: varchar({ length: 30 }),
     bankAccountNumber: varchar({ length: 50 }),
     bankAccountHolder: varchar({ length: 120 }),
@@ -398,6 +406,8 @@ export const merchantSurplusPredictions = pgTable(
       mode: "number",
     }).notNull(),
     confidenceScore: numeric({ precision: 5, scale: 4, mode: "number" }).notNull(),
+    /** Evening (17-23 WIB) rain forecast the model used, from Open-Meteo; NULL = unknown / heuristic row. */
+    rainForecastMm: numeric({ precision: 5, scale: 1, mode: "number" }),
     modelVersion: varchar({ length: 40 }).notNull(),
     proactiveNotifSent: boolean().notNull().default(false),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

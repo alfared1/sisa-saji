@@ -12,5 +12,6 @@ export function testDb(): { db: Db; close: () => Promise<void> } {
 }
 
 export async function reseed(db: Db, now = new Date()) {
-  return seedDatabase(db, { pickupQrSecret: TEST_PICKUP_QR_SECRET, now });
+  // Tests always start from pristine data, pilot warung included.
+  return seedDatabase(db, { pickupQrSecret: TEST_PICKUP_QR_SECRET, now, allowPilotWipe: true });
 }

@@ -5,6 +5,7 @@ import { BadgeCheckIcon, ChevronRightIcon, MapPinIcon, StarIcon } from "lucide-r
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { StockBadge } from "@/components/common/stock-badge";
+import { PilotBadge } from "@/components/common/pilot-badge";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { MerchantSummary } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
@@ -27,7 +28,7 @@ type MerchantCardData = Pick<
   | "min_price_idr"
   | "total_available_stock"
   | "closes_at"
-> & { batches?: MerchantSummary["batches"] };
+> & { batches?: MerchantSummary["batches"]; is_pilot?: boolean };
 
 /** MerchantCard — a warung in "Mitra Terdekat" and the map preview sheet. */
 export function MerchantCard({
@@ -82,6 +83,7 @@ export function MerchantCard({
               <VerifiedBadge compact />
             ))}
         </div>
+        {merchant.is_pilot && <PilotBadge className="mt-1" />}
         <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1 font-semibold text-foreground">
             <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />

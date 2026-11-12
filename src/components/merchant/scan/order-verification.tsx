@@ -123,11 +123,25 @@ export function OrderVerificationPanel({
         </p>
       )}
 
+      {order.payment_method === "BAYAR_DI_WARUNG" && !order.paid_at && (
+        <p className="rounded-2xl bg-deal-soft px-3 py-2.5 text-sm font-bold text-deal">
+          Tagih {formatIdr(order.total_customer_paid_idr)} dari pembeli (bayar di warung, tunai atau QRIS warung).
+        </p>
+      )}
+
       <dl className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
-          <dt className="text-xs text-muted-foreground">Total dibayar</dt>
+          <dt className="text-xs text-muted-foreground">
+            {order.payment_method === "BAYAR_DI_WARUNG" ? "Total ditagih" : "Total dibayar"}
+          </dt>
           <dd className="text-base font-extrabold tabular-nums">{formatIdr(order.total_customer_paid_idr)}</dd>
-          <dd className="text-[11px] text-muted-foreground">Lunas · {order.payment_method}</dd>
+          <dd className="text-[11px] text-muted-foreground">
+            {order.payment_method === "BAYAR_DI_WARUNG"
+              ? order.paid_at
+                ? "Lunas di warung"
+                : "Dibayar di warung saat ambil"
+              : `Lunas · ${order.payment_method}`}
+          </dd>
         </div>
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
           <dt className="text-xs text-muted-foreground">Batas ambil</dt>
@@ -174,7 +188,9 @@ export function VerificationSuccess({ order, onNext }: { order: OrderDetail; onN
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
           <WalletIcon className="size-4 text-primary" aria-hidden />
           <p className="mt-1 text-sm font-extrabold tabular-nums">+{formatIdr(order.net_merchant_payout_idr)}</p>
-          <p className="text-[11px] text-muted-foreground">ke saldo</p>
+          <p className="text-[11px] text-muted-foreground">
+            {order.payment_method === "BAYAR_DI_WARUNG" ? "diterima langsung" : "ke saldo"}
+          </p>
         </div>
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
           <LeafIcon className="size-4 text-primary" aria-hidden />

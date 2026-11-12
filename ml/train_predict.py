@@ -15,15 +15,17 @@ What it does
        rolling_4w_sellout_rate (same weekday, previous 4 weeks, Laplace smoothed),
        rolling_4w_obs          (number of same-weekday observations),
        menu_4w_avg_surplus     (all weekdays, previous 28 days),
-       historical_conversion_rate (merchant), category (categorical), price, is_mystery_bag.
-     Future features (data not available yet): rain / weather forecast (BMKG),
-     academic calendar (UTS/UAS, holidays, KKN), local events.
+       historical_conversion_rate (merchant), category (categorical), price, is_mystery_bag,
+       rain_evening_mm (rain 17:00-22:59 WIB at the warung, Open-Meteo: observed for
+       history, forecast for the next 7 days; NaN when unavailable, see ml/weather.py).
+     Not yet: academic calendar (UTS/UAS, holidays, KKN), local events.
   3. Time-based split: the last 7 history days are the validation set. Prints MAE of
      the LGBMRegressor vs the heuristic baseline (heuristic-v0: same-weekday mean),
      and the AUC of the LGBMClassifier. Then refits both on all data.
      The regressor boosts the residual on top of the heuristic baseline.
   4. Predicts today..+6 (WIB) for every active menu and UPSERTs into
-     merchant_surplus_predictions with model_version 'lgbm-v1', plus a merchant-level
+     merchant_surplus_predictions with model_version 'lgbm-v1' (and the evening rain
+     forecast it used in rain_forecast_mm), plus a merchant-level
      row (menu_id NULL) holding the sum of portions. The table is
      UNIQUE NULLS NOT DISTINCT (merchant_id, menu_id, target_date), so these rows
      replace heuristic-v0 rows; proactive_notif_sent is preserved.
@@ -46,6 +48,8 @@ import numpy as np
 import pandas as pd
 import psycopg
 from dotenv import load_dotenv
+
+import weather
 
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = Path(__file__).resolve().parent / "artifacts"
@@ -79,6 +83,7 @@ FEATURES = [
     "category",
     "price",
     "is_mystery_bag",
+    "rain_evening_mm",
 ]
 
 
@@ -114,7 +119,9 @@ SELECT mn.id::text                          AS menu_id,
        mn.is_mystery_bag                    AS is_mystery_bag,
        mn.is_active                         AS is_active,
        m.historical_conversion_rate::float8 AS historical_conversion_rate,
-       to_char(m.default_surplus_start_time, 'HH24:MI:SS') AS peak_hour
+       to_char(m.default_surplus_start_time, 'HH24:MI:SS') AS peak_hour,
+       m.latitude::float8                   AS lat,
+       m.longitude::float8                  AS lng
 FROM menus mn JOIN merchants m ON m.id = mn.merchant_id
 """
 
@@ -165,7 +172,7 @@ def calendar_features(d: date) -> dict[str, int]:
     }
 
 
-def feature_row(menu: pd.Series | dict, d: date, history: History) -> dict:
+def feature_row(menu: pd.Series | dict, d: date, history: History, rain: dict) -> dict:
     return {
         **calendar_features(d),
         **history.rolling(menu["menu_id"], d),
@@ -173,6 +180,7 @@ def feature_row(menu: pd.Series | dict, d: date, history: History) -> dict:
         "category": menu["category"],
         "price": int(menu["price"]),
         "is_mystery_bag": int(bool(menu["is_mystery_bag"])),
+        "rain_evening_mm": weather.rain_for(rain, float(menu["lat"]), float(menu["lng"]), d),
     }
 
 
@@ -182,7 +190,7 @@ def to_frame(rows: list[dict]) -> pd.DataFrame:
     return df
 
 
-def build_training_set(hist: pd.DataFrame, menus: pd.DataFrame, history: History) -> pd.DataFrame:
+def build_training_set(hist: pd.DataFrame, menus: pd.DataFrame, history: History, rain: dict) -> pd.DataFrame:
     menu_info = menus.set_index("menu_id")
     rows = []
     for r in hist.itertuples(index=False):
@@ -195,6 +203,8 @@ def build_training_set(hist: pd.DataFrame, menus: pd.DataFrame, history: History
             "category": m["category"],
             "price": m["price"],
             "is_mystery_bag": m["is_mystery_bag"],
+            "lat": m["lat"],
+            "lng": m["lng"],
         }
         rows.append(
             {
@@ -203,7 +213,7 @@ def build_training_set(hist: pd.DataFrame, menus: pd.DataFrame, history: History
                 "batch_date": r.batch_date,
                 "surplus_portions": int(r.surplus_portions),
                 "sold_out": int(r.sold_out),
-                **feature_row(menu, r.batch_date, history),
+                **feature_row(menu, r.batch_date, history, rain),
             }
         )
     return to_frame(rows) if rows else pd.DataFrame()
@@ -330,7 +340,7 @@ def base_confidence(metrics: dict) -> float:
 UPSERT_HEAD = """
 INSERT INTO merchant_surplus_predictions
   (merchant_id, menu_id, target_date, day_of_week, predicted_surplus_portions,
-   predicted_peak_surplus_hour, sellout_probability_at_50pct, confidence_score, model_version)
+   predicted_peak_surplus_hour, sellout_probability_at_50pct, confidence_score, rain_forecast_mm, model_version)
 VALUES {values}
 ON CONFLICT ON CONSTRAINT uq_predictions_merchant_menu_date DO UPDATE SET
   day_of_week = EXCLUDED.day_of_week,
@@ -338,33 +348,43 @@ ON CONFLICT ON CONSTRAINT uq_predictions_merchant_menu_date DO UPDATE SET
   predicted_peak_surplus_hour = EXCLUDED.predicted_peak_surplus_hour,
   sellout_probability_at_50pct = EXCLUDED.sellout_probability_at_50pct,
   confidence_score = EXCLUDED.confidence_score,
+  rain_forecast_mm = EXCLUDED.rain_forecast_mm,
   model_version = EXCLUDED.model_version,
   created_at = now()
 """
-ROW_PLACEHOLDER = "(%s::uuid, %s::uuid, %s::date, %s, %s, %s::time, %s, %s, %s)"
+ROW_PLACEHOLDER = "(%s::uuid, %s::uuid, %s::date, %s, %s, %s::time, %s, %s, %s, %s)"
 
 
-def predict_rows(reg, clf, menus: pd.DataFrame, history: History, today: date, conf_base: float) -> list[tuple]:
+def _mm(v: float) -> float | None:
+    return None if v is None or math.isnan(v) else round(float(v), 1)
+
+
+def predict_rows(reg, clf, menus: pd.DataFrame, history: History, today: date, conf_base: float, rain: dict) -> list[tuple]:
     active = menus[menus["is_active"]].reset_index(drop=True)
     if active.empty:
         return []
     rows: list[tuple] = []
     for k in range(HORIZON_DAYS):
         d = today + timedelta(days=k)
-        feats = to_frame([feature_row(m, d, history) for _, m in active.iterrows()])
+        feats = to_frame([feature_row(m, d, history, rain) for _, m in active.iterrows()])
         portions = reg.predict(feats)
         proba = clf.predict_proba(feats[FEATURES])[:, 1]
         dow = postgres_dow(d)
         per_merchant: dict[str, list[tuple[float, float, float]]] = defaultdict(list)
         peak_by_merchant: dict[str, str] = {}
+        rain_by_merchant: dict[str, float | None] = {}
         for i, m in active.iterrows():
             obs = int(feats.loc[i, "rolling_4w_obs"])
             conf = min(0.95, conf_base * (0.8 + 0.05 * obs))
             p = float(np.clip(proba[i], 0.02, 0.98))
             portions_i = round(float(portions[i]), 2)
-            rows.append((m["merchant_id"], m["menu_id"], d, dow, portions_i, m["peak_hour"], round(p, 4), round(conf, 4), MODEL_VERSION))
+            mm = _mm(feats.loc[i, "rain_evening_mm"])
+            rows.append(
+                (m["merchant_id"], m["menu_id"], d, dow, portions_i, m["peak_hour"], round(p, 4), round(conf, 4), mm, MODEL_VERSION)
+            )
             per_merchant[m["merchant_id"]].append((portions_i, p, conf))
             peak_by_merchant[m["merchant_id"]] = m["peak_hour"]
+            rain_by_merchant[m["merchant_id"]] = mm
         for merchant_id, vals in per_merchant.items():
             rows.append(
                 (
@@ -376,6 +396,7 @@ def predict_rows(reg, clf, menus: pd.DataFrame, history: History, today: date, c
                     peak_by_merchant[merchant_id],
                     round(float(np.mean([v[1] for v in vals])), 4),
                     round(float(np.mean([v[2] for v in vals])), 4),
+                    rain_by_merchant.get(merchant_id),
                     MODEL_VERSION,
                 )
             )
@@ -413,6 +434,7 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="train + evaluate only, do not write predictions")
     parser.add_argument("--today", help="override 'today' (YYYY-MM-DD, WIB) for backtests")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--no-weather", action="store_true", help="skip the Open-Meteo rain feature (offline runs)")
     args = parser.parse_args()
 
     # The environment wins over .env (scripts/ml-run.ts passes DATABASE_URL explicitly).
@@ -431,7 +453,13 @@ def main() -> int:
             log("Belum ada histori batch yang sudah ditutup. Lewati pelatihan (heuristic-v0 tetap dipakai).")
             return 0
         history = History(hist)
-        data = build_training_set(hist, menus, history)
+        rain: dict = {}
+        if not args.no_weather:
+            points = {weather.grid_key(float(m.lat), float(m.lng)) for m in menus.itertuples(index=False)}
+            start, end = min(hist["batch_date"]), today + timedelta(days=HORIZON_DAYS - 1)
+            rain = weather.evening_rain(points, start, end, today, log)
+            log(f"cuaca: {len(points)} titik, {len(rain)} malam dengan data hujan ({start} .. {end})")
+        data = build_training_set(hist, menus, history, rain)
         n_days = data["batch_date"].nunique()
         log(f"training set: {len(data)} rows, {data['menu_id'].nunique()} menus, {n_days} days "
             f"({data['batch_date'].min()} .. {data['batch_date'].max()})")
@@ -457,7 +485,7 @@ def main() -> int:
         log("  top features (gain): " + ", ".join(f"{n}={g:.0f}" for n, g in importance[:5]))
 
         conf = base_confidence(metrics)
-        rows = predict_rows(reg, clf, menus, history, today, conf)
+        rows = predict_rows(reg, clf, menus, history, today, conf, rain)
         metrics.update(
             {
                 "model_version": MODEL_VERSION,
@@ -465,6 +493,8 @@ def main() -> int:
                 "today_wib": today.isoformat(),
                 "base_confidence": round(conf, 4),
                 "prediction_rows": len(rows),
+                "weather_nights": len(rain),
+                "training_rows_with_rain": int(data["rain_evening_mm"].notna().sum()),
                 "feature_importance_gain": {n: round(float(g), 1) for n, g in importance},
             }
         )

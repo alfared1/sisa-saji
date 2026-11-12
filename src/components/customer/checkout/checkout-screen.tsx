@@ -129,8 +129,10 @@ export function CheckoutScreen() {
     queryFn: () => api.get<VouchersResponse>("/vouchers"),
     staleTime: 5 * 60_000,
   });
-  const voucher = vouchers.data?.vouchers.find((v) => v.code === voucherCode) ?? null;
-  const preview = previewTotals({ items, voucher });
+  // Pilot warung: paid at the counter, no service fee, no vouchers (see orders/checkout.ts).
+  const isPilot = detail.data?.is_pilot ?? false;
+  const voucher = isPilot ? null : (vouchers.data?.vouchers.find((v) => v.code === voucherCode) ?? null);
+  const preview = previewTotals({ items, voucher, serviceFeeIdr: isPilot ? 0 : undefined });
 
   const slots = useMemo(
     () =>
@@ -160,7 +162,12 @@ export function CheckoutScreen() {
       void qc.invalidateQueries({ queryKey: customerKeys.nearbyAll });
       router.replace(`/orders/${order.id}`);
       clearCart();
-      toast.success("Stok dikunci 10 menit. Selesaikan pembayaran QRIS.", { id: "checkout-ok" });
+      toast.success(
+        order.payment_method === "BAYAR_DI_WARUNG"
+          ? "Pesanan tercatat. Bayar langsung di warung saat mengambil."
+          : "Stok dikunci 10 menit. Selesaikan pembayaran QRIS.",
+        { id: "checkout-ok" },
+      );
     },
     onError: (err) => {
       if (!(err instanceof ApiClientError)) {
@@ -222,7 +229,7 @@ export function CheckoutScreen() {
       items: items.map((i) => ({ batch_id: i.batch_id, quantity: i.quantity })),
       scheduled_pickup_time: slot && slotValid ? slot : undefined,
       uses_own_lunchbox: ownContainer,
-      payment_method: method,
+      payment_method: isPilot ? "BAYAR_DI_WARUNG" : method,
       voucher_code: voucher ? voucher.code : undefined,
     });
   };
@@ -277,15 +284,15 @@ export function CheckoutScreen() {
   // Rendered twice: phone pay bar (lg:hidden) and the lg+ summary card (hidden lg:block).
   const payButton = (className: string) => (
     <Button
-      className={cn("rounded-full px-6 text-base font-extrabold shadow-card", className)}
+      className={cn("rounded-xl px-6 text-base font-extrabold shadow-card", className)}
       onClick={submit}
       disabled={checkout.isPending || blocked || !detail.data}
     >
       {checkout.isPending ? <Loader2Icon className="size-5 animate-spin" /> : <LockIcon className="size-4" />}
-      Lanjut Bayar
+      {isPilot ? "Pesan, bayar di warung" : "Lanjut Bayar"}
     </Button>
   );
-  const voucherRow = (
+  const voucherRow = isPilot ? null : (
     <VoucherRow
       voucher={voucher}
       subtotal={preview.subtotal_recovery_idr}
@@ -379,7 +386,7 @@ export function CheckoutScreen() {
           <BringOwnContainerToggle
             checked={ownContainer}
             onCheckedChange={setOwnContainer}
-            voucherAvailable={Boolean(vouchers.data?.vouchers.some((v) => v.code === "BAWABEKAL"))}
+            voucherAvailable={!isPilot && Boolean(vouchers.data?.vouchers.some((v) => v.code === "BAWABEKAL"))}
             onUseVoucher={() => {
               const v = vouchers.data?.vouchers.find((x) => x.code === "BAWABEKAL");
               if (!v) return;
@@ -395,11 +402,22 @@ export function CheckoutScreen() {
           {/* Phones: voucher sits between the container toggle and payment. lg+: it moves to the summary. */}
           <div className="lg:hidden">{voucherRow}</div>
 
-          <CheckoutCard title="Metode Pembayaran" icon={WalletIcon}>
-            <PaymentMethodPicker value={method} onChange={setMethod} />
-            <p className="mt-2 text-xs text-muted-foreground">
-              Bayar lewat QRIS dinamis, bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
-            </p>
+          <CheckoutCard title={isPilot ? "Pembayaran" : "Metode Pembayaran"} icon={WalletIcon}>
+            {isPilot ? (
+              <p className="text-sm leading-relaxed">
+                <b className="font-bold">Bayar langsung di warung</b> saat mengambil, tunai atau QRIS milik warung.{" "}
+                <span className="text-muted-foreground">
+                  Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan dan belum menerima voucher.
+                </span>
+              </p>
+            ) : (
+              <>
+                <PaymentMethodPicker value={method} onChange={setMethod} />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Bayar lewat QRIS dinamis, bisa dipindai dari GoPay, OVO, DANA, ShopeePay, atau m-banking.
+                </p>
+              </>
+            )}
           </CheckoutCard>
         </div>
 
@@ -413,7 +431,8 @@ export function CheckoutScreen() {
                 <p className="mt-2 text-center text-xs font-semibold text-urgent">Hapus menu yang tidak tersedia untuk lanjut.</p>
               )}
               <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
-                <LockIcon className="size-3" aria-hidden /> Stok dikunci 10 menit setelah kamu lanjut bayar
+                <LockIcon className="size-3" aria-hidden />{" "}
+                {isPilot ? "Porsi disimpan untukmu sampai batas waktu ambil" : "Stok dikunci 10 menit setelah kamu lanjut bayar"}
               </p>
             </div>
           </PriceAndImpactBreakdown>
@@ -425,7 +444,7 @@ export function CheckoutScreen() {
         <div className="safe-bottom border-t border-border/70 bg-background/95 px-4 pt-3 pb-3 shadow-float backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">Total bayar</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">{isPilot ? "Bayar di warung" : "Total bayar"}</p>
               <p className="text-lg leading-tight font-extrabold">
                 <Money value={preview.total_idr} />
               </p>

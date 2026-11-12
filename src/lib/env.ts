@@ -90,6 +90,14 @@ export function getCronSecret(): string | undefined {
 }
 
 /**
+ * Invite code the team hands to real warung joining the field pilot. Unset = the pilot
+ * is closed (nobody can join). At least 8 characters so it cannot be guessed by trying.
+ */
+export function getPilotInviteCode(): string | undefined {
+  return read("PILOT_INVITE_CODE", z.string().trim().min(8).optional());
+}
+
+/**
  * Serverless hosts have no long-running worker: when true, hot endpoints run due jobs
  * after their response (next/server `after`), guarded by DB leases (job_runs).
  * Leave false when `npm run worker` is running.

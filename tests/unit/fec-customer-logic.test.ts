@@ -58,6 +58,7 @@ function batch(p: Partial<BatchCard> = {}): BatchCard {
     merchant_id: "w1",
     merchant_slug: "warung-a",
     merchant_name: "Warung A",
+    merchant_is_pilot: false,
     distance_m: 600,
     ...p,
   };
@@ -74,6 +75,7 @@ function merchant(batches: BatchCard[], p: Partial<MerchantSummary> = {}): Merch
     lng: 110.37,
     distance_m: 600,
     is_verified: true,
+    is_pilot: false,
     tier: "PREMIUM",
     rating_avg: 4.5,
     total_reviews: 10,

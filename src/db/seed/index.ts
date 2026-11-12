@@ -895,6 +895,22 @@ export interface SeedOptions {
   /** PRNG seed (default 20271107 or env SEED). */
   seed?: number;
   log?: (msg: string) => void;
+  /**
+   * Seeding wipes every table. When real pilot warung exist (merchants.is_pilot) it refuses,
+   * unless this is set: the field-pilot results must not disappear with a demo reseed.
+   */
+  allowPilotWipe?: boolean;
+}
+
+/** Thrown by seedDatabase when pilot data would be wiped without allowPilotWipe. */
+export class PilotDataPresentError extends Error {
+  constructor(readonly pilotWarung: number) {
+    super(
+      `${pilotWarung} warung uji coba (data nyata) ada di database. Seed menghapus semua data; ` +
+        "set allowPilotWipe (SEED_WIPE_PILOT=1 / ?wipe_pilot=1) kalau memang ingin menghapusnya.",
+    );
+    this.name = "PilotDataPresentError";
+  }
 }
 
 export interface SeedSummary {
@@ -924,6 +940,11 @@ export async function seedDatabase(db: Db, opts: SeedOptions): Promise<SeedSumma
   // One transaction: readers never see half-seeded tables, and a failed seed
   // leaves the previous data in place.
   await db.transaction(async (tx) => {
+    if (!opts.allowPilotWipe) {
+      const { rows } = await tx.execute<{ n: number }>(sql`SELECT COUNT(*)::int AS n FROM merchants WHERE is_pilot`);
+      const n = rows[0]?.n ?? 0;
+      if (n > 0) throw new PilotDataPresentError(n);
+    }
     log("[seed] wiping tables …");
     await tx.execute(sql`
       TRUNCATE reviews, order_items, orders, discount_adjustment_logs,

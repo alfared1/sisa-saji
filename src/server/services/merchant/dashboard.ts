@@ -46,6 +46,7 @@ export async function tonightPrediction(db: Db, merchantId: string, date: string
     confidence_score: overall.confidenceScore,
     peak_hour: overall.peakHour,
     model_version: overall.modelVersion,
+    rain_forecast_mm: overall.rainForecastMm,
     per_menu: activeMenus
       .map((m) => ({
         menu_id: m.id,

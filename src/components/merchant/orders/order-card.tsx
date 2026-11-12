@@ -81,6 +81,11 @@ export function MerchantOrderCard({ order, compact = false }: { order: OrderDeta
                 <Clock3Icon className="size-3.5" aria-hidden /> {formatClockId(order.created_at)}
               </span>
             )}
+            {order.payment_method === "BAYAR_DI_WARUNG" && (
+              <span className="inline-flex items-center rounded-full bg-deal-soft px-2 py-0.5 font-semibold text-deal">
+                {order.paid_at ? "Lunas di warung" : "Bayar di warung"}
+              </span>
+            )}
             {order.uses_own_lunchbox && (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-semibold text-primary">
                 <RecycleIcon className="size-3" aria-hidden /> Bawa wadah

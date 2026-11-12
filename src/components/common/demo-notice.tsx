@@ -21,8 +21,8 @@ export function DemoNotice({ audience, className }: { audience: "pembeli" | "mit
       <p>
         <b className="font-bold">Mode demo.</b>{" "}
         {audience === "pembeli"
-          ? "Warung, rating, dan pembayaran di sini hanya contoh. Tidak ada uang yang ditagih."
-          : "Pesanan dan pembayaran di sini hanya contoh. Saldo warung tidak bisa dicairkan."}
+          ? "Warung, rating, dan pembayaran di sini contoh, kecuali warung berlabel “Warung uji coba” yang sungguhan dan dibayar langsung di tempat."
+          : "Pesanan dan pembayaran di sini hanya contoh. Saldo warung tidak bisa dicairkan. Warung uji coba menerima bayaran langsung dari pembeli."}
       </p>
     </aside>
   );

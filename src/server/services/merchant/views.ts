@@ -29,6 +29,8 @@ export function toMerchantProfile(m: Merchant): MerchantProfile {
     default_surplus_start_time: hhmm(m.defaultSurplusStartTime),
     is_open: m.isOpen,
     merchant_verified: m.merchantVerified,
+    is_pilot: m.isPilot,
+    pilot_joined_at: m.pilotJoinedAt ? m.pilotJoinedAt.toISOString() : null,
     subscription_tier: m.subscriptionTier,
     subscription_expires_at: m.subscriptionExpiresAt ? m.subscriptionExpiresAt.toISOString() : null,
     wallet_balance_idr: Number(m.walletBalanceIdr),

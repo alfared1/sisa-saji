@@ -10,7 +10,7 @@
  * All functions taking `tx` must run inside a transaction (db.transaction).
  */
 import "server-only";
-import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import type { Db, DbOrTx, Tx } from "@/db/client";
 import { orderItems, orders, surplusBatches } from "@/db/schema";
 import { ApiError } from "@/server/http";
@@ -136,6 +136,36 @@ export async function abandonPendingOrder(
     .update(orders)
     .set({ status, cancelReason: reason, updatedAt: now })
     .where(and(eq(orders.id, orderId), eq(orders.status, "PENDING_PAYMENT")))
+    .returning({ id: orders.id });
+  if (!updated) return false;
+  await releaseReservation(tx, orderId, now);
+  return true;
+}
+
+/**
+ * Pilot "bayar di warung" orders keep their portions reserved until the warung verifies
+ * the pickup (commitReservation then). Cancelled by the customer or never collected, they
+ * move to CANCELLED/EXPIRED here and the portions go back to the shelf. Returns false when
+ * the order was not an open pay-at-warung order (idempotent).
+ */
+export async function abandonPayAtWarungOrder(
+  tx: Tx,
+  orderId: string,
+  status: "CANCELLED" | "EXPIRED",
+  reason: string,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const [updated] = await tx
+    .update(orders)
+    .set({ status, cancelReason: reason, updatedAt: now })
+    .where(
+      and(
+        eq(orders.id, orderId),
+        eq(orders.status, "READY_FOR_PICKUP"),
+        eq(orders.paymentMethod, "BAYAR_DI_WARUNG"),
+        isNull(orders.paidAt),
+      ),
+    )
     .returning({ id: orders.id });
   if (!updated) return false;
   await releaseReservation(tx, orderId, now);

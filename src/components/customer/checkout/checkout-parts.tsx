@@ -492,9 +492,7 @@ export function PriceAndImpactBreakdown({
         </div>
         <div className="flex justify-between gap-2">
           <dt>Biaya layanan</dt>
-          <dd className="font-semibold">
-            <Money value={p.service_fee_idr} />
-          </dd>
+          <dd className="font-semibold">{p.service_fee_idr > 0 ? <Money value={p.service_fee_idr} /> : "Gratis"}</dd>
         </div>
         {p.voucher_discount_idr > 0 && (
           <div className="flex justify-between gap-2 text-primary">

@@ -6,6 +6,8 @@
  * directions / WhatsApp, items, offline-saved chip.
  */
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   AlarmClockIcon,
   CalendarClockIcon,
@@ -15,13 +17,66 @@ import {
   ShieldCheckIcon,
   StoreIcon,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { QrCodeView } from "@/components/common/qr-code-view";
+import { Button } from "@/components/ui/button";
+import { ApiClientError, api } from "@/lib/api/client";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useNow } from "@/hooks/use-now";
-import type { OrderDetail } from "@/lib/contracts";
-import { formatClockId, wibTime } from "@/lib/time";
+import type { OrderDetail, OrderResponse } from "@/lib/contracts";
+import { formatClockId, formatIdr, wibTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { customerKeys } from "../lib/queries";
 import { DirectionsAndWhatsAppButtons, OrderItemsCard, pickupCodeLabel } from "./order-bits";
+
+/**
+ * Pilot warung ticket: the customer pays the warung at pickup (cash or the warung's own
+ * QRIS), so the amount is shown up front and the ticket stays cancellable until then.
+ */
+function PayAtWarungCard({ order }: { order: OrderDetail }) {
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState(false);
+  const cancel = useMutation({
+    mutationFn: () => api.post<OrderResponse>(`/orders/${order.id}/cancel`),
+    onSuccess: (res) => {
+      qc.setQueryData(customerKeys.order(order.id), res);
+      void qc.invalidateQueries({ queryKey: customerKeys.ordersAll });
+      setConfirm(false);
+      toast("Pesanan dibatalkan", { description: "Porsinya dikembalikan ke warung." });
+    },
+    onError: (err) => {
+      setConfirm(false);
+      toast.error(err instanceof ApiClientError ? err.message : "Gagal membatalkan pesanan.");
+    },
+  });
+  return (
+    <section aria-label="Pembayaran di warung" className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
+      <p className="text-sm font-semibold text-muted-foreground">Bayar langsung di warung</p>
+      <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatIdr(order.total_customer_paid_idr)}</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        Tunai atau QRIS milik warung, saat kamu mengambil. Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan.
+      </p>
+      <Button
+        variant="ghost"
+        className="mt-2 -ml-2 h-10 rounded-xl px-2 text-sm font-bold text-urgent hover:bg-urgent-soft hover:text-urgent"
+        onClick={() => setConfirm(true)}
+      >
+        Batalkan pesanan
+      </Button>
+      <ConfirmDialog
+        open={confirm}
+        onOpenChange={setConfirm}
+        destructive
+        title="Batalkan pesanan?"
+        description="Porsi yang disimpan untukmu dikembalikan ke warung dan bisa dipesan orang lain."
+        confirmLabel="Ya, batalkan"
+        cancelLabel="Kembali"
+        loading={cancel.isPending}
+        onConfirm={() => cancel.mutate()}
+      />
+    </section>
+  );
+}
 
 export function PickupDeadlineBanner({ deadlineIso }: { deadlineIso: string }) {
   const c = useCountdown(deadlineIso);
@@ -153,23 +208,27 @@ export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail;
 }
 
 export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
+  const payAtWarung = order.payment_method === "BAYAR_DI_WARUNG" && !order.paid_at;
+  const steps = [
+    "Datang ke warung sebelum batas waktu.",
+    `Tunjukkan QR atau sebutkan kode ${pickupCodeLabel(order)} ke kasir.`,
+    ...(payAtWarung ? [`Bayar ${formatIdr(order.total_customer_paid_idr)} langsung ke warung, tunai atau QRIS warung.`] : []),
+    "Warung memverifikasi kode, lalu menyerahkan pesananmu.",
+  ];
   return (
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} />
         <DigitalPickupPass order={order} savedOffline={savedOffline} />
+        {payAtWarung && <PayAtWarungCard order={order} />}
       </div>
       {/* lg+: sticky details column. */}
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
         <h2 className="text-sm font-extrabold">Cara ambil pesanan</h2>
         <ol className="mt-3 space-y-3">
-          {[
-            "Datang ke warung sebelum batas waktu.",
-            `Tunjukkan QR atau sebutkan kode ${pickupCodeLabel(order)} ke kasir.`,
-            "Warung sudah memverifikasi dan menyerahkan pesananmu.",
-          ].map((s, i) => (
+          {steps.map((s, i) => (
             <li key={s} className="flex items-start gap-3 text-sm">
               <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-primary-foreground">
                 {i + 1}

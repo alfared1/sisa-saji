@@ -17,6 +17,7 @@ function merchant(
     lng: 0,
     distance_m: o.distance,
     is_verified: Boolean(o.verified),
+    is_pilot: false,
     tier: o.premium ? "PREMIUM" : "REGULAR",
     rating_avg: 5,
     total_reviews: 0,

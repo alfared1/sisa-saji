@@ -1,13 +1,18 @@
 /**
- * Checkout — one transaction:
+ * Checkout: one transaction:
  *   reserve stock (stock.reserveItems, row-level conditional UPDATE)
  *   → price lines from each batch's current price (snapshotted in order_items)
  *   → computeOrderTotals → order number / pickup code / QR token
  *   → simulated dynamic QRIS → PENDING_PAYMENT order.
+ *
+ * Pilot warung (merchants.is_pilot): the customer pays the warung directly at pickup.
+ * The order is a ticket right away (READY_FOR_PICKUP, payment_method BAYAR_DI_WARUNG,
+ * no QRIS, no service fee, no voucher) and its portions stay reserved until the warung
+ * verifies the pickup (see pickup.ts) or the order is cancelled / not collected.
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gt, inArray, like, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, like, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
@@ -21,6 +26,13 @@ import { loadOrderDetails } from "@/server/mappers/order";
 import { buildDynamicQris, cityFromAddress } from "@/server/services/payment/qris";
 import { newGatewayRef } from "@/server/services/payment/webhook";
 import { abandonPendingOrder, reserveItems, type Tx } from "@/server/services/stock";
+
+/** Open, unpaid "bayar di warung" ticket: counts as an unpaid hold for the fair-use limits. */
+const UNPAID_PAY_AT_WARUNG = and(
+  eq(orders.status, "READY_FOR_PICKUP"),
+  eq(orders.paymentMethod, "BAYAR_DI_WARUNG"),
+  isNull(orders.paidAt),
+);
 
 export type CheckoutInput = z.output<typeof CheckoutBody>;
 
@@ -102,13 +114,14 @@ async function enforceFairUse(
       orderNumber: orders.orderNumber,
       merchantId: orders.merchantId,
       paymentExpiresAt: orders.paymentExpiresAt,
+      status: orders.status,
     })
     .from(orders)
-    .where(and(eq(orders.customerId, userId), eq(orders.status, "PENDING_PAYMENT")));
+    .where(and(eq(orders.customerId, userId), or(eq(orders.status, "PENDING_PAYMENT"), UNPAID_PAY_AT_WARUNG)));
   const pending: typeof pendingRows = [];
   for (const o of pendingRows) {
     // Lazily expire stale unpaid checkouts the worker has not reached yet.
-    if (o.paymentExpiresAt && o.paymentExpiresAt <= now) {
+    if (o.status === "PENDING_PAYMENT" && o.paymentExpiresAt && o.paymentExpiresAt <= now) {
       await abandonPendingOrder(tx, o.id, "EXPIRED", "Pembayaran tidak diselesaikan dalam 10 menit", now);
     } else pending.push(o);
   }
@@ -124,7 +137,9 @@ async function enforceFairUse(
     if (sameItems(existing, items)) return atSameWarung.id;
     throw new ApiError(
       "CONFLICT",
-      `Kamu masih punya pesanan belum dibayar di warung ini (${atSameWarung.orderNumber}). Bayar atau batalkan dulu.`,
+      atSameWarung.status === "PENDING_PAYMENT"
+        ? `Kamu masih punya pesanan belum dibayar di warung ini (${atSameWarung.orderNumber}). Bayar atau batalkan dulu.`
+        : `Kamu masih punya pesanan yang belum diambil di warung ini (${atSameWarung.orderNumber}). Ambil atau batalkan dulu.`,
       { order_id: atSameWarung.id, order_number: atSameWarung.orderNumber },
     );
   }
@@ -214,6 +229,15 @@ export async function checkout(
     if (merchant.ownerUserId === args.userId) {
       throw new ApiError("FORBIDDEN", "Tidak bisa memesan dari warung sendiri");
     }
+    const payAtWarung = merchant.isPilot;
+    if (!payAtWarung && input.payment_method === "BAYAR_DI_WARUNG") {
+      throw new ApiError("VALIDATION_ERROR", "Bayar di warung hanya untuk warung uji coba", [
+        { path: "payment_method", message: "Pilih QRIS atau dompet digital" },
+      ]);
+    }
+    if (payAtWarung && voucher) {
+      throw new ApiError("VOUCHER_INVALID", "Voucher belum berlaku di warung uji coba. Pembayaran langsung ke warung.");
+    }
 
     const requested = new Map<string, number>();
     for (const it of input.items) requested.set(it.batch_id, (requested.get(it.batch_id) ?? 0) + it.quantity);
@@ -261,11 +285,15 @@ export async function checkout(
     }
     const totals = computeOrderTotals(
       lines.map((l) => l.line),
-      { voucherDiscountIdr: voucher?.discount_idr ?? 0 },
+      // Pilot: the warung collects the recovery price itself; the platform charges nothing.
+      { voucherDiscountIdr: voucher?.discount_idr ?? 0, platformCommissionIdr: payAtWarung ? 0 : undefined },
     );
 
     const deadline = new Date(Math.min(...reserved.map((b) => b.pickupEndTime.getTime())));
-    const paymentExpiresAt = new Date(Math.min(now.getTime() + PAYMENT_TTL_SECONDS * 1000, deadline.getTime()));
+    // Pay-at-warung tickets have no online payment window: they run to the pickup deadline.
+    const paymentExpiresAt = payAtWarung
+      ? deadline
+      : new Date(Math.min(now.getTime() + PAYMENT_TTL_SECONDS * 1000, deadline.getTime()));
 
     let scheduled: Date | null = null;
     if (input.scheduled_pickup_time) {
@@ -288,7 +316,7 @@ export async function checkout(
             orderNumber,
             customerId: args.userId,
             merchantId: merchant.id,
-            status: "PENDING_PAYMENT",
+            status: payAtWarung ? "READY_FOR_PICKUP" : "PENDING_PAYMENT",
             pickupCode,
             pickupQrToken: createPickupToken(orderId, pickupCode, args.pickupQrSecret),
             scheduledPickupTime: scheduled,
@@ -300,15 +328,17 @@ export async function checkout(
             platformCommissionIdr: totals.platformCommissionIdr,
             totalCustomerPaidIdr: totals.totalCustomerPaidIdr,
             netMerchantPayoutIdr: totals.netMerchantPayoutIdr,
-            paymentMethod: input.payment_method,
-            paymentGatewayRef: newGatewayRef(),
-            qrisDynamicString: buildDynamicQris({
-              merchantName: merchant.merchantName,
-              merchantCity: cityFromAddress(merchant.address),
-              merchantRef: merchant.id,
-              amountIdr: totals.totalCustomerPaidIdr,
-              reference: orderNumber,
-            }),
+            paymentMethod: payAtWarung ? "BAYAR_DI_WARUNG" : input.payment_method,
+            paymentGatewayRef: payAtWarung ? null : newGatewayRef(),
+            qrisDynamicString: payAtWarung
+              ? null
+              : buildDynamicQris({
+                  merchantName: merchant.merchantName,
+                  merchantCity: cityFromAddress(merchant.address),
+                  merchantRef: merchant.id,
+                  amountIdr: totals.totalCustomerPaidIdr,
+                  reference: orderNumber,
+                }),
             paymentExpiresAt,
             createdAt: now,
             updatedAt: now,

@@ -185,7 +185,8 @@ export async function topUpDemoBatches(db: Db, now: Date = new Date(), opts: Top
   const open = await db
     .select({ id: merchants.id, lat: merchants.latitude, lng: merchants.longitude })
     .from(merchants)
-    .where(eq(merchants.isOpen, true));
+    // Never publish demo surplus for a real pilot warung.
+    .where(and(eq(merchants.isOpen, true), eq(merchants.isPilot, false)));
 
   const hubs = new Map<string, HubState>(
     CAMPUSES.map((c) => {

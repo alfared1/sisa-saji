@@ -211,15 +211,29 @@ npm run dev:all             # http://localhost:3000
 
 Database alternatif: `docker compose up -d` (PostGIS 16, lalu `DATABASE_URL=postgres://sisasaji:sisasaji@127.0.0.1:5432/sisasaji`) atau Postgres cloud (mis. Neon) dengan PostGIS aktif. Migrasi pertama menjalankan `CREATE EXTENSION postgis`.
 
-ML opsional: buat `.venv` lalu `pip install -r ml/requirements.txt`, kemudian `npm run ml:train`. Tanpa `.venv`, worker memakai prediksi heuristik.
+ML opsional: buat `.venv` lalu `pip install -r ml/requirements.txt`, kemudian `npm run ml:train`. Tanpa `.venv`, worker memakai prediksi heuristik. Training mengambil data hujan dari Open-Meteo (gratis, tanpa API key) sebagai salah satu fitur; tanpa internet fitur itu kosong dan training tetap jalan (`python ml/train_predict.py --no-weather` untuk mematikannya).
 
 ### Deploy ke Vercel setelah data demo berubah
 
 Build Vercel (`vercel-build`) hanya menjalankan migrasi, tidak seed. Setelah perubahan `src/db/seed/` di-deploy, database produksi masih berisi data lama: titik default IPB Dramaga tampil kosong dan login mitra demo masih memakai pemilik warung lama sampai seed ulang dijalankan.
 
-1. Tunggu deploy selesai, lalu seed ulang: `POST /api/cron/bootstrap?force=1` dengan header `Authorization: Bearer $CRON_SECRET`. Ini **menghapus semua data**, termasuk akun dan sesi, dan tabel terkunci selama seed berjalan (puluhan detik). Jalankan sebelum presentasi, jangan saat presentasi.
+1. Tunggu deploy selesai, lalu seed ulang: `POST /api/cron/bootstrap?force=1` dengan header `Authorization: Bearer $CRON_SECRET`. Ini **menghapus semua data**, termasuk akun dan sesi, dan tabel terkunci selama seed berjalan (puluhan detik). Jalankan sebelum presentasi, jangan saat presentasi. `force` hanya berlaku di deployment demo (`DEMO_MODE=true`), dan ditolak kalau sudah ada warung uji coba, kecuali ditambah `&wipe_pilot=1` (data uji coba ikut terhapus, jadi pikirkan dulu).
 2. Cek `/api/v1/discover/nearby?lat=-6.5568&lng=106.7313&radius_m=2000` (harus ada warung) dan login mitra demo.
 3. Jalankan `npm run ml:train` dengan `DATABASE_URL` diarahkan ke database produksi, supaya dasbor mitra kembali menampilkan prediksi LightGBM (seed menulis prediksi heuristik).
+
+---
+
+## Uji coba lapangan (warung sungguhan)
+
+Mode ini untuk menguji Sisa-Saji di warung nyata di tengah data demo, dengan hasil yang dipisahkan dan bisa dipertanggungjawabkan.
+
+1. Isi `PILOT_INVITE_CODE` (min. 8 karakter) di `.env` atau environment Vercel, lalu bagikan kodenya ke warung yang ikut.
+2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan** dan memasukkan kodenya. Warung mendapat label "Warung uji coba".
+3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Porsi disimpan sampai batas waktu ambil, dan pembeli bisa membatalkan sebelum mengambil.
+4. Warung memindai QR atau kode `SJ-XXXX` seperti biasa. Layar verifikasi menampilkan jumlah yang harus ditagih.
+5. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, dan per hari.
+
+Yang dihitung hanya pesanan di warung uji coba yang dibuat setelah warung bergabung, benar-benar diambil dan diverifikasi warung, dan bukan pesanan pemilik di warungnya sendiri. Data demo tidak pernah ikut. Job demo tidak memasang surplus contoh di warung uji coba, dan seed ulang menolak menghapus data uji coba tanpa izin eksplisit (`SEED_WIPE_PILOT=1` untuk `npm run db:seed`).
 
 ---
 
@@ -254,6 +268,7 @@ Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
 | `OTP_DEV_MODE` | – | `true` = kode OTP tampil di layar (demo) |
 | `PAYMENT_PROVIDER` | – | `simulator` (satu-satunya provider saat ini) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push; push nonaktif bila kosong |
+| `PILOT_INVITE_CODE` | – | Kode undangan uji coba lapangan (min. 8 karakter). Kosong = uji coba tertutup |
 | `DB_POOL_MAX` | – | Ukuran pool koneksi per proses (default 10 web, 4 worker). Isi `1` untuk PGlite, yang hanya punya satu sesi Postgres |
 | `REDIS_URL` | – | Tidak dipakai saat ini (cadangan untuk scaling) |
 | `DEMO_*`, `NEXT_DIST_DIR` | – | Pengaturan `npm run demo` (lihat di atas) |

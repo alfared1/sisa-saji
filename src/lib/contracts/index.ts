@@ -93,7 +93,8 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export const BATCH_STATUSES = ["SCHEDULED", "ACTIVE", "SOLD_OUT", "EXPIRED", "CANCELLED"] as const;
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 
-export const PAYMENT_METHODS = ["QRIS", "GOPAY", "OVO", "DANA", "SURPLUS_PAY"] as const;
+/** BAYAR_DI_WARUNG: pilot warung only, set by the server (the customer pays the warung at pickup). */
+export const PAYMENT_METHODS = ["QRIS", "GOPAY", "OVO", "DANA", "SURPLUS_PAY", "BAYAR_DI_WARUNG"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export type UserRole = "CUSTOMER" | "MERCHANT" | "ADMIN";
@@ -221,6 +222,40 @@ export type ImpactSummary = {
   monthly: MonthlyImpact[];
 };
 
+/** POST /api/v1/merchant/pilot — join the field pilot with the team's invite code. → MerchantMeResponse */
+export const PilotJoinBody = z.object({ code: z.string().trim().min(1).max(64) });
+export type PilotJoinBody = z.input<typeof PilotJoinBody>;
+
+/**
+ * GET /api/v1/stats/pilot — public. Real results of the field pilot only: completed
+ * (picked up and verified by the warung) orders at pilot warung, excluding orders a
+ * warung owner placed at their own warung. Demo data is never included.
+ */
+export type PilotStats = {
+  /** Earliest pilot_joined_at; null before the first warung joined. */
+  started_at: string | null;
+  warung_count: number;
+  orders_completed: number;
+  portions_rescued: number;
+  food_saved_grams: number;
+  co2_avoided_grams: number;
+  /** What buyers saved versus normal prices. */
+  money_saved_idr: number;
+  /** Recovery revenue the warung collected for food that would have been thrown away. */
+  warung_revenue_idr: number;
+  unique_buyers: number;
+  warung: {
+    name: string;
+    slug: string;
+    joined_at: string;
+    orders_completed: number;
+    portions_rescued: number;
+    food_saved_grams: number;
+  }[];
+  /** Completed orders per WIB day, oldest first. */
+  daily: { date: string; portions_rescued: number; food_saved_grams: number }[];
+};
+
 /** GET /api/v1/stats/global — public. */
 export type GlobalStats = {
   total_food_saved_grams: number;
@@ -274,6 +309,8 @@ export type BatchCard = {
   merchant_id: string;
   merchant_slug: string;
   merchant_name: string;
+  /** Real warung in the field pilot: paid at the warung, no service fee, no vouchers. */
+  merchant_is_pilot: boolean;
   distance_m: number | null;
 };
 
@@ -287,6 +324,8 @@ export type MerchantSummary = {
   lng: number;
   distance_m: number | null;
   is_verified: boolean;
+  /** Real warung in the field pilot (see BatchCard.merchant_is_pilot). */
+  is_pilot: boolean;
   tier: MerchantTier;
   rating_avg: number;
   total_reviews: number;
@@ -598,6 +637,9 @@ export type MerchantProfile = {
   default_surplus_start_time: string;
   is_open: boolean;
   merchant_verified: boolean;
+  /** Joined the field pilot with the invite code. */
+  is_pilot: boolean;
+  pilot_joined_at: string | null;
   subscription_tier: MerchantTier;
   subscription_expires_at: string | null;
   wallet_balance_idr: number;
@@ -749,6 +791,8 @@ export type TonightPrediction = {
   confidence_score: number;
   peak_hour: string; // "HH:MM"
   model_version: string;
+  /** Evening (17-23 WIB) rain forecast in mm that the model used; null when unknown. */
+  rain_forecast_mm: number | null;
   per_menu: { menu_id: string; menu_name: string; predicted_surplus_portions: number }[];
 };
 

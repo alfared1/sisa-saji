@@ -29,11 +29,15 @@ export function quickOrderLoginUrl(merchantSlug: string, batchId: string): strin
 }
 
 /** Checkout body: one batch, QRIS, pickup as soon as possible (no slot). */
-export function quickOrderBody(batch: Pick<BatchCard, "merchant_id" | "batch_id">, quantity: number): CheckoutBody {
+export function quickOrderBody(
+  batch: Pick<BatchCard, "merchant_id" | "batch_id"> & Partial<Pick<BatchCard, "merchant_is_pilot">>,
+  quantity: number,
+): CheckoutBody {
   return {
     merchant_id: batch.merchant_id,
     items: [{ batch_id: batch.batch_id, quantity }],
-    payment_method: "QRIS",
+    // Pilot warung are paid at the counter (the server enforces it either way).
+    payment_method: batch.merchant_is_pilot ? "BAYAR_DI_WARUNG" : "QRIS",
   };
 }
 

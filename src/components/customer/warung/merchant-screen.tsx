@@ -33,6 +33,7 @@ import { ListSkeleton } from "@/components/common/list-skeleton";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PilotBadge } from "@/components/common/pilot-badge";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
@@ -270,7 +271,12 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                 <div className="min-w-0">
                   {/* The sticky PageHeader already carries the page's h1 (same name). */}
                   <h2 className="text-xl leading-tight font-extrabold">{m.name}</h2>
-                  {m.is_verified && <VerifiedBadge label="Toko Terverifikasi" className="mt-1.5" />}
+                  {(m.is_verified || m.is_pilot) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {m.is_verified && <VerifiedBadge label="Toko Terverifikasi" />}
+                      {m.is_pilot && <PilotBadge />}
+                    </div>
+                  )}
                 </div>
                 <SubscribeButton merchant={m} />
               </div>

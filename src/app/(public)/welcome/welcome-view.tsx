@@ -109,6 +109,9 @@ function ImpactStats() {
           </p>
         </>
       )}
+      <Link href="/uji-coba" className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-primary hover:underline">
+        Lihat hasil uji coba di warung sungguhan
+      </Link>
     </section>
   );
 }

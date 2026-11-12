@@ -11,7 +11,7 @@ import type { OrderDetail, OrderListQuery, OrderStatus, ReviewBody } from "@/lib
 import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { receivePaymentWebhook, signWebhookBody, newGatewayRef } from "@/server/services/payment/webhook";
-import { abandonPendingOrder } from "@/server/services/stock";
+import { abandonPayAtWarungOrder, abandonPendingOrder } from "@/server/services/stock";
 
 type OrderListInput = z.output<typeof OrderListQuery>;
 type ReviewInput = z.output<typeof ReviewBody>;
@@ -81,10 +81,16 @@ async function ownedOrder(db: Db, orderId: string, userId: string) {
 
 export async function cancelOrder(db: Db, orderId: string, userId: string, now: Date = new Date()): Promise<OrderDetail> {
   const o = await ownedOrder(db, orderId, userId);
-  if (o.status !== "PENDING_PAYMENT") {
+  // Pilot tickets are paid at the warung, so they stay cancellable until the pickup.
+  const payAtWarung = o.status === "READY_FOR_PICKUP" && o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
+  if (o.status !== "PENDING_PAYMENT" && !payAtWarung) {
     throw new ApiError("ORDER_STATE_CONFLICT", "Hanya pesanan yang belum dibayar yang bisa dibatalkan");
   }
-  const done = await db.transaction((tx) => abandonPendingOrder(tx, orderId, "CANCELLED", "Dibatalkan oleh pembeli", now));
+  const done = await db.transaction((tx) =>
+    payAtWarung
+      ? abandonPayAtWarungOrder(tx, orderId, "CANCELLED", "Dibatalkan oleh pembeli", now)
+      : abandonPendingOrder(tx, orderId, "CANCELLED", "Dibatalkan oleh pembeli", now),
+  );
   if (!done) throw new ApiError("ORDER_STATE_CONFLICT", "Status pesanan sudah berubah");
   const [detail] = await loadOrderDetails(db, [orderId], "customer");
   return detail;

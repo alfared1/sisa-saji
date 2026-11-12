@@ -14,6 +14,8 @@ export const E2E_DATABASE_URL =
 export const DEFAULT_POINT = { lat: CAMPUSES[0].lat, lng: CAMPUSES[0].lng } as const;
 
 export const DEMO_CUSTOMER_EMAIL = "demo.pembeli@sisasaji.test";
+/** PILOT_INVITE_CODE of the e2e server (see global-setup.ts). */
+export const E2E_PILOT_CODE = "E2E-PILOT-2026";
 export const DEMO_MERCHANT_EMAIL = "demo.mitra@sisasaji.test";
 /** Seeded demo warung (Warung Nasi Teh Euis, Babakan Raya), owned by the demo merchant account. */
 export { DEMO_MERCHANT_NAME, DEMO_MERCHANT_SLUG };

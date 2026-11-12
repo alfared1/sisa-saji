@@ -6,7 +6,11 @@ import { getDatabaseUrl, getPickupQrSecret } from "../src/lib/env";
 
 async function main() {
   const { db, pool } = createDb(getDatabaseUrl(), { max: 1 });
-  const summary = await seedDatabase(db, { pickupQrSecret: getPickupQrSecret(), log: console.log });
+  const summary = await seedDatabase(db, {
+    pickupQrSecret: getPickupQrSecret(),
+    log: console.log,
+    allowPilotWipe: process.env.SEED_WIPE_PILOT === "1",
+  });
   console.table(summary);
   console.log(
     "[seed] demo accounts: demo.pembeli@sisasaji.test (+6281200000001), demo.mitra@sisasaji.test (+6281300000001)",

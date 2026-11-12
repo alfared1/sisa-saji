@@ -76,6 +76,15 @@ export function AiPredictionAlertCard({
         {confidenceText(prediction.confidence_score)} Kalau dijual dengan diskon 50%, biasanya {selloutOutOfTen} dari 10 malam
         habis.
       </p>
+      {prediction.rain_forecast_mm !== null && (
+        <p className="mt-1 text-sm text-white/85">
+          Cuaca pukul 17.00 sampai 23.00:{" "}
+          {prediction.rain_forecast_mm < 0.5
+            ? "diperkirakan tidak hujan"
+            : `diperkirakan hujan sekitar ${prediction.rain_forecast_mm.toLocaleString("id-ID")} mm`}
+          , sudah ikut dihitung.
+        </p>
+      )}
 
       {menus.length > 0 && (
         <ul className="mt-4 flex flex-wrap gap-2" aria-label="Perkiraan per menu">

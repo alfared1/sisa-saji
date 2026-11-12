@@ -35,6 +35,12 @@ describe("quick order checkout body", () => {
       payment_method: "QRIS",
     });
   });
+
+  it("pays at the warung for a pilot warung", () => {
+    expect(quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID, merchant_is_pilot: true }, 1).payment_method).toBe(
+      "BAYAR_DI_WARUNG",
+    );
+  });
 });
 
 describe("logged-out return path", () => {
