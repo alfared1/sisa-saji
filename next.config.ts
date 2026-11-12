@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SW_BUILD: process.env.NODE_ENV === "production" ? Date.now().toString(36) : "dev",
   },
+  // Loaded from node_modules at runtime instead of bundled (OTP email over SMTP).
+  serverExternalPackages: ["nodemailer"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

@@ -6,7 +6,11 @@
  *             (OTP_MAX_REQUESTS_PER_CLIENT_WINDOW, OTP_MAX_SENDS_PER_HOUR). The limits run
  *             before the real-account check, so that refusal cannot be probed without limit.
  *             Dev mode returns the code (`dev_code`); otherwise it is sent through the
- *             channel's provider (otp-delivery.ts) and a failed send is an error.
+ *             channel's provider (otp-delivery.ts) and a failed send is an error whose
+ *             message and `details.reason` say whether our provider setup is broken
+ *             (PROVIDER_CONFIG) or its daily limit is used up (QUOTA), both suggesting the
+ *             other channel, the recipient was refused (RECIPIENT) or it may work later
+ *             (TEMPORARY).
  *             Outside dev mode the shared demo numbers are refused (one-tap demo login
  *             only): they look like real numbers and would message a stranger.
  *  - verify:  latest unconsumed code; OTP_MAX_ATTEMPTS wrong tries lock it;
@@ -33,6 +37,8 @@ import {
 import {
   DEMO_LOGIN_ONLY_REASON,
   REAL_OTP_REQUIRED_REASON,
+  type OtpDeliveryFailedDetails,
+  type OtpDeliveryFailureReason,
   type OtpRequestBody,
   type OtpRequestResponse,
   type OtpVerifyBody,
@@ -74,6 +80,46 @@ export function channelUnavailableMessage(channel: OtpChannel, providers: OtpPro
   return "Kode masuk belum bisa dikirim saat ini. Coba lagi nanti.";
 }
 
+/** The other channel, when it can deliver codes right now. */
+export function alternativeChannel(channel: OtpChannel, providers: OtpProviders): OtpChannel | undefined {
+  const other: OtpChannel = channel === "EMAIL" ? "WHATSAPP" : "EMAIL";
+  return canDeliver(other, providers) ? other : undefined;
+}
+
+/** The channel is down on our side (broken setup, or its daily limit is used up): offer the other one. */
+const channelDown = (reason: OtpDeliveryFailureReason) => reason === "PROVIDER_CONFIG" || reason === "QUOTA";
+
+/**
+ * Why the code did not arrive. Only a refusal of the recipient asks the user to check the
+ * number or address; a broken provider setup or a used-up daily limit is ours, so it points
+ * to the other channel.
+ */
+export function deliveryFailureMessage(channel: OtpChannel, reason: OtpDeliveryFailureReason, providers: OtpProviders): string {
+  const label = channel === "WHATSAPP" ? "WhatsApp" : "email";
+  if (channelDown(reason)) {
+    const other = alternativeChannel(channel, providers);
+    const next = !other ? "Coba lagi nanti." : other === "WHATSAPP" ? "Masuk dengan nomor WhatsApp dulu." : "Masuk dengan email dulu.";
+    const why = reason === "QUOTA" ? "sudah mencapai batas kirim hari ini" : "sedang tidak bisa dikirim";
+    return `Kode lewat ${label} ${why}. ${next}`;
+  }
+  if (reason === "RECIPIENT") {
+    return channel === "WHATSAPP"
+      ? "Kode belum terkirim ke WhatsApp. Pastikan nomornya aktif di WhatsApp, lalu coba lagi."
+      : "Kode belum terkirim ke email. Periksa alamatnya, lalu coba lagi.";
+  }
+  return `Kode belum terkirim ke ${label}. Coba lagi sebentar lagi.`;
+}
+
+function deliveryFailedDetails(
+  channel: OtpChannel,
+  reason: OtpDeliveryFailureReason,
+  providers: OtpProviders,
+): OtpDeliveryFailedDetails {
+  // The other channel is offered only when this one is down on our side.
+  const other = channelDown(reason) ? alternativeChannel(channel, providers) : undefined;
+  return { channel, reason, ...(other ? { alternative_channel: other } : {}) };
+}
+
 export async function requestOtp(
   db: Db,
   input: OtpRequestInput,
@@ -91,7 +137,11 @@ export async function requestOtp(
 
   const providers = opts.devMode ? null : (opts.delivery?.providers ?? configuredOtpProviders());
   if (providers && !canDeliver(id.channel, providers)) {
-    throw new ApiError("OTP_DELIVERY_FAILED", channelUnavailableMessage(id.channel, providers), { channel: id.channel });
+    throw new ApiError(
+      "OTP_DELIVERY_FAILED",
+      channelUnavailableMessage(id.channel, providers),
+      deliveryFailedDetails(id.channel, "PROVIDER_CONFIG", providers),
+    );
   }
 
   await assertOtpRateLimits(db, { identifier: id.value, clientKey, realDelivery: !opts.devMode, now });
@@ -129,12 +179,12 @@ export async function requestOtp(
   if (!result.delivered) {
     // Nobody received this code: retire it (it still counts towards the rate limit).
     await db.update(otpCodes).set({ consumedAt: now }).where(eq(otpCodes.id, row.id));
+    const reason = result.failure ?? "TEMPORARY";
+    const known = providers ?? { resend: null, fonnteToken: null };
     throw new ApiError(
       "OTP_DELIVERY_FAILED",
-      id.channel === "WHATSAPP"
-        ? "Kode belum terkirim ke WhatsApp. Pastikan nomornya aktif di WhatsApp, lalu coba lagi sebentar lagi."
-        : "Kode belum terkirim ke email. Periksa alamatnya, lalu coba lagi sebentar lagi.",
-      { channel: id.channel },
+      deliveryFailureMessage(id.channel, reason, known),
+      deliveryFailedDetails(id.channel, reason, known),
     );
   }
 

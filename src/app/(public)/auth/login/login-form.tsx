@@ -12,7 +12,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDemoLogin } from "@/hooks/use-demo-login";
 import { useGlobalStats } from "@/hooks/use-global-stats";
 import { ApiClientError, api } from "@/lib/api/client";
-import { DEMO_LOGIN_ONLY_REASON, OtpRequestBody, REAL_OTP_REQUIRED_REASON, type OtpRequestResponse } from "@/lib/contracts";
+import {
+  DEMO_LOGIN_ONLY_REASON,
+  OtpRequestBody,
+  REAL_OTP_REQUIRED_REASON,
+  type OtpDeliveryFailedDetails,
+  type OtpRequestResponse,
+} from "@/lib/contracts";
 import { writeSession } from "@/lib/pwa/storage";
 import { cn } from "@/lib/utils";
 import {
@@ -59,6 +65,13 @@ export function LoginForm() {
     request.reset();
   };
 
+  const switchKind = (k: IdentifierKind) => {
+    setKind(k);
+    setValue("");
+    setFieldError(null);
+    request.reset();
+  };
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     setFieldError(null);
@@ -91,6 +104,12 @@ export function LoginForm() {
   const noteReason =
     request.error instanceof ApiClientError ? (request.error.details as { reason?: unknown } | undefined)?.reason : undefined;
   const needsRealOtp = noteReason === REAL_OTP_REQUIRED_REASON || noteReason === DEMO_LOGIN_ONLY_REASON;
+  // Sending on this channel is broken on our side and the other one works: offer it.
+  const alternative =
+    request.error instanceof ApiClientError && request.error.code === "OTP_DELIVERY_FAILED"
+      ? (request.error.details as Partial<OtpDeliveryFailedDetails> | undefined)?.alternative_channel
+      : undefined;
+  const alternativeKind: IdentifierKind | null = alternative === "WHATSAPP" ? "phone" : alternative === "EMAIL" ? "email" : null;
   const copy = COPY[role];
 
   // lg+: the form sits in a card, vertically centred by the auth layout.
@@ -129,12 +148,7 @@ export function LoginForm() {
               type="button"
               role="radio"
               aria-checked={kind === k}
-              onClick={() => {
-                setKind(k);
-                setValue("");
-                setFieldError(null);
-                request.reset();
-              }}
+              onClick={() => switchKind(k)}
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 kind === k ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground",
@@ -187,7 +201,26 @@ export function LoginForm() {
             </p>
           ) : (
             <Alert variant="destructive" className="rounded-2xl">
-              <AlertDescription>{apiError}</AlertDescription>
+              <AlertDescription>
+                {apiError}
+                {alternativeKind && alternativeKind !== kind && (
+                  <>
+                    {/* Each account has one login, so the other channel opens only an account registered with it. */}
+                    <span className="mt-1 block text-xs">
+                      {alternativeKind === "phone"
+                        ? "Nomor yang belum terdaftar akan dibuatkan akun baru, terpisah dari akun emailmu."
+                        : "Email yang belum terdaftar akan dibuatkan akun baru, terpisah dari akun nomormu."}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => switchKind(alternativeKind)}
+                      className="mt-1 block rounded-sm py-1 font-semibold underline underline-offset-3 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      {alternativeKind === "phone" ? "Pakai nomor WhatsApp" : "Pakai email"}
+                    </button>
+                  </>
+                )}
+              </AlertDescription>
             </Alert>
           ))}
 

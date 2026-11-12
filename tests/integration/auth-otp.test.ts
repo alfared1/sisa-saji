@@ -117,15 +117,99 @@ describe("POST /auth/otp/request", () => {
   it("dev mode off and the provider fails: the stored code is retired", async () => {
     const phone = freshPhone();
     const failing = (async () => new Response("down", { status: 502 })) as unknown as typeof fetch;
-    await expectApiError(
+    const err = await expectApiError(
       requestOtp(db, OtpRequestBody.parse({ phone_number: phone }), {
         devMode: false,
         delivery: { providers: { resend: null, fonnteToken: "fonnte-token-123" }, fetch: failing },
       }),
       "OTP_DELIVERY_FAILED",
     );
+    // An outage: try again later, without blaming the number.
+    expect(err.status).toBe(503);
+    expect(err.message).toBe("Kode belum terkirim ke WhatsApp. Coba lagi sebentar lagi.");
+    expect(err.details).toEqual({ channel: "WHATSAPP", reason: "TEMPORARY" });
     const [row] = await db.select().from(otpCodes).where(eq(otpCodes.identifier, toE164(phone)));
     expect(row.consumedAt).not.toBeNull();
+  });
+
+  it("a rejected SMTP password points to WhatsApp instead of the address, and retires the code", async () => {
+    const address = `smtp-${randomInt(0, 10 ** 9)}@contoh.test`;
+    const rejected = Object.assign(new Error("Invalid login"), { code: "EAUTH", responseCode: 535 });
+    const smtp = { host: "smtp.gmail.com", port: 465, secure: true, user: "kode.sisasaji@gmail.com", pass: "abcdefghijklmnop", fromName: "Sisa-Saji" };
+    const err = await expectApiError(
+      requestOtp(db, OtpRequestBody.parse({ email: address }), {
+        devMode: false,
+        delivery: {
+          providers: { smtp, resend: null, fonnteToken: "fonnte-token-123" },
+          smtpMailer: () => ({
+            sendMail: async () => {
+              throw rejected;
+            },
+          }),
+        },
+      }),
+      "OTP_DELIVERY_FAILED",
+    );
+    expect(err.message).toBe("Kode lewat email sedang tidak bisa dikirim. Masuk dengan nomor WhatsApp dulu.");
+    expect(err.details).toEqual({ channel: "EMAIL", reason: "PROVIDER_CONFIG", alternative_channel: "WHATSAPP" });
+    const [row] = await db.select().from(otpCodes).where(eq(otpCodes.identifier, address));
+    expect(row.consumedAt).not.toBeNull();
+  });
+
+  it("the Gmail daily limit points to WhatsApp instead of asking to retry soon", async () => {
+    const address = `quota-${randomInt(0, 10 ** 9)}@contoh.test`;
+    const limit = Object.assign(new Error("Daily user sending limit exceeded"), {
+      code: "EENVELOPE",
+      responseCode: 550,
+      command: "MAIL FROM",
+      response: "550 5.4.5 Daily user sending limit exceeded.",
+    });
+    const smtp = { host: "smtp.gmail.com", port: 465, secure: true, user: "kode.sisasaji@gmail.com", pass: "abcdefghijklmnop", fromName: "Sisa-Saji" };
+    const err = await expectApiError(
+      requestOtp(db, OtpRequestBody.parse({ email: address }), {
+        devMode: false,
+        delivery: {
+          providers: { smtp, resend: null, fonnteToken: "fonnte-token-123" },
+          smtpMailer: () => ({
+            sendMail: async () => {
+              throw limit;
+            },
+          }),
+        },
+      }),
+      "OTP_DELIVERY_FAILED",
+    );
+    expect(err.message).toBe("Kode lewat email sudah mencapai batas kirim hari ini. Masuk dengan nomor WhatsApp dulu.");
+    expect(err.details).toEqual({ channel: "EMAIL", reason: "QUOTA", alternative_channel: "WHATSAPP" });
+  });
+
+  it("a half-set SMTP_* in the environment does not stop WhatsApp login", async () => {
+    const KEYS = ["SMTP_USER", "SMTP_PASS", "SMTP_HOST", "SMTP_PORT", "RESEND_API_KEY", "OTP_EMAIL_FROM", "FONNTE_TOKEN"] as const;
+    const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      for (const k of KEYS) delete process.env[k];
+      process.env.SMTP_USER = "kode.sisasaji@gmail.com"; // SMTP_PASS forgotten
+      process.env.FONNTE_TOKEN = "fonnte-token-123";
+      const fonnte = (async () => Response.json({ status: true })) as unknown as typeof fetch;
+
+      // No `providers`: they come from the environment, as in production.
+      const res = await requestOtp(db, OtpRequestBody.parse({ phone_number: freshPhone() }), { devMode: false, delivery: { fetch: fonnte } });
+      expect(res).toMatchObject({ sent: true, channel: "WHATSAPP" });
+
+      const err = await expectApiError(
+        requestOtp(db, OtpRequestBody.parse({ email: `half-${randomInt(0, 10 ** 9)}@contoh.test` }), { devMode: false, delivery: { fetch: fonnte } }),
+        "OTP_DELIVERY_FAILED",
+      );
+      expect(err.status).toBe(503);
+      expect(err.details).toEqual({ channel: "EMAIL", reason: "PROVIDER_CONFIG", alternative_channel: "WHATSAPP" });
+    } finally {
+      errorLog.mockRestore();
+      for (const k of KEYS) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
   });
 
   it(`rate limits after ${OTP_MAX_REQUESTS_PER_WINDOW} requests per 10 minutes`, async () => {

@@ -263,10 +263,28 @@ npm run test:e2e            # Playwright: 38 test dalam 16 file, di build produk
 
 Sebelum mengundang warung sungguhan, kode OTP harus benar-benar dikirim ke pemilik akun, bukan ditampilkan di layar:
 
-1. **Email (Resend):** buat API key di [resend.com](https://resend.com), verifikasi domain pengirim, lalu isi `RESEND_API_KEY` dan `OTP_EMAIL_FROM` (mis. `Sisa-Saji <kode@domainmu.id>`).
-2. **WhatsApp (Fonnte):** hubungkan nomor WhatsApp pengirim di [fonnte.com](https://fonnte.com), lalu isi `FONNTE_TOKEN` dengan token perangkatnya.
-3. Set `OTP_DEV_MODE=false` dan deploy ulang. Cukup satu penyedia; kanal yang belum punya penyedia menjawab "Kode lewat WhatsApp belum tersedia. Masuk dengan email dulu." (atau sebaliknya).
-4. Cek: minta kode untuk nomor/email sendiri. Kode tidak boleh muncul di layar dan harus masuk ke WhatsApp/email. Setelah itu **Pengaturan → Uji coba lapangan** baru menerima kode undangan.
+1. **Email lewat Gmail (tanpa domain sendiri):** pakai akun Gmail khusus untuk aplikasi (mis. `kode.sisasaji@gmail.com`), bukan Gmail pribadi.
+   1. Di akun itu, nyalakan **Verifikasi 2 Langkah** (Akun Google → Keamanan). Sandi aplikasi baru tersedia setelah ini aktif.
+   2. Buka [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), buat sandi aplikasi bernama mis. "Sisa-Saji", lalu salin 16 hurufnya. Boleh ditempel beserta spasinya (`abcd efgh ijkl mnop`), spasinya dibuang otomatis.
+   3. Di Vercel (Project Settings → Environment Variables, lingkungan **Production**), isi `SMTP_USER` dengan alamat Gmail tadi dan `SMTP_PASS` dengan sandi aplikasinya.
+   4. Kalau belum punya domain terverifikasi di Resend, **hapus `RESEND_API_KEY` dan `OTP_EMAIL_FROM`**. Selama `SMTP_USER`/`SMTP_PASS` terisi, Resend memang tidak dipakai, tapi lebih rapi dihapus.
+   5. Email terkirim dari alamat Gmail itu dengan nama "Sisa-Saji" (`SMTP_FROM_NAME`). Gmail selalu memakai alamat akunnya sebagai pengirim, jadi `OTP_EMAIL_FROM` tidak berlaku di sini. Batas Gmail sekitar **500 email per hari**; lewat dari itu Gmail menolak sampai keesokan harinya, dan halaman login mengarahkan pengguna ke WhatsApp.
+   6. Mengganti sandi akun Google membatalkan semua sandi aplikasinya: buat yang baru dan perbarui `SMTP_PASS`.
+2. **Email lewat Resend (kalau punya domain):** buat API key di [resend.com](https://resend.com), verifikasi domain pengirim, lalu isi `RESEND_API_KEY` dan `OTP_EMAIL_FROM` (mis. `Sisa-Saji <kode@domainmu.id>`). Tanpa domain terverifikasi, Resend menolak semua alamat tujuan selain pemilik akunnya. Kalau `SMTP_USER`/`SMTP_PASS` juga diisi, SMTP yang dipakai.
+3. **WhatsApp (Fonnte):** hubungkan nomor WhatsApp pengirim di [fonnte.com](https://fonnte.com), lalu isi `FONNTE_TOKEN` dengan token perangkatnya.
+4. Set `OTP_DEV_MODE=false` dan deploy ulang (variabel yang baru diisi baru terbaca setelah deploy ulang). Cukup satu penyedia; kanal yang belum punya penyedia menjawab "Kode lewat WhatsApp belum tersedia. Masuk dengan email dulu." (atau sebaliknya).
+5. Cek: minta kode untuk nomor/email sendiri. Kode tidak boleh muncul di layar dan harus masuk ke WhatsApp/email (cek juga folder Spam). Setelah itu **Pengaturan → Uji coba lapangan** baru menerima kode undangan. Kalau email tidak jalan, buka Vercel → Logs: galat `Invalid environment variable SMTP_…` berarti variabelnya salah ketik atau baru satu yang terisi (mis. `SMTP_USER` tanpa `@gmail.com`, atau `SMTP_PASS` belum diisi). Selama itu hanya login email yang mati; login WhatsApp dan sesi yang sudah ada tetap jalan. Perbaiki variabelnya lalu deploy ulang.
+
+Kalau pengiriman gagal, pesan di layar membedakan penyebabnya (`details.reason` pada `503 OTP_DELIVERY_FAILED`):
+
+| Penyebab | Contoh | Pesan untuk pengguna |
+| :--- | :--- | :--- |
+| `PROVIDER_CONFIG` (pengaturan kita salah) | Sandi aplikasi Gmail ditolak (535), host/port SMTP salah, domain Resend belum diverifikasi (403), key Resend salah, perangkat Fonnte terputus | "Kode lewat email sedang tidak bisa dikirim. Masuk dengan nomor WhatsApp dulu." (atau "Coba lagi nanti." bila WhatsApp juga belum ada). Halaman login menampilkan tombol untuk pindah kanal |
+| `QUOTA` | Batas harian Gmail habis (550 5.4.5) | "Kode lewat email sudah mencapai batas kirim hari ini. Masuk dengan nomor WhatsApp dulu." dengan tombol pindah kanal yang sama |
+| `TEMPORARY` | Timeout, server penyedia sedang gangguan, Gmail menolak login sementara (454 "Too many login attempts") | "Kode belum terkirim ke email. Coba lagi sebentar lagi." |
+| `RECIPIENT` | Penyedia menolak alamat/nomor tujuan | "Kode belum terkirim ke email. Periksa alamatnya, lalu coba lagi." |
+
+Log server hanya mencatat penyedia, kode galatnya (mis. `EAUTH 535`), dan tujuan yang disamarkan, jadi penyebabnya bisa dicek di Vercel → Logs tanpa membuka kode atau sandi.
 
 Begitu pengiriman asli aktif, semua sesi yang dibuka saat kode masih tampil di layar otomatis tidak berlaku lagi (semua orang perlu masuk ulang sekali, kecuali akun demo). Jadi akun yang sempat diambil alih orang lain selama mode demo tidak terbawa ke uji coba. Sebelum bergabung, kartu uji coba juga menampilkan rekening pencairan warung supaya pemilik bisa memeriksanya.
 
@@ -286,7 +304,9 @@ Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
 | `PICKUP_QR_SECRET` | produksi | HMAC token QR pengambilan, min. 32 karakter |
 | `PAYMENT_WEBHOOK_SECRET` | produksi | HMAC-SHA512 webhook pembayaran, min. 32 karakter |
 | `OTP_DEV_MODE` | – | `true` = kode OTP tampil di layar (demo). Wajib `false` sebelum ada warung sungguhan |
-| `RESEND_API_KEY`, `OTP_EMAIL_FROM` | – | Kirim kode OTP lewat email (Resend). Keduanya harus diisi |
+| `SMTP_USER`, `SMTP_PASS` | – | Kirim kode OTP lewat email dari kotak surat SMTP, mis. Gmail + sandi aplikasi (spasi di sandi dibuang). Keduanya harus diisi. Didahulukan dari Resend |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM_NAME` | – | Opsional. Default `smtp.gmail.com`, `465` (TLS langsung; port lain memakai STARTTLS), nama pengirim `Sisa-Saji` |
+| `RESEND_API_KEY`, `OTP_EMAIL_FROM` | – | Kirim kode OTP lewat email (Resend, butuh domain terverifikasi). Keduanya harus diisi. Tidak dipakai bila `SMTP_USER`/`SMTP_PASS` terisi |
 | `FONNTE_TOKEN` | – | Kirim kode OTP lewat WhatsApp (Fonnte) |
 | `PAYMENT_PROVIDER` | – | `simulator` (satu-satunya provider saat ini) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push; push nonaktif bila kosong |
@@ -320,7 +340,7 @@ Mengganti secret membuat semua sesi logout dan QR tiket lama tidak berlaku; seed
 12. **Komisi platform dibayar pembeli** sebagai biaya layanan Rp 1.500, bukan dipotong dari warung (`net_merchant_payout_idr = subtotal_recovery_idr`).
 13. **Peta memakai Leaflet + OpenStreetMap**, bukan MapLibre: lebih ringan, tanpa API key, cukup untuk peta radius 2 km.
 14. **Service worker ditulis tangan** (`public/sw.js`) alih-alih plugin PWA, supaya caching tiket offline dan Web Push bisa dikontrol penuh dengan Next.js 16.
-15. **OTP mode development**: di versi demo kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`). Pengiriman asli lewat Resend (email) dan Fonnte (WhatsApp) sudah tersedia dan aktif setelah variabelnya diisi dan `OTP_DEV_MODE=false`. Selama mode demo, akun warung uji coba dan pembelinya tidak bisa dibuka lewat OTP.
+15. **OTP mode development**: di versi demo kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`). Pengiriman asli lewat SMTP/Gmail atau Resend (email) dan Fonnte (WhatsApp) sudah tersedia dan aktif setelah variabelnya diisi dan `OTP_DEV_MODE=false`. Selama mode demo, akun warung uji coba dan pembelinya tidak bisa dibuka lewat OTP.
 16. **Pembayaran tersimulasi**: QRIS dinamis berformat EMVCo + CRC16 dan webhook bertanda tangan HMAC-SHA512 asli, tetapi pembayarannya dipicu tombol "Simulasi Bayar (Demo)" (`PAYMENT_PROVIDER=simulator`).
 17. **Fair-use checkout**: maksimal 1 pesanan belum dibayar per warung dan 2 secara total, serta batas porsi per pembeli per batch `max(3, ceil(stok awal / 2))`. Tujuannya mencegah satu akun mengunci seluruh stok surplus.
 18. **Pesanan tidak diambil** sampai 30 menit setelah batas waktu menjadi `EXPIRED`. Warung tetap dibayar sekali, dan pembeli tidak mendapat kredit dampak.

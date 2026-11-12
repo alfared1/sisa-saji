@@ -149,6 +149,24 @@ export const REAL_OTP_REQUIRED_REASON = "REAL_OTP_REQUIRED";
  * (/auth/demo), never with a code sent to whoever owns that number.
  */
 export const DEMO_LOGIN_ONLY_REASON = "DEMO_LOGIN_ONLY";
+/**
+ * `error.details.reason` of the 503 OTP_DELIVERY_FAILED from /auth/otp/request:
+ *  - PROVIDER_CONFIG: the channel's provider is missing or misconfigured (rejected key or
+ *    password, unverified sender domain, disconnected WhatsApp device). Not the user's input.
+ *  - QUOTA: the provider's daily sending limit is used up (Gmail: about 500 a day); the
+ *    channel stays down until it resets, so the other channel is suggested too.
+ *  - TEMPORARY: timeout, network error or provider outage; trying again later may work.
+ *  - RECIPIENT: the provider refused this number/email address.
+ */
+export const OTP_DELIVERY_FAILURE_REASONS = ["PROVIDER_CONFIG", "QUOTA", "TEMPORARY", "RECIPIENT"] as const;
+export type OtpDeliveryFailureReason = (typeof OTP_DELIVERY_FAILURE_REASONS)[number];
+/** `error.details` of the 503 OTP_DELIVERY_FAILED from /auth/otp/request. */
+export type OtpDeliveryFailedDetails = {
+  channel: "WHATSAPP" | "EMAIL";
+  reason: OtpDeliveryFailureReason;
+  /** Set when the other channel can deliver codes right now (the message suggests it). */
+  alternative_channel?: "WHATSAPP" | "EMAIL";
+};
 
 /** POST /api/v1/auth/otp/verify — public. Sets the session cookie. */
 export const OtpVerifyBody = z
