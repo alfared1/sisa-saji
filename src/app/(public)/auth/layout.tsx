@@ -49,27 +49,26 @@ const POINTS = [
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-backdrop min-h-dvh lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(30rem,1fr)]">
-      <aside className="hidden bg-impact text-white lg:flex lg:flex-col lg:px-12 lg:py-10 xl:px-16">
-        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+      {/* One centred stack (logo, message, example, points), level with the form card, so no screen size leaves a gap in the middle. Short laptop screens get a tighter stack without the points. */}
+      <aside className="hidden bg-impact text-white lg:flex lg:flex-col lg:justify-center lg:px-12 lg:py-10 xl:px-16">
+        <div className="mx-auto w-full max-w-lg">
           <Link
             href="/welcome"
             aria-label="Beranda Sisa-Saji"
-            className="w-fit rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-white/60"
+            className="inline-flex w-fit rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-white/60"
           >
             <Logo tone="onImpact" />
           </Link>
 
-          <div className="my-auto py-10">
-            <h2 className="text-4xl leading-tight font-extrabold xl:text-[2.75rem]">Porsi terakhir malam ini menunggu untuk diselamatkan.</h2>
-            <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">
-              Warung di sekitarmu menjual porsi yang belum laku menjelang tutup. Makin dekat jam tutup, makin murah.
-            </p>
-            <div className="mt-8">
-              <PriceDropExample />
-            </div>
+          <h2 className="mt-10 text-4xl leading-tight font-extrabold xl:text-[2.75rem] [@media(max-height:760px)]:mt-6 [@media(max-height:760px)]:text-3xl">Porsi terakhir malam ini menunggu untuk diselamatkan.</h2>
+          <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">
+            Warung di sekitarmu menjual porsi yang belum laku menjelang tutup. Makin dekat jam tutup, makin murah.
+          </p>
+          <div className="mt-8 [@media(max-height:760px)]:mt-5">
+            <PriceDropExample />
           </div>
 
-          <ul className="space-y-2.5 text-sm text-white/85">
+          <ul className="mt-8 space-y-2.5 text-sm text-white/85 [@media(max-height:760px)]:hidden">
             {POINTS.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-center gap-3">
                 <Icon className="size-5 shrink-0" aria-hidden /> {text}
