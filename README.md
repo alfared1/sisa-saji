@@ -228,10 +228,13 @@ Build Vercel (`vercel-build`) hanya menjalankan migrasi, tidak seed. Setelah per
 Mode ini untuk menguji Sisa-Saji di warung nyata di tengah data demo, dengan hasil yang dipisahkan dan bisa dipertanggungjawabkan.
 
 1. Isi `PILOT_INVITE_CODE` (min. 8 karakter) di `.env` atau environment Vercel, lalu bagikan kodenya ke warung yang ikut.
-2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan** dan memasukkan kodenya. Warung mendapat label "Warung uji coba".
+2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan**, memasukkan kodenya, dan mengisi perkiraan berapa porsi biasanya tersisa per malam sebelum memakai Sisa-Saji (angka pembanding, tidak bisa diubah setelah disimpan). Warung mendapat label "Warung uji coba".
 3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Porsi disimpan sampai batas waktu ambil, dan pembeli bisa membatalkan sebelum mengambil.
 4. Warung memindai QR atau kode `SJ-XXXX` seperti biasa. Layar verifikasi menampilkan jumlah yang harus ditagih.
-5. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, dan per hari.
+5. Setiap malam setelah tutup, warung mengisi kartu **Sisa setelah tutup** di dasbor: porsi yang tetap tidak laku dibagikan, jadi pakan ternak atau maggot, dikompos, atau dibuang. Laporan bisa diisi untuk tadi malam atau malam ini (`PUT /api/v1/merchant/leftovers`).
+6. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, per hari, dan **porsi yang dibuang turun berapa persen** dibanding sebelum uji coba: 1 − dibuang ÷ (perkiraan awal × jumlah malam laporan).
+
+Halaman **`/tentang`** merangkum produk untuk juri atau calon mitra dalam satu halaman (masalah, cara kerja, dampak, teknologi, model bisnis, SDGs, sumber), dengan tombol "Coba sebagai pembeli" dan "Coba sebagai warung" yang langsung masuk ke akun demo (`POST /api/v1/auth/demo`, hanya aktif selama aplikasi memakai data demo).
 
 Yang dihitung hanya pesanan di warung uji coba yang dibuat setelah warung bergabung, benar-benar diambil dan diverifikasi warung, dan bukan pesanan pemilik di warungnya sendiri. Data demo tidak pernah ikut. Job demo tidak memasang surplus contoh di warung uji coba, dan seed ulang menolak menghapus data uji coba tanpa izin eksplisit (`SEED_WIPE_PILOT=1` untuk `npm run db:seed`).
 
@@ -247,10 +250,10 @@ npm run typecheck && npm run lint
 Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan stok paralel (tanpa overselling), eskalasi diskon, alur pembayaran + webhook, dan verifikasi pickup.
 
 ```bash
-npm run test:e2e            # Playwright: 35 test dalam 14 file, di build produksi
+npm run test:e2e            # Playwright: 38 test dalam 16 file, di build produksi
 ```
 
-`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada, dan `E2E_SERVER_LOG=<file>` untuk menyimpan log database + server (berguna saat test gagal karena error di server).
+`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, halaman tentang + akun demo sekali ketuk, uji coba lapangan (bayar di warung + laporan sisa), rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada, dan `E2E_SERVER_LOG=<file>` untuk menyimpan log database + server (berguna saat test gagal karena error di server).
 
 ---
 

@@ -22,7 +22,10 @@ export const MERCHANT_PREMIUM_PRICE_IDR = 50_000;
 
 /** Environmental impact factors. */
 export const DEFAULT_PORTION_WEIGHT_GRAMS = 200;
-/** IPCC: 2.5 kg CO2e per 1 kg food waste avoided. */
+/**
+ * 2.5 kg CO2e per 1 kg food waste avoided: FAO (2013) Food Wastage Footprint puts the
+ * carbon footprint of 1.3 Gt of uneaten food at 3.3 Gt CO2e (≈ 2.5 kg per kg).
+ */
 export const CO2E_PER_KG_FOOD = 2.5;
 /** One mature tree absorbs ~22.24 kg CO2 per year (proposal ratio 912 t ≈ 41,000 trees). */
 export const CO2_KG_PER_TREE_YEAR = 22.24;

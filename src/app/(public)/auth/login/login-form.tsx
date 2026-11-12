@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiClientError, api } from "@/lib/api/client";
 import { OtpRequestBody, type OtpRequestResponse } from "@/lib/contracts";
+import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
 import { writeSession } from "@/lib/pwa/storage";
 import { cn } from "@/lib/utils";
 import {
@@ -32,11 +33,6 @@ import {
   type AuthRole,
   type IdentifierKind,
 } from "../auth-flow";
-
-const DEMO_ACCOUNTS: Record<AuthRole, { phone: string; email: string }> = {
-  CUSTOMER: { phone: "081200000001", email: "demo.pembeli@sisasaji.test" },
-  MERCHANT: { phone: "081300000001", email: "demo.mitra@sisasaji.test" },
-};
 
 const COPY: Record<AuthRole, { title: string; subtitle: string }> = {
   CUSTOMER: {

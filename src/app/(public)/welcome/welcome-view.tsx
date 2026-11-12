@@ -66,7 +66,7 @@ function StatTile({ icon: Icon, value, unit, label }: { icon: ComponentType<{ cl
   );
 }
 
-function ImpactStats() {
+export function ImpactStats() {
   const stats = useQuery({
     queryKey: GLOBAL_STATS_QUERY_KEY,
     queryFn: () => api.get<GlobalStats>("/stats/global"),
@@ -109,7 +109,10 @@ function ImpactStats() {
           </p>
         </>
       )}
-      <Link href="/uji-coba" className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-primary hover:underline">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        Mendukung SDG 12.3: mengurangi separuh sampah pangan per kapita di tingkat ritel dan konsumen pada 2030.
+      </p>
+      <Link href="/uji-coba" className="mt-1 inline-flex min-h-11 items-center text-sm font-bold text-primary hover:underline">
         Lihat hasil uji coba di warung sungguhan
       </Link>
     </section>
@@ -208,7 +211,10 @@ export function WelcomeView() {
           <Logo />
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <Button asChild variant="ghost" className="h-11 rounded-xl px-4 font-semibold">
+            <Button asChild variant="ghost" className="h-11 rounded-xl px-2.5 font-semibold">
+              <Link href="/tentang">Tentang</Link>
+            </Button>
+            <Button asChild variant="ghost" className="h-11 rounded-xl px-2.5 font-semibold">
               <Link href="/auth/login">Masuk</Link>
             </Button>
           </div>

@@ -7,7 +7,7 @@ import { db, loginContextAs, ok, pickBatch, registerCustomer } from "../helpers"
 /**
  * Field pilot end to end: a real warung joins with the invite code, a customer orders
  * and sees "bayar di warung", the warung verifies the pickup and is told what to
- * charge, and /uji-coba counts it.
+ * charge, reports the night's leftovers, and /uji-coba counts both.
  */
 test("pilot warung: join with the code, pay at the warung, verified pickup shows on /uji-coba", async ({ page, context, browser }) => {
   // A seeded Bogor warung (not the shared demo warung) with live surplus tonight.
@@ -25,8 +25,10 @@ test("pilot warung: join with the code, pay at the warung, verified pickup shows
   await page.goto("/merchant/settings");
   const pilot = page.getByRole("region", { name: "Uji coba lapangan" });
   await pilot.getByLabel("Kode undangan").fill(E2E_PILOT_CODE.toLowerCase());
+  await pilot.getByLabel(/biasanya berapa porsi tersisa/).fill("10");
   await pilot.getByRole("button", { name: "Gabung" }).click();
   await expect(pilot.getByText(/Warungmu ikut uji coba/)).toBeVisible();
+  await expect(pilot.getByText(/Sebelum uji coba: sekitar 10 porsi/)).toBeVisible();
 
   // Customer orders: a ticket right away, paid at the warung, no service fee.
   const { order } = await ok<CheckoutResponse>(
@@ -59,13 +61,28 @@ test("pilot warung: join with the code, pay at the warung, verified pickup shows
   expect((await verify).status()).toBe(200);
   await expect(panel.getByText("diterima langsung")).toBeVisible();
 
+  // After closing: 3 portions given away, 2 thrown away (10 before the pilot → 80% fewer).
+  await page.goto("/merchant/dashboard");
+  const leftovers = page.getByRole("region", { name: "Sisa setelah tutup" });
+  await leftovers.getByRole("button", { name: "Malam ini" }).click();
+  await expect(leftovers.getByRole("button", { name: "Malam ini" })).toHaveAttribute("aria-pressed", "true");
+  await leftovers.getByRole("textbox", { name: "Porsi dibagikan", exact: true }).fill("3");
+  await leftovers.getByRole("textbox", { name: "Porsi dibuang", exact: true }).fill("2");
+  await expect(leftovers.getByText(/Total 5 porsi, 3 di antaranya tidak terbuang/)).toBeVisible();
+  const saved = page.waitForResponse((r) => r.url().includes("/api/v1/merchant/leftovers") && r.request().method() === "PUT");
+  await leftovers.getByRole("button", { name: "Simpan laporan" }).click();
+  expect((await saved).status()).toBe(200);
+  await expect(leftovers.getByRole("button", { name: "Perbarui laporan" })).toBeVisible();
+
   // Public results count it, apart from the demo data.
   const stats = await ok<PilotStats>(await customer.get("/api/v1/stats/pilot"));
   expect(stats.portions_rescued).toBeGreaterThanOrEqual(1);
   expect(stats.warung.some((w) => w.slug === batch.merchant_slug && w.portions_rescued >= 1)).toBe(true);
+  expect(stats.leftovers).toMatchObject({ nights_reported: 1, donated: 3, discarded: 2, waste_reduction_pct: 80 });
   await phone.goto("/uji-coba");
   await expect(phone.getByRole("heading", { name: "Hasil uji coba di warung sungguhan" })).toBeVisible();
   await expect(phone.getByRole("region", { name: "Hasil uji coba" }).getByText("porsi terselamatkan")).toBeVisible();
+  await expect(phone.getByText("Porsi yang dibuang turun 80%")).toBeVisible();
 
   await phoneCtx.close();
   await customer.dispose();

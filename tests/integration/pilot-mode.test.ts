@@ -118,6 +118,15 @@ describe("bayar di warung tickets", () => {
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 4, reservedStock: 2 });
   });
 
+  it("refuses the shared demo accounts, so nobody cooks at a real warung for a buyer who does not exist", async () => {
+    const { batch } = await newBatch(pilot.id);
+    for (const email of ["demo.pembeli@sisasaji.test", "demo.mitra@sisasaji.test"]) {
+      const [demoUser] = await db.select().from(users).where(eq(users.email, email));
+      await expectCode(order(demoUser.id, { merchant_id: pilot.id, items: [{ batch_id: batch.id, quantity: 1 }] }), "FORBIDDEN");
+    }
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
+  });
+
   it("refuses vouchers at a pilot warung and pay-at-warung at a regular one", async () => {
     const buyer = await newCustomer();
     const { batch } = await newBatch(pilot.id);

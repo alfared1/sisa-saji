@@ -8,7 +8,8 @@ import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
-import type { PilotStats } from "@/lib/contracts";
+import { LEFTOVER_DESTINATIONS, type PilotStats } from "@/lib/contracts";
+import { CO2E_SOURCE } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 
 export const PILOT_STATS_QUERY_KEY = ["stats", "pilot"] as const;
@@ -27,6 +28,57 @@ function Figure({ value, unit, label }: { value: string; unit?: string; label: s
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+const LEFTOVER_NAMES = {
+  donated: "dibagikan",
+  animal_feed: "jadi pakan ternak atau maggot",
+  compost: "dikompos",
+  discarded: "dibuang",
+} as const;
+
+/** "turun 62%" / "naik 10%" / "tetap": the change in portions thrown away versus before the pilot. */
+export function wasteChangeText(pct: number): string {
+  if (pct > 0) return `turun ${pct}%`;
+  if (pct < 0) return `naik ${-pct}%`;
+  return "tetap";
+}
+
+function LeftoverSection({ l }: { l: PilotStats["leftovers"] }) {
+  return (
+    <section aria-labelledby="sampah-title" className="mt-8">
+      <h2 id="sampah-title" className="text-lg font-bold">
+        Sampah warung
+      </h2>
+      {l.nights_reported === 0 ? (
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Belum ada laporan sisa. Setiap malam setelah tutup, warung mencatat porsi yang tetap tidak laku: dibagikan, jadi pakan,
+          dikompos, atau dibuang.
+        </p>
+      ) : (
+        <div className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border">
+          {l.waste_reduction_pct !== null ? (
+            <p className="text-2xl leading-tight font-extrabold sm:text-3xl">
+              Porsi yang dibuang {wasteChangeText(l.waste_reduction_pct)}
+            </p>
+          ) : (
+            <p className="text-base font-bold">Perbandingan dengan sebelum uji coba belum tersedia.</p>
+          )}
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dibanding sebelum ikut uji coba, dari {l.nights_reported} malam laporan.
+          </p>
+          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+            {LEFTOVER_DESTINATIONS.map((k) => (
+              <li key={k}>
+                <b className="block text-lg font-extrabold tabular-nums">{l[k].toLocaleString("id-ID")}</b>
+                <span className="text-muted-foreground">porsi {LEFTOVER_NAMES[k]}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -98,6 +150,8 @@ export function PilotResultsView() {
               <Figure value={s.unique_buyers.toLocaleString("id-ID")} label="pembeli berbeda" />
             </section>
 
+            <LeftoverSection l={s.leftovers} />
+
             <section aria-labelledby="warung-title" className="mt-8">
               <h2 id="warung-title" className="text-lg font-bold">
                 Per warung
@@ -110,6 +164,11 @@ export function PilotResultsView() {
                         {w.name}
                       </Link>
                       <p className="text-xs text-muted-foreground">Bergabung {dateLabel(w.joined_at)}</p>
+                      {w.waste_reduction_pct !== null && (
+                        <p className="text-xs text-muted-foreground">
+                          Porsi dibuang {wasteChangeText(w.waste_reduction_pct)} ({w.nights_reported} malam laporan)
+                        </p>
+                      )}
                     </div>
                     <p className="shrink-0 text-right text-sm">
                       <b className="font-extrabold tabular-nums">{w.portions_rescued.toLocaleString("id-ID")}</b> porsi
@@ -151,7 +210,21 @@ export function PilotResultsView() {
               diambil tidak dihitung.
             </li>
             <li>Pesanan pemilik warung di warungnya sendiri tidak dihitung.</li>
-            <li>Berat pangan dari berat porsi tiap menu; emisi memakai faktor IPCC 2,5 kg CO₂e per kg pangan.</li>
+            <li>
+              Berat pangan dari berat porsi tiap menu. Emisi memakai faktor 2,5 kg CO₂e per kg pangan, dari{" "}
+              <a href={CO2E_SOURCE.url} className="font-semibold text-primary underline-offset-2 hover:underline" target="_blank" rel="noreferrer">
+                {CO2E_SOURCE.label}
+              </a>
+              .
+            </li>
+            <li>
+              Saat bergabung, pemilik warung memperkirakan berapa porsi biasanya tersisa per malam. Angka ini tidak bisa diubah
+              setelah disimpan.
+            </li>
+            <li>
+              Porsi dibuang turun = 1 − (porsi dibuang ÷ (perkiraan sebelum uji coba × jumlah malam laporan)), hanya dari warung
+              yang mengisi perkiraan. Porsi yang dibagikan, jadi pakan, atau dikompos tidak dihitung sebagai dibuang.
+            </li>
           </ul>
         </section>
       </div>

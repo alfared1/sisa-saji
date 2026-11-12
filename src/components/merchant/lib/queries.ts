@@ -27,6 +27,8 @@ export const merchantKeys = {
   ordersAll: ["merchant", "orders"] as const,
   analytics: (range: number) => ["merchant", "analytics", range] as const,
   insights: ["merchant", "insights"] as const,
+  leftoversAll: ["merchant", "leftovers"] as const,
+  leftovers: (date?: string) => ["merchant", "leftovers", date ?? ""] as const,
 };
 
 /**

@@ -18,6 +18,7 @@ Aturan ini dijaga oleh kode dan test. Mengubah salah satunya berarti mengubah pr
   - 3 pesanan batal atau kedaluwarsa dalam 30 menit membuat checkout baru ditolak sementara (`RATE_LIMITED`).
 - **Pesanan yang tidak diambil.** Pesanan `PAID` atau `READY_FOR_PICKUP` yang belum diambil sampai `pickup_deadline_at` + 30 menit diubah worker menjadi `EXPIRED`. Warung tetap menerima pembayaran tepat sekali, pembeli tidak mendapat kredit dampak (`closeUnclaimedOrders` di `src/server/services/orders/pickup.ts`).
 - **Uji coba lapangan terpisah dari data demo.** Warung yang bergabung dengan `PILOT_INVITE_CODE` (`merchants.is_pilot`) dibayar langsung di tempat: checkout langsung membuat tiket `READY_FOR_PICKUP` dengan `payment_method = BAYAR_DI_WARUNG`, tanpa QRIS, biaya layanan, atau voucher. Porsinya tetap dikunci (`reserved_stock`) sampai warung memverifikasi pengambilan (`commitReservation` saat itu, `paid_at` diisi, saldo dompet tidak ditambah karena uang sudah diterima tunai). Tiket yang dibatalkan atau tidak diambil melepas porsinya lewat `abandonPayAtWarungOrder` di `stock.ts`. `GET /api/v1/stats/pilot` (halaman `/uji-coba`) hanya menghitung pesanan `COMPLETED` di warung uji coba yang dibuat setelah warung bergabung, tanpa pesanan pemilik di warungnya sendiri. `topUpDemoBatches` melewati warung uji coba, dan `seedDatabase` menolak menghapus data uji coba tanpa `allowPilotWipe`. Implementasi: `src/server/services/merchant/pilot.ts`, `orders/checkout.ts`, `orders/pickup.ts`.
+- **Penurunan sampah diukur terhadap angka awal yang tetap.** Saat bergabung, warung mengisi `pilot_baseline_leftover_portions` (perkiraan porsi tersisa per malam sebelum Sisa-Saji); angka ini hanya bisa diisi sekali. Setiap malam warung mencatat ke mana sisa yang tetap tidak laku pergi (`leftover_reports`: dibagikan, pakan ternak atau maggot, kompos, dibuang), untuk tadi malam atau malam ini saja. `/uji-coba` menghitung penurunan = 1 − dibuang ÷ (angka awal × malam laporan), hanya dari laporan sejak tanggal bergabung dan hanya dari warung yang mengisi angka awal. Implementasi: `src/server/services/merchant/leftovers.ts`.
 - **Kode pickup tidak bisa ditebak beruntun.** Setelah 10 kode salah dalam 10 menit, input kode manual warung diblokir sementara (`RATE_LIMITED`). Pemindaian QR (token HMAC) tetap jalan.
 
 ## Konstanta
@@ -29,7 +30,7 @@ Semua angka domain ada di `src/lib/constants.ts`; ubah di sana, jangan menulis a
 | `DEFAULT_SEARCH_RADIUS_M` | 2000 | Radius pencarian default, bisa diperluas ke 5.000 dan 10.000 m |
 | `SURPLUS_WINDOW_START` / `_END` | 20:00 / 23:00 | Jendela surplus utama (WIB) |
 | `DEFAULT_PORTION_WEIGHT_GRAMS` | 200 | Berat satu porsi |
-| `CO2E_PER_KG_FOOD` | 2,5 | Benchmark IPCC: 500 g CO₂e per porsi 200 g |
+| `CO2E_PER_KG_FOOD` | 2,5 | FAO (2013), *Food Wastage Footprint*: 3,3 Gt CO₂e dari 1,3 Gt pangan terbuang; 500 g CO₂e per porsi 200 g |
 | `CO2_KG_PER_TREE_YEAR` | 22,24 | Untuk padanan "setara pohon" |
 | `PLATFORM_COMMISSION_DEFAULT_IDR` | 1500 | Biaya layanan per transaksi berhasil |
 | `MERCHANT_PREMIUM_PRICE_IDR` | 50000 | Langganan bulanan badge "Mitra Terverifikasi" dan prioritas urutan |

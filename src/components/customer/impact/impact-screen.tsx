@@ -131,7 +131,7 @@ function Totals({ d }: { d: ImpactSummary }) {
         </div>
       ))}
       <p className="col-span-2 text-center text-xs text-muted-foreground lg:text-left xl:col-span-4">
-        Dari <b className="text-foreground">{d.completed_orders}</b> pesanan selesai · faktor IPCC 2,5 kg CO₂e per kg pangan
+        Dari <b className="text-foreground">{d.completed_orders}</b> pesanan selesai · faktor FAO 2,5 kg CO₂e per kg pangan
       </p>
     </section>
   );

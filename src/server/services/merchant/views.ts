@@ -31,6 +31,7 @@ export function toMerchantProfile(m: Merchant): MerchantProfile {
     merchant_verified: m.merchantVerified,
     is_pilot: m.isPilot,
     pilot_joined_at: m.pilotJoinedAt ? m.pilotJoinedAt.toISOString() : null,
+    pilot_baseline_leftover_portions: m.pilotBaselineLeftoverPortions,
     subscription_tier: m.subscriptionTier,
     subscription_expires_at: m.subscriptionExpiresAt ? m.subscriptionExpiresAt.toISOString() : null,
     wallet_balance_idr: Number(m.walletBalanceIdr),

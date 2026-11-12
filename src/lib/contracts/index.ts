@@ -170,6 +170,10 @@ export type SessionUser = {
   merchant_slug: string | null;
 };
 export type OtpVerifyResponse = { user: SessionUser; is_new_user: boolean };
+
+/** POST /api/v1/auth/demo: sign in to a seeded demo account (demo deployments only). → OtpVerifyResponse */
+export const DemoLoginBody = z.object({ role: z.enum(["CUSTOMER", "MERCHANT"]) });
+export type DemoLoginBody = z.input<typeof DemoLoginBody>;
 /** GET /api/v1/auth/me — public (user is null when logged out). */
 export type AuthMeResponse = { user: SessionUser | null };
 /** POST /api/v1/auth/logout → { ok: true } */
@@ -222,9 +226,59 @@ export type ImpactSummary = {
   monthly: MonthlyImpact[];
 };
 
-/** POST /api/v1/merchant/pilot — join the field pilot with the team's invite code. → MerchantMeResponse */
-export const PilotJoinBody = z.object({ code: z.string().trim().min(1).max(64) });
+/** Upper bound for any per-night portion count a warung types in. */
+export const MAX_NIGHTLY_PORTIONS = 500;
+const nightlyPortions = z.coerce.number().int().min(0).max(MAX_NIGHTLY_PORTIONS);
+
+/**
+ * POST /api/v1/merchant/pilot: join the field pilot with the team's invite code, stating how
+ * many portions were usually left over per night before Sisa-Saji. → MerchantMeResponse
+ */
+export const PilotJoinBody = z.object({
+  code: z.string().trim().min(1).max(64),
+  baseline_leftover_portions: nightlyPortions,
+});
 export type PilotJoinBody = z.input<typeof PilotJoinBody>;
+
+/** PATCH /api/v1/merchant/pilot: set the baseline once, for a warung that joined without one. → MerchantMeResponse */
+export const PilotBaselineBody = z.object({ baseline_leftover_portions: nightlyPortions });
+export type PilotBaselineBody = z.input<typeof PilotBaselineBody>;
+
+/** Where portions still unsold after closing went. */
+export const LEFTOVER_DESTINATIONS = ["donated", "animal_feed", "compost", "discarded"] as const;
+export type LeftoverDestination = (typeof LEFTOVER_DESTINATIONS)[number];
+export type LeftoverCounts = Record<LeftoverDestination, number>;
+
+/** PUT /api/v1/merchant/leftovers: record (or correct) one night's leftovers. → LeftoverReportView */
+export const LeftoverReportBody = z.object({
+  report_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  donated: nightlyPortions,
+  animal_feed: nightlyPortions,
+  compost: nightlyPortions,
+  discarded: nightlyPortions,
+});
+export type LeftoverReportBody = z.input<typeof LeftoverReportBody>;
+
+/** GET /api/v1/merchant/leftovers?date=YYYY-MM-DD */
+export const LeftoverReportQuery = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+
+export type LeftoverReportView = {
+  /** WIB night the report is about. Defaults to last night before 12.00 WIB, tonight after. */
+  report_date: string;
+  /** Nights that can still be reported or corrected (oldest first). */
+  editable_dates: string[];
+  /** Portions of that night's surplus batches nobody bought in the app. */
+  unsold_in_app: number;
+  report: (LeftoverCounts & { updated_at: string }) | null;
+  /** Counts toward the public pilot results. */
+  is_pilot: boolean;
+  baseline_leftover_portions: number | null;
+};
 
 /**
  * GET /api/v1/stats/pilot — public. Real results of the field pilot only: completed
@@ -244,6 +298,18 @@ export type PilotStats = {
   /** Recovery revenue the warung collected for food that would have been thrown away. */
   warung_revenue_idr: number;
   unique_buyers: number;
+  /**
+   * Nightly leftover reports from pilot warung, on or after the night they joined. Portions
+   * that were given away, fed to animals or composted still did not end up as waste.
+   */
+  leftovers: LeftoverCounts & {
+    nights_reported: number;
+    /**
+     * Fewer portions thrown away than before Sisa-Saji, in percent: 1 − discarded ÷
+     * (baseline × nights reported), over warung that gave a baseline. Null until one has.
+     */
+    waste_reduction_pct: number | null;
+  };
   warung: {
     name: string;
     slug: string;
@@ -251,6 +317,12 @@ export type PilotStats = {
     orders_completed: number;
     portions_rescued: number;
     food_saved_grams: number;
+    /** Owner's estimate of portions left over per night before joining. */
+    baseline_leftover_portions: number | null;
+    nights_reported: number;
+    /** Average portions thrown away per reported night. */
+    discarded_per_night: number | null;
+    waste_reduction_pct: number | null;
   }[];
   /** Completed orders per WIB day, oldest first. */
   daily: { date: string; portions_rescued: number; food_saved_grams: number }[];
@@ -640,6 +712,7 @@ export type MerchantProfile = {
   /** Joined the field pilot with the invite code. */
   is_pilot: boolean;
   pilot_joined_at: string | null;
+  pilot_baseline_leftover_portions: number | null;
   subscription_tier: MerchantTier;
   subscription_expires_at: string | null;
   wallet_balance_idr: number;

@@ -169,6 +169,12 @@ export const merchants = pgTable(
      */
     isPilot: boolean().notNull().default(false),
     pilotJoinedAt: timestamp({ withTimezone: true }),
+    /**
+     * Owner's estimate, given when joining the pilot, of how many portions were usually
+     * left over per night before Sisa-Saji. Set once and never changed, so the waste
+     * reduction in the pilot results compares against a fixed baseline.
+     */
+    pilotBaselineLeftoverPortions: integer(),
     bankCode: varchar({ length: 30 }),
     bankAccountNumber: varchar({ length: 50 }),
     bankAccountHolder: varchar({ length: 120 }),
@@ -423,6 +429,40 @@ export const merchantSurplusPredictions = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* 9b. leftover_reports                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What happened to the portions still unsold after the warung closed, one row per warung
+ * per WIB night. Together with merchants.pilot_baseline_leftover_portions this measures
+ * how much food a pilot warung still throws away.
+ */
+export const leftoverReports = pgTable(
+  "leftover_reports",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    reportDate: date({ mode: "string" }).notNull(),
+    /** Given away: staff, neighbours, a mosque or orphanage. */
+    donatedPortions: integer().notNull().default(0),
+    /** Animal feed or black soldier fly (maggot) larvae. */
+    animalFeedPortions: integer().notNull().default(0),
+    compostPortions: integer().notNull().default(0),
+    discardedPortions: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    unique("uq_leftover_reports_merchant_date").on(t.merchantId, t.reportDate),
+    check(
+      "leftover_reports_non_negative",
+      sql`${t.donatedPortions} >= 0 AND ${t.animalFeedPortions} >= 0 AND ${t.compostPortions} >= 0 AND ${t.discardedPortions} >= 0`,
+    ),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* 10. customer_merchant_subscriptions                                 */
 /* ------------------------------------------------------------------ */
 
@@ -577,3 +617,4 @@ export type Menu = typeof menus.$inferSelect;
 export type SurplusBatch = typeof surplusBatches.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
+export type LeftoverReport = typeof leftoverReports.$inferSelect;

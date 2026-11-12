@@ -13,6 +13,7 @@ import { useMerchantLive } from "../lib/use-merchant-live";
 import { MerchantPage, StatTile } from "../ui";
 import { ActiveSurplusBatchList } from "./active-batch-list";
 import { AiPredictionAlertCard } from "./ai-prediction-card";
+import { LeftoverReportCard } from "./leftover-report-card";
 import { IncomingPickupQueue } from "./pickup-queue";
 import { StoreStatusHeader, greetingFor } from "./store-status-header";
 
@@ -91,6 +92,7 @@ export function MerchantDashboardView() {
         <div className="min-w-0 space-y-4 lg:space-y-6">
           <AiPredictionAlertCard prediction={d.ai_prediction} publishedMenuIds={publishedMenuIds} />
           <ActiveSurplusBatchList batches={d.active_batches} />
+          <LeftoverReportCard />
         </div>
         <IncomingPickupQueue orders={d.pending_pickups} className="lg:sticky lg:top-6" />
       </div>

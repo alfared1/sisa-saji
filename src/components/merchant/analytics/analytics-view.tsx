@@ -239,7 +239,7 @@ export function MerchantAnalyticsView() {
               <StatTile icon={TargetIcon} label="Sell-through" value={percent(a.sell_through_rate)} hint={`${a.portions_sold} dari ${a.portions_published} porsi`} />
               <StatTile icon={Trash2Icon} label="Porsi terbuang" value={a.portions_wasted} hint="tidak laku sampai tutup" tint="urgent" />
               <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(a.food_saved_grams)} hint="dari pesanan selesai" tint="brand" />
-              <StatTile icon={CloudIcon} label="CO₂e dicegah" value={formatKg(a.co2_avoided_grams)} hint="faktor IPCC 2,5×" tint="brand" />
+              <StatTile icon={CloudIcon} label="CO₂e dicegah" value={formatKg(a.co2_avoided_grams)} hint="faktor FAO 2,5×" tint="brand" />
             </div>
           </div>
 

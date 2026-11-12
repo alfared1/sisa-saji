@@ -18,6 +18,7 @@ import type { Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
 import { DEMO_VOUCHERS, PAYMENT_TTL_SECONDS } from "@/lib/constants";
 import type { CheckoutBody, OrderDetail } from "@/lib/contracts";
+import { isDemoAccount } from "@/lib/demo-accounts";
 import { createPickupToken, generatePickupCode } from "@/lib/pickup-token";
 import { computeOrderTotals, type OrderLineInput } from "@/lib/pricing/order-totals";
 import { wibDate } from "@/lib/time";
@@ -237,6 +238,15 @@ export async function checkout(
     }
     if (payAtWarung && voucher) {
       throw new ApiError("VOUCHER_INVALID", "Voucher belum berlaku di warung uji coba. Pembayaran langsung ke warung.");
+    }
+    if (payAtWarung) {
+      const [buyer] = await tx.select({ email: users.email, phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, args.userId));
+      if (buyer && isDemoAccount(buyer)) {
+        throw new ApiError(
+          "FORBIDDEN",
+          "Ini warung sungguhan yang ikut uji coba. Untuk memesan di sini, masuk dengan nomor HP atau emailmu sendiri.",
+        );
+      }
     }
 
     const requested = new Map<string, number>();

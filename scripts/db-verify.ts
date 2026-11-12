@@ -101,7 +101,7 @@ async function main() {
   const co2 = await one<{ n: number }>(sql`
     SELECT COUNT(*)::int AS n FROM orders
     WHERE total_co2_avoided_grams <> ROUND(total_food_saved_grams * 2.5)`);
-  check("CO2e = food × 2.5 (IPCC)", co2.n === 0);
+  check("CO2e = food × 2.5 (FAO 2013)", co2.n === 0);
 
   const impactNonCompleted = await one<{ n: number }>(sql`
     SELECT COUNT(*)::int AS n FROM orders WHERE status <> 'COMPLETED' AND total_food_saved_grams <> 0`);

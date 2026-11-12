@@ -5,7 +5,13 @@ import {
   DEFAULT_PORTION_WEIGHT_GRAMS,
 } from "./constants";
 
-/** grams of food saved → grams of CO2e avoided (IPCC factor 2.5). */
+/** Where CO2E_PER_KG_FOOD comes from, for the "cara menghitung" notes in the UI. */
+export const CO2E_SOURCE = {
+  label: "FAO (2013), Food Wastage Footprint",
+  url: "https://www.fao.org/3/i3347e/i3347e.pdf",
+} as const;
+
+/** grams of food saved → grams of CO2e avoided (FAO factor 2.5). */
 export function co2GramsFromFoodGrams(foodGrams: number): number {
   return Math.round(foodGrams * CO2E_PER_KG_FOOD);
 }
