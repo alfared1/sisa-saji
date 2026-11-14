@@ -6,13 +6,14 @@
  * then the nationwide pin, then the radius pin.
  */
 import Link from "next/link";
-import { BadgeCheckIcon, MoonStarIcon, StarIcon, StoreIcon, UtensilsCrossedIcon } from "lucide-react";
+import { BadgeCheckIcon, MoonStarIcon, StoreIcon, UtensilsCrossedIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { localTimeZone } from "@/lib/campuses";
 import type { BatchCard, MapPin, MerchantSummary, WarungMapPin } from "@/lib/contracts";
+import { NO_TRUST_SIGNALS } from "@/lib/trust-signals";
 import { cn } from "@/lib/utils";
+import { RatingLine } from "../bits";
 import { FoodThumb } from "../food-thumb";
-import { formatRating } from "../lib/format";
 import { MerchantCard } from "../merchant-card";
 import { merchantCardFromWarungPin, previewIsIdle, previewSlug, type PreviewSources } from "./map-scope";
 
@@ -27,6 +28,8 @@ export function merchantFromPin(pin: MapPin) {
     is_verified: pin.is_verified,
     rating_avg: 0,
     total_reviews: 0,
+    // A radius pin carries no review signals; nothing is claimed until the warung loads.
+    trust: NO_TRUST_SIGNALS,
     logo_url: null,
     max_discount_pct: pin.max_discount_pct,
     min_price_idr: 0,
@@ -87,10 +90,8 @@ export function IdleWarungPreview({ warung }: { warung: WarungMapPin }) {
             <BadgeCheckIcon className="size-4 shrink-0 text-brand-strong" aria-label="Mitra Terverifikasi" role="img" />
           )}
         </div>
-        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-          <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
-          <span className="font-semibold text-foreground">{formatRating(warung.rating_avg)}</span>
-          <span>({warung.total_reviews})</span>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          <RatingLine avg={warung.rating_avg} count={warung.total_reviews} />
         </p>
         <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
           <MoonStarIcon className="size-3.5" aria-hidden />

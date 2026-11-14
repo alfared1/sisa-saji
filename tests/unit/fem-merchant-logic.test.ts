@@ -26,9 +26,14 @@ import {
   stockSegments,
   stripEmpty,
   suggestMinPrice,
+  menuPatch,
+  sameItems,
+  type MenuFormValues,
 } from "@/components/merchant/lib/logic";
+import { fitWithin, pickEncoding } from "@/components/merchant/lib/compress-photo";
 import { indonesianZodError } from "@/components/merchant/lib/zod-id";
-import { MenuCreateBody, MerchantOnboardingBody, type MerchantBatchView } from "@/lib/contracts";
+import { BATCH_PHOTO_MAX_BYTES, BATCH_PHOTO_TARGET_BYTES } from "@/lib/constants";
+import { MenuCreateBody, MerchantOnboardingBody, type MenuView, type MerchantBatchView } from "@/lib/contracts";
 import { MINUTE_MS } from "@/lib/time";
 
 // 2026-11-08 18:00 WIB (11:00Z)
@@ -227,6 +232,77 @@ describe("contract schemas with Indonesian messages", () => {
       opts,
     );
     expect(r.error?.issues.find((i) => i.path[0] === "lat")?.message).toBe("Taruh pin lokasi warung di peta");
+  });
+});
+
+describe("menu contents and lauk (menu form)", () => {
+  const before: MenuView = {
+    id: "m1",
+    menu_name: "Nasi Rames",
+    category: "MAKANAN_BERAT",
+    description: null,
+    image_url: null,
+    original_price_idr: 20000,
+    min_recovery_price_idr: 10000,
+    portion_weight_grams: 200,
+    contents: ["Nasi putih", "Sayur asem"],
+    lauk_options: ["Ayam bakar", "Telur balado"],
+    is_active: true,
+  };
+  const values = (over: Partial<MenuFormValues> = {}): MenuFormValues => ({
+    menu_name: before.menu_name,
+    category: before.category,
+    original_price_idr: before.original_price_idr,
+    min_recovery_price_idr: before.min_recovery_price_idr,
+    portion_weight_grams: before.portion_weight_grams,
+    contents: [...before.contents],
+    lauk_options: [...before.lauk_options],
+    ...over,
+  });
+
+  it("compares lists by entries and order", () => {
+    expect(sameItems(["a", "b"], ["a", "b"])).toBe(true);
+    expect(sameItems(["a", "b"], ["b", "a"])).toBe(false);
+    expect(sameItems(["a"], ["a", "b"])).toBe(false);
+    expect(sameItems([], [])).toBe(true);
+  });
+
+  it("sends a list only when it changed (new copies of equal lists are no change)", () => {
+    expect(menuPatch(before, values())).toEqual({});
+    expect(menuPatch(before, values({ contents: ["Nasi putih", "Sayur asem", "Sambal"] }))).toEqual({
+      contents: ["Nasi putih", "Sayur asem", "Sambal"],
+    });
+    expect(menuPatch(before, values({ lauk_options: ["Telur balado", "Ayam bakar"] }))).toEqual({
+      lauk_options: ["Telur balado", "Ayam bakar"],
+    });
+    expect(menuPatch(before, values({ lauk_options: [] }))).toEqual({ lauk_options: [] });
+  });
+
+  it("a new menu needs at least one contents item or lauk option, and no surprise menus", () => {
+    const base = { menu_name: "Nasi Rames", original_price_idr: 20000, min_recovery_price_idr: 10000 };
+    expect(MenuCreateBody.safeParse(base).success).toBe(false);
+    expect(MenuCreateBody.safeParse({ ...base, contents: ["Nasi putih"] }).success).toBe(true);
+    expect(MenuCreateBody.safeParse({ ...base, lauk_options: ["Ayam bakar"] }).success).toBe(true);
+    expect(MenuCreateBody.safeParse({ ...base, contents: ["Nasi"], category: "MYSTERY_BAG" }).success).toBe(false);
+    expect(MenuCreateBody.safeParse({ ...base, contents: ["Nasi", "nasi"] }).success).toBe(false);
+  });
+});
+
+describe("photo compression size math", () => {
+  it("fits the long edge and keeps the aspect ratio, never upscaling", () => {
+    expect(fitWithin(4000, 3000, 1280)).toEqual({ width: 1280, height: 960 });
+    expect(fitWithin(3000, 4000, 1280)).toEqual({ width: 960, height: 1280 });
+    expect(fitWithin(800, 600, 1280)).toEqual({ width: 800, height: 600 });
+    expect(fitWithin(10000, 1, 1280)).toEqual({ width: 1280, height: 1 });
+  });
+
+  it("keeps the first quality under the target, else the smallest under the hard limit", () => {
+    const kb = (n: number) => ({ size: n * 1024 });
+    expect(pickEncoding([kb(300), kb(240), kb(200)])).toEqual(kb(240));
+    expect(pickEncoding([kb(500), kb(380), kb(320)])).toEqual(kb(320));
+    expect(pickEncoding([kb(900), kb(700)])).toBeNull();
+    expect(pickEncoding([{ size: BATCH_PHOTO_TARGET_BYTES }])).toEqual({ size: BATCH_PHOTO_TARGET_BYTES });
+    expect(pickEncoding([{ size: BATCH_PHOTO_MAX_BYTES + 1 }])).toBeNull();
   });
 });
 

@@ -41,6 +41,7 @@ import { LoginCta, SectionHeader, TabTitle } from "../bits";
 import { useImpactSummary } from "../impact-card";
 import { badgeLabel, formatDecimal } from "../lib/format";
 import { customerKeys } from "../lib/queries";
+import { HungerAlertStatus } from "../notifications/hunger-alert-banner";
 import { MonthlyImpactChart } from "./monthly-chart";
 
 const TIER_ICONS = [SproutIcon, AwardIcon, TrophyIcon] as const;
@@ -155,8 +156,8 @@ export function PushOptIn() {
           {push.permission === "denied"
             ? "Notifikasi diblokir. Izinkan lewat pengaturan browser."
             : on
-              ? "Kami kabari saat warung favoritmu membuka surplus."
-              : "Dapat kabar saat ada surplus atau perkiraan porsi sisa di warung favoritmu."}
+              ? "Kami kabari saat warung favorit atau warung dekat kos buka diskon malam."
+              : "Kabari aku saat warung favorit atau warung dekat kos buka diskon malam."}
         </p>
       </div>
       {!on && push.permission !== "denied" && (
@@ -363,6 +364,7 @@ export function ImpactScreen() {
             </div>
             <div className="contents lg:sticky lg:top-20 lg:col-span-5 lg:flex lg:flex-col lg:gap-5 xl:col-span-4">
               <PushOptIn />
+              <HungerAlertStatus />
               <PredictiveSubscriptionList />
             </div>
           </>

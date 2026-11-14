@@ -1,6 +1,7 @@
 /**
  * Checkout: money math, stock reservation (incl. a 10-way race for 3 portions),
- * merchant/batch/voucher rules and the simulated QRIS payload.
+ * merchant/batch/voucher rules, the simulated QRIS payload, "bayar di warung" at a regular
+ * (non-pilot) warung, and the lauk chosen per order line.
  */
 import { randomInt } from "node:crypto";
 import { asc, eq } from "drizzle-orm";
@@ -8,7 +9,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
-import { PAYMENT_TTL_SECONDS, PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/constants";
+import {
+  PAY_AT_WARUNG_HOLD_MINUTES,
+  PAY_AT_WARUNG_MAX_PORTIONS,
+  PAYMENT_TTL_SECONDS,
+  PLATFORM_COMMISSION_DEFAULT_IDR,
+} from "@/lib/constants";
 import { CheckoutBody } from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
@@ -49,7 +55,14 @@ async function newCustomer(name = "Pembeli Uji") {
 /** Inserts an ACTIVE batch for the merchant's first menu at exactly 50% off. */
 async function newBatch(
   merchantId: string,
-  opts: { stock?: number; endInMin?: number; status?: "ACTIVE" | "EXPIRED"; menuIndex?: number } = {},
+  opts: {
+    stock?: number;
+    endInMin?: number;
+    status?: "ACTIVE" | "EXPIRED";
+    menuIndex?: number;
+    /** Sets the menu's lauk options and the batch's lauk still available tonight. */
+    lauk?: { options: string[]; available: string[] };
+  } = {},
 ) {
   // Cheapest first (Teh Euis: Rp 17.000, Rp 18.000, Rp 20.000) so the voucher math is deterministic.
   const menuList = await db
@@ -57,7 +70,10 @@ async function newBatch(
     .from(menus)
     .where(eq(menus.merchantId, merchantId))
     .orderBy(asc(menus.originalPriceIdr), asc(menus.id));
-  const menu = menuList[opts.menuIndex ?? 0];
+  let menu = menuList[opts.menuIndex ?? 0];
+  if (opts.lauk) {
+    [menu] = await db.update(menus).set({ laukOptions: opts.lauk.options }).where(eq(menus.id, menu.id)).returning();
+  }
   const now = Date.now();
   const stock = opts.stock ?? 5;
   const [b] = await db
@@ -74,6 +90,7 @@ async function newBatch(
       pickupStartTime: new Date(now - 60 * 60_000),
       pickupEndTime: new Date(now + (opts.endInMin ?? 90) * 60_000),
       status: opts.status ?? "ACTIVE",
+      laukAvailable: opts.lauk?.available ?? [],
     })
     .returning();
   return { batch: b, menu };
@@ -444,5 +461,200 @@ describe("POST /orders/checkout — fair use (no stock hoarding)", () => {
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const pending = await db.select().from(orders).where(eq(orders.customerId, customer.id));
     expect(pending).toHaveLength(1);
+  });
+});
+
+describe("POST /orders/checkout — bayar di warung at a regular warung", () => {
+  it("is a ticket right away: READY_FOR_PICKUP, no QRIS, fee 0, portions held at most 30 minutes", async () => {
+    expect(demoMerchant.isPilot).toBe(false);
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 5, endInMin: 120 });
+    const now = new Date();
+    const o = await run(
+      customer.id,
+      { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 2 }], payment_method: "BAYAR_DI_WARUNG" },
+      now,
+    );
+    expect(o).toMatchObject({
+      status: "READY_FOR_PICKUP",
+      payment_method: "BAYAR_DI_WARUNG",
+      platform_commission_idr: 0,
+      total_customer_paid_idr: o.subtotal_recovery_idr,
+      qris_string: null,
+      paid_at: null,
+      merchant: { id: demoMerchant.id, is_pilot: false },
+    });
+    expect(o.pickup_code).toMatch(/^\d{4}$/);
+    expect(Date.parse(o.pickup_deadline_at)).toBe(now.getTime() + PAY_AT_WARUNG_HOLD_MINUTES * 60_000);
+    expect(o.payment_expires_at).toBe(o.pickup_deadline_at);
+    const [row] = await db.select().from(orders).where(eq(orders.id, o.id));
+    expect(row.paymentGatewayRef).toBeNull();
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 3, reservedStock: 2 });
+  });
+
+  it("never holds past the batch's pickup end", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { endInMin: 20 });
+    const o = await run(customer.id, {
+      merchant_id: demoMerchant.id,
+      items: [{ batch_id: batch.id, quantity: 1 }],
+      payment_method: "BAYAR_DI_WARUNG",
+    });
+    expect(o.pickup_deadline_at).toBe(batch.pickupEndTime.toISOString());
+  });
+
+  it("refuses a voucher with cash, and caps a cash ticket at the portion limit (nothing reserved)", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 10 });
+    const err = await expectCode(
+      run(customer.id, {
+        merchant_id: demoMerchant.id,
+        items: [{ batch_id: batch.id, quantity: 2 }],
+        payment_method: "BAYAR_DI_WARUNG",
+        voucher_code: "HEMAT2K",
+      }),
+      "VOUCHER_INVALID",
+    );
+    expect(err.message).toBe("Voucher hanya untuk bayar lewat QRIS atau dompet digital.");
+    const cap = await expectCode(
+      run(customer.id, {
+        merchant_id: demoMerchant.id,
+        items: [{ batch_id: batch.id, quantity: PAY_AT_WARUNG_MAX_PORTIONS + 1 }],
+        payment_method: "BAYAR_DI_WARUNG",
+      }),
+      "VALIDATION_ERROR",
+    );
+    expect(cap.message).toContain(`${PAY_AT_WARUNG_MAX_PORTIONS} porsi`);
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 10, reservedStock: 0 });
+  });
+
+  it("a QRIS checkout first frees portions on another buyer's lapsed cash ticket", async () => {
+    const t0 = new Date();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 3, endInMin: 120 });
+    const first = await run(
+      (await newCustomer()).id,
+      { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 3 }], payment_method: "BAYAR_DI_WARUNG" },
+      t0,
+    );
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 0, reservedStock: 3 });
+
+    const later = new Date(t0.getTime() + (PAY_AT_WARUNG_HOLD_MINUTES + 1) * 60_000);
+    const second = await run(
+      (await newCustomer()).id,
+      { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 2 }] },
+      later,
+    );
+    expect(second.status).toBe("PENDING_PAYMENT");
+    const [lapsed] = await db.select().from(orders).where(eq(orders.id, first.id));
+    expect(lapsed.status).toBe("EXPIRED");
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 1, reservedStock: 2 });
+  });
+});
+
+describe("POST /orders/checkout — lauk per line", () => {
+  const LAUK = { options: ["Ayam goreng", "Pepes ikan mas", "Tahu tempe bacem"], available: ["Ayam goreng", "Pepes ikan mas"] };
+
+  it("snapshots the chosen lauk in the stored casing; an omitted lauk stays null", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6, lauk: LAUK });
+    const o = await run(customer.id, {
+      merchant_id: demoMerchant.id,
+      items: [{ batch_id: batch.id, quantity: 1, lauk: "  ayam   GORENG " }],
+    });
+    expect(o.items).toEqual([expect.objectContaining({ batch_id: batch.id, quantity: 1, lauk: "Ayam goreng" })]);
+    const rows = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id));
+    expect(rows.map((r) => r.laukChoice)).toEqual(["Ayam goreng"]);
+
+    const plain = await run((await newCustomer()).id, {
+      merchant_id: demoMerchant.id,
+      items: [{ batch_id: batch.id, quantity: 1 }],
+    });
+    expect(plain.items).toEqual([expect.objectContaining({ lauk: null })]);
+  });
+
+  it("refuses a sold-out or unknown lauk and rolls the reservation back", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6, lauk: LAUK });
+    const soldOut = await expectCode(
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1, lauk: "Tahu tempe bacem" }] }),
+      "VALIDATION_ERROR",
+    );
+    expect(soldOut.message).toBe("Lauk Tahu tempe bacem sudah habis. Pilih lauk lain, ya.");
+    expect(soldOut.details).toEqual([
+      expect.objectContaining({ path: "items", batch_id: batch.id, lauk: "Tahu tempe bacem", lauk_available: LAUK.available }),
+    ]);
+    const unknown = await expectCode(
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1, lauk: "Rendang" }] }),
+      "VALIDATION_ERROR",
+    );
+    expect(unknown.message).toContain("tidak ada di menu ini");
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
+    expect(await db.select().from(orders).where(eq(orders.customerId, customer.id))).toHaveLength(0);
+  });
+
+  it("one batch with two lauk: two order lines, one reservation of the sum", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6, lauk: LAUK });
+    const o = await run(customer.id, {
+      merchant_id: demoMerchant.id,
+      items: [
+        { batch_id: batch.id, quantity: 1, lauk: "Ayam goreng" },
+        { batch_id: batch.id, quantity: 1, lauk: "Pepes ikan mas" },
+        { batch_id: batch.id, quantity: 1, lauk: "ayam goreng" },
+      ],
+    });
+    expect(o.items).toHaveLength(2);
+    expect(o.items.find((i) => i.lauk === "Ayam goreng")?.quantity).toBe(2);
+    expect(o.items.find((i) => i.lauk === "Pepes ikan mas")?.quantity).toBe(1);
+    expect(o.subtotal_recovery_idr).toBe(3 * batch.currentSellingPriceIdr);
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 3, reservedStock: 3 });
+  });
+
+  it("the per-buyer cap and the cash ticket cap sum the lauk lines of a batch", async () => {
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6, lauk: LAUK }); // cap: 3 per buyer
+    expect(maxPortionsPerCustomer(6)).toBe(3);
+    await expectCode(
+      run((await newCustomer()).id, {
+        merchant_id: demoMerchant.id,
+        items: [
+          { batch_id: batch.id, quantity: 2, lauk: "Ayam goreng" },
+          { batch_id: batch.id, quantity: 2, lauk: "Pepes ikan mas" },
+        ],
+      }),
+      "VALIDATION_ERROR",
+    );
+    const cash = await expectCode(
+      run((await newCustomer()).id, {
+        merchant_id: demoMerchant.id,
+        items: [
+          { batch_id: batch.id, quantity: 2, lauk: "Ayam goreng" },
+          { batch_id: batch.id, quantity: 2, lauk: "Pepes ikan mas" },
+        ],
+        payment_method: "BAYAR_DI_WARUNG",
+      }),
+      "VALIDATION_ERROR",
+    );
+    expect(cash.details).toEqual([expect.objectContaining({ batch_id: batch.id, max_quantity: PAY_AT_WARUNG_MAX_PORTIONS })]);
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
+  });
+
+  it("a double tap with the same lauk returns the same order; another lauk conflicts", async () => {
+    const customer = await newCustomer();
+    const { batch } = await newBatch(demoMerchant.id, { stock: 6, lauk: LAUK });
+    const first = await run(customer.id, {
+      merchant_id: demoMerchant.id,
+      items: [{ batch_id: batch.id, quantity: 1, lauk: "Ayam goreng" }],
+    });
+    const again = await run(customer.id, {
+      merchant_id: demoMerchant.id,
+      items: [{ batch_id: batch.id, quantity: 1, lauk: "AYAM GORENG" }],
+    });
+    expect(again.id).toBe(first.id);
+    const err = await expectCode(
+      run(customer.id, { merchant_id: demoMerchant.id, items: [{ batch_id: batch.id, quantity: 1, lauk: "Pepes ikan mas" }] }),
+      "CONFLICT",
+    );
+    expect(err.details).toMatchObject({ order_id: first.id });
+    expect(await batchRow(batch.id)).toMatchObject({ availableStock: 5, reservedStock: 1 });
   });
 });

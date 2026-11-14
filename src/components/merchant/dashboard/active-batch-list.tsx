@@ -4,26 +4,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  GiftIcon,
-  MegaphoneIcon,
-  MinusIcon,
-  PackageOpenIcon,
-  PlusIcon,
-  TrendingUpIcon,
-  XCircleIcon,
-  ZapIcon,
-} from "lucide-react";
+import { MegaphoneIcon, MinusIcon, PackageOpenIcon, PlusIcon, Trash2Icon, TrendingUpIcon, XCircleIcon, ZapIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { EmptyState } from "@/components/common/empty-state";
 import { errorMessage } from "@/components/common/error-state";
 import { PriceTag } from "@/components/common/price-tag";
 import { Switch } from "@/components/ui/switch";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
-import type { BatchResponse, MerchantBatchView, MerchantDashboard } from "@/lib/contracts";
+import type { BatchPatchBody, BatchResponse, MerchantBatchView, MerchantDashboard } from "@/lib/contracts";
+import { DEMO_MAX_BATCH_STOCK } from "@/lib/demo-accounts";
 import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { LaukToggles } from "../common/lauk-toggles";
+import { PhotoFileButton, photoAudienceText } from "../common/photo-file-button";
+import { photoVisibilityText, useBatchPhotoMutations } from "../lib/batch-photo";
 import { applyStockDelta, escalationLabel, percent, stockSegments, STOCK_MAX } from "../lib/logic";
 import { merchantKeys } from "../lib/queries";
 
@@ -85,7 +81,33 @@ function useBatchMutations() {
     onSettled: () => void qc.invalidateQueries({ queryKey: merchantKeys.dashboard }),
   });
 
-  return { stock, toggleAuto, cancel };
+  // Tonight's lauk and the portion promise: optimistic, rolled back on error.
+  const tonight = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Pick<BatchPatchBody, "lauk_available" | "full_portion"> }) =>
+      api.patch<BatchResponse>(`/merchant/surplus/${id}`, body),
+    onMutate: async ({ id, body }) => {
+      await qc.cancelQueries({ queryKey: merchantKeys.dashboard });
+      const prev = qc.getQueryData<MerchantDashboard>(merchantKeys.dashboard);
+      qc.setQueryData<MerchantDashboard>(merchantKeys.dashboard, (old) =>
+        patchBatchInCache(old, id, (b) => ({
+          ...b,
+          lauk_available: body.lauk_available ?? b.lauk_available,
+          full_portion: body.full_portion ?? b.full_portion,
+        })),
+      );
+      return { prev };
+    },
+    onSuccess: (res) => {
+      qc.setQueryData<MerchantDashboard>(merchantKeys.dashboard, (old) => patchBatchInCache(old, res.batch.id, () => res.batch));
+    },
+    onError: (err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(merchantKeys.dashboard, ctx.prev);
+      toast.error(errorMessage(err, "Gagal menyimpan perubahan."));
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: merchantKeys.dashboard }),
+  });
+
+  return { stock, toggleAuto, cancel, tonight };
 }
 
 function StatusPill({ status, startIso }: { status: MerchantBatchView["status"]; startIso: string }) {
@@ -135,29 +157,165 @@ export function StockBar({ batch }: { batch: MerchantBatchView }) {
   );
 }
 
-function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeof useBatchMutations> }) {
+/** Tonight's photo of the batch, or a neutral tile; a photo that stops loading falls back to the tile. */
+function BatchThumb({ batch }: { batch: MerchantBatchView }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const url = batch.photo && batch.photo.url !== failedUrl ? batch.photo.url : null;
+  if (url) {
+    return (
+      // Served by the API with a visibility check on every read; a plain <img> avoids next/image config.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt={`Foto etalase ${batch.menu_name}`}
+        onError={() => setFailedUrl(url)}
+        className="size-14 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+      />
+    );
+  }
+  return (
+    <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-2xl bg-muted text-muted-foreground" aria-hidden>
+      <PackageOpenIcon className="size-5" />
+    </span>
+  );
+}
+
+/** "Tambah foto" / "Ganti foto" / "Hapus foto", with who sees it and the uploads left. */
+function BatchPhotoControls({ batch, isDemo, isPilot }: { batch: MerchantBatchView; isDemo: boolean; isPilot: boolean }) {
+  const { upload, remove } = useBatchPhotoMutations();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const left = batch.photo_uploads_left;
+
+  const onPicked = (jpeg: Blob) =>
+    upload.mutate(
+      { batchId: batch.id, jpeg },
+      {
+        onSuccess: (res) =>
+          toast.success(res.photo ? `Foto terunggah pukul ${formatClockId(res.photo.uploaded_at)}` : "Foto terunggah", {
+            id: `photo-${batch.id}`,
+          }),
+        onError: (err) => toast.error(errorMessage(err, "Gagal mengunggah foto."), { id: `photo-${batch.id}` }),
+      },
+    );
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <PhotoFileButton onPicked={onPicked} busy={upload.isPending} disabled={left <= 0} className="h-10 text-xs">
+          {upload.isPending ? "Mengunggah…" : batch.photo ? "Ganti foto" : "Tambah foto"}
+        </PhotoFileButton>
+        {batch.photo && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-muted-foreground outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <Trash2Icon className="size-4" aria-hidden /> Hapus foto
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        {batch.photo ? photoVisibilityText(batch.photo) : photoAudienceText({ isDemo, isPilot })}{" "}
+        {left <= 0 ? "Batas ganti foto untuk batch ini sudah habis." : `Sisa ${left} kali unggah untuk batch ini.`}
+      </p>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        destructive
+        icon={<Trash2Icon className="size-7" />}
+        title="Hapus foto etalase?"
+        description="Foto langsung hilang dari listing. Kesempatan unggah yang sudah dipakai tidak kembali."
+        confirmLabel="Ya, hapus"
+        cancelLabel="Tidak"
+        loading={remove.isPending}
+        onConfirm={() =>
+          remove.mutate(batch.id, {
+            onError: (err) => toast.error(errorMessage(err, "Gagal menghapus foto.")),
+            onSettled: () => setConfirmDelete(false),
+          })
+        }
+      />
+    </div>
+  );
+}
+
+/** Tonight's lauk, the portion promise and the photo, while buyers can still order. */
+function BatchTonight({
+  batch,
+  m,
+  isDemo,
+  isPilot,
+}: {
+  batch: MerchantBatchView;
+  m: ReturnType<typeof useBatchMutations>;
+  isDemo: boolean;
+  isPilot: boolean;
+}) {
+  const laukHeading = `lauk-${batch.id}`;
+  return (
+    <div className="mt-4 space-y-4 border-t border-border pt-4">
+      {batch.lauk_options.length > 0 && (
+        <div>
+          <h4 id={laukHeading} className="mb-2 text-xs font-semibold">
+            Lauk yang masih ada
+          </h4>
+          <LaukToggles
+            options={batch.lauk_options}
+            value={batch.lauk_available}
+            onChange={(lauk) => m.tonight.mutate({ id: batch.id, body: { lauk_available: lauk } })}
+            labelledBy={laukHeading}
+            size="sm"
+          />
+        </div>
+      )}
+      <label className="flex cursor-pointer items-center justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold">Porsi normal</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {batch.full_portion ? "Porsi sama dengan biasa." : "Pembeli melihat: porsi lebih kecil dari biasa."}
+          </span>
+        </span>
+        <Switch
+          checked={batch.full_portion}
+          onCheckedChange={(v) => m.tonight.mutate({ id: batch.id, body: { full_portion: v } })}
+          aria-label={`Porsi normal ${batch.menu_name}`}
+        />
+      </label>
+      <BatchPhotoControls batch={batch} isDemo={isDemo} isPilot={isPilot} />
+    </div>
+  );
+}
+
+function BatchCard({
+  batch,
+  m,
+  isDemo,
+  isPilot,
+}: {
+  batch: MerchantBatchView;
+  m: ReturnType<typeof useBatchMutations>;
+  isDemo: boolean;
+  isPilot: boolean;
+}) {
   const [confirm, setConfirm] = useState(false);
   const closed = batch.status === "EXPIRED" || batch.status === "CANCELLED";
   const esc = batch.auto_discount_enabled ? escalationLabel(batch.next_escalation) : null;
+  // The shared demo warung keeps each batch within DEMO_MAX_BATCH_STOCK portions (server rule).
+  const stockMax = isDemo ? DEMO_MAX_BATCH_STOCK : STOCK_MAX;
 
   return (
     <li className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5">
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "inline-flex size-11 shrink-0 items-center justify-center rounded-2xl",
-            batch.is_mystery_bag ? "bg-deal-soft text-deal" : "bg-brand-soft text-primary",
-          )}
-          aria-hidden
-        >
-          {batch.is_mystery_bag ? <GiftIcon className="size-5" /> : <PackageOpenIcon className="size-5" />}
-        </span>
+        <BatchThumb batch={batch} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill status={batch.status} startIso={batch.pickup_start_time} />
             {!closed && <CountdownBadge endIso={batch.pickup_end_time} />}
           </div>
           <h3 className="mt-1.5 text-base leading-snug font-semibold">{batch.menu_name}</h3>
+          {batch.contents.length > 0 && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">Isi: {batch.contents.join(", ")}</p>
+          )}
           <PriceTag
             className="mt-1"
             original={batch.original_price_idr}
@@ -208,7 +366,7 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
             <button
               type="button"
               aria-label={`Tambah stok ${batch.menu_name}`}
-              disabled={batch.available_stock >= STOCK_MAX}
+              disabled={batch.available_stock >= stockMax}
               onClick={() => m.stock.mutate({ id: batch.id, delta: 1 })}
               className="inline-flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground transition-transform outline-none hover:bg-primary/90 active:scale-95 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
             >
@@ -237,6 +395,8 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
         </div>
       )}
 
+      {!closed && <BatchTonight batch={batch} m={m} isDemo={isDemo} isPilot={isPilot} />}
+
       <ConfirmDialog
         open={confirm}
         onOpenChange={setConfirm}
@@ -258,8 +418,9 @@ function BatchCard({ batch, m }: { batch: MerchantBatchView; m: ReturnType<typeo
 }
 
 /** Blueprint ActiveSurplusBatchList. */
-export function ActiveSurplusBatchList({ batches }: { batches: MerchantBatchView[] }) {
+export function ActiveSurplusBatchList({ batches, isPilot = false }: { batches: MerchantBatchView[]; isPilot?: boolean }) {
   const m = useBatchMutations();
+  const isDemo = useSession().user?.is_demo ?? false;
   const sorted = [...batches].sort((a, b) => {
     const rank = (s: MerchantBatchView["status"]) => (s === "ACTIVE" ? 0 : s === "SCHEDULED" ? 1 : s === "SOLD_OUT" ? 2 : 3);
     return rank(a.status) - rank(b.status) || Date.parse(a.pickup_end_time) - Date.parse(b.pickup_end_time);
@@ -289,7 +450,7 @@ export function ActiveSurplusBatchList({ batches }: { batches: MerchantBatchView
       ) : (
         <ul className="grid gap-3 xl:grid-cols-2">
           {sorted.map((b) => (
-            <BatchCard key={b.id} batch={b} m={m} />
+            <BatchCard key={b.id} batch={b} m={m} isDemo={isDemo} isPilot={isPilot} />
           ))}
         </ul>
       )}

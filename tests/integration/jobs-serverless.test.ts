@@ -3,6 +3,7 @@ import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { jobRuns, merchants, surplusBatches } from "../../src/db/schema";
 import { nearestCampus } from "../../src/lib/campuses";
 import { CAMPUSES, HOME_REGION } from "../../src/lib/constants";
+import { atWib, wibDate } from "../../src/lib/time";
 import { acquireLease, runDueJobs, topUpDemoBatches } from "../../src/server/jobs/serverless";
 import { reseed, testDb } from "../helpers/db";
 
@@ -159,6 +160,32 @@ describe("demo top-up", () => {
       expect(on.demoTopUp?.status).toBe("ok");
     } finally {
       process.env.DEMO_MODE = prev;
+    }
+  });
+});
+
+describe("hunger-hour (Jam Lapar digest)", () => {
+  it("runs once per WIB night between 20.00 and 21.30, behind its own daily lease", async () => {
+    // A past evening. Every other job is parked (lease taken far in the future), so only
+    // the job under test can run.
+    const day = wibDate(new Date(Date.now() - 24 * 60 * 60_000));
+    const parked = ["minute", "merchant-reminders", "escalation", `prediction-refresh:${day}`, `proactive-notifications:${day}`];
+    const future = new Date(Date.now() + 365 * 24 * 60 * 60_000);
+    for (const name of parked) {
+      await db
+        .insert(jobRuns)
+        .values({ name, lastRunAt: future, lastStatus: "ok" })
+        .onConflictDoUpdate({ target: jobRuns.name, set: { lastRunAt: future } });
+    }
+    try {
+      expect((await runDueJobs(db, atWib(day, "19:59")))["hunger-hour"]).toBeUndefined();
+      expect((await runDueJobs(db, atWib(day, "20:10")))["hunger-hour"]?.status).toBe("ok");
+      expect((await runDueJobs(db, atWib(day, "20:40")))["hunger-hour"]?.status).toBe("skipped");
+      expect((await runDueJobs(db, atWib(day, "21:30")))["hunger-hour"]).toBeUndefined();
+      const [row] = await db.select().from(jobRuns).where(eq(jobRuns.name, `hunger-hour:${day}`));
+      expect(row.lastStatus).toBe("ok");
+    } finally {
+      await db.delete(jobRuns).where(inArray(jobRuns.name, parked));
     }
   });
 });

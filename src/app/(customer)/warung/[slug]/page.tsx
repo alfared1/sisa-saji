@@ -6,7 +6,7 @@ import { MerchantScreen } from "@/components/customer/warung/merchant-screen";
 
 export const metadata: Metadata = {
   title: "Warung",
-  description: "Menu surplus malam ini, harga turun otomatis menjelang tutup. Pesan & ambil sendiri.",
+  description: "Menu surplus malam ini dengan isi porsi yang jelas, harga turun menjelang tutup. Kunci porsi, lalu ambil sendiri.",
 };
 
 async function WarungLoader({

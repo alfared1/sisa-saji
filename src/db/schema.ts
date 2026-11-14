@@ -52,6 +52,13 @@ const geographyPoint = customType<{ data: string; driverData: string }>({
   },
 });
 
+/** Raw bytes (batch photos). node-postgres reads and writes bytea as a Buffer. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
 /* ------------------------------------------------------------------ */
 /* Enums                                                               */
 /* ------------------------------------------------------------------ */
@@ -184,6 +191,17 @@ export const merchants = pgTable(
       .default(0.65),
     ratingAvg: numeric({ precision: 3, scale: 2, mode: "number" }).notNull().default(5),
     totalReviews: integer().notNull().default(0),
+    /**
+     * Review aggregates for the buyer trust signals (src/lib/trust-signals.ts). Only reviews
+     * that answered the question count. hygiene_avg stays NULL until someone answered: never
+     * a default score.
+     */
+    hygieneAvg: numeric({ precision: 3, scale: 2, mode: "number" }),
+    hygieneCount: integer().notNull().default(0),
+    /** Reviews that said the portion was the normal size ("Ya, kenyang"). */
+    portionFullCount: integer().notNull().default(0),
+    /** Reviews that answered the portion question at all. */
+    portionAnswerCount: integer().notNull().default(0),
     ...timestamps,
   },
   (t) => [
@@ -217,7 +235,15 @@ export const menus = pgTable(
     originalPriceIdr: integer().notNull(),
     minRecoveryPriceIdr: integer().notNull(),
     portionWeightGrams: integer().notNull().default(200),
+    /**
+     * Legacy closed "paket kejutan". No longer created or shown (migration 0009 deactivated
+     * them); kept because the ML feature query still selects it.
+     */
     isMysteryBag: boolean().notNull().default(false),
+    /** What is always in one portion ("Nasi timbel", "Sayur asem"). Max MENU_CONTENTS_MAX. */
+    contents: text().array().notNull().default(sql`'{}'::text[]`),
+    /** Lauk the buyer picks one of; empty when the portion is fixed. Max LAUK_OPTIONS_MAX. */
+    laukOptions: text().array().notNull().default(sql`'{}'::text[]`),
     isActive: boolean().notNull().default(true),
     ...timestamps,
   },
@@ -228,6 +254,9 @@ export const menus = pgTable(
     // Floor price must not exceed the normal price.
     check("menus_floor_le_original", sql`${t.minRecoveryPriceIdr} <= ${t.originalPriceIdr}`),
     check("menus_portion_weight_positive", sql`${t.portionWeightGrams} > 0`),
+    // MENU_CONTENTS_MAX / LAUK_OPTIONS_MAX in src/lib/constants.ts.
+    check("menus_contents_max", sql`cardinality(${t.contents}) <= 12`),
+    check("menus_lauk_options_max", sql`cardinality(${t.laukOptions}) <= 8`),
   ],
 );
 
@@ -258,11 +287,25 @@ export const surplusBatches = pgTable(
     pickupEndTime: timestamp({ withTimezone: true }).notNull(),
     status: batchStatus().notNull().default("ACTIVE"),
     lastPriceUpdatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Tonight's lauk still available: a subset of the menu's lauk_options. Lauk have no
+     * stock counters; the batch portion stays the only atomic unit (stock.ts).
+     */
+    laukAvailable: text().array().notNull().default(sql`'{}'::text[]`),
+    /** Warung's disclosure: false = tonight's portion is smaller than usual. */
+    fullPortion: boolean().notNull().default(true),
+    /**
+     * Photos uploaded for this batch, including replaced and deleted ones (max
+     * BATCH_PHOTO_MAX_UPLOADS). Lives here so deleting the photo does not reset it.
+     */
+    photoUploadCount: smallint().notNull().default(0),
     ...timestamps,
   },
   (t) => [
     index("idx_batches_active_window").on(t.status, t.pickupEndTime, t.currentSellingPriceIdr),
     index("idx_batches_merchant_date").on(t.merchantId, t.batchDate),
+    // LAUK_OPTIONS_MAX in src/lib/constants.ts.
+    check("batches_lauk_available_max", sql`cardinality(${t.laukAvailable}) <= 8`),
     check("batches_initial_stock_positive", sql`${t.initialStock} > 0`),
     check("batches_available_stock_nonneg", sql`${t.availableStock} >= 0`),
     check("batches_reserved_stock_nonneg", sql`${t.reservedStock} >= 0`),
@@ -354,6 +397,12 @@ export const orderItems = pgTable(
     unitSellingPriceIdr: integer().notNull(),
     discountPctApplied: integer().notNull(),
     portionWeightGrams: integer().notNull().default(200),
+    /**
+     * The lauk the buyer chose, snapshot in the stored casing of the batch's lauk_available.
+     * NULL = no lauk chosen (fixed menu, or the buyer picks at the counter). One row per
+     * (batch, lauk) line, so one batch can appear on several rows of an order.
+     */
+    laukChoice: varchar({ length: 40 }),
   },
   (t) => [
     index("idx_order_items_order").on(t.orderId),
@@ -506,11 +555,16 @@ export const reviews = pgTable(
     rating: smallint().notNull(),
     tags: text().array(),
     comment: text(),
+    /** "Seberapa bersih tempat dan makanannya?" 1-5; NULL = not answered. */
+    hygieneRating: smallint(),
+    /** "Porsinya sesuai porsi normal?" NULL = not answered. */
+    portionFull: boolean(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("idx_reviews_merchant").on(t.merchantId, t.createdAt.desc()),
     check("reviews_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
+    check("reviews_hygiene_range", sql`${t.hygieneRating} IS NULL OR ${t.hygieneRating} BETWEEN 1 AND 5`),
   ],
 );
 
@@ -583,9 +637,94 @@ export const pushSubscriptions = pgTable(
     auth: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     lastSuccessAt: timestamp({ withTimezone: true }),
+    /**
+     * "Notifikasi Jam Lapar": at most one push per WIB night when a warung within
+     * hunger_alert_radius_m of this point opens its night discount. The point is rounded to
+     * 3 decimals (about 110 m) before it is stored; disabling clears it.
+     */
+    hungerAlertEnabled: boolean().notNull().default(false),
+    hungerAlertLat: doublePrecision(),
+    hungerAlertLng: doublePrecision(),
+    hungerAlertGeom: geographyPoint().generatedAlwaysAs(
+      sql`(ST_SetSRID(ST_MakePoint(hunger_alert_lng, hunger_alert_lat), 4326)::geography)`,
+    ),
+    hungerAlertRadiusM: integer().notNull().default(500),
+    hungerAlertLabel: varchar({ length: 80 }),
+    /** WIB date of the last hunger alert this device got (the nightly claim). */
+    lastHungerAlertOn: date({ mode: "string" }),
+    /** Last "Kirim contoh notifikasi" (cooldown). */
+    hungerAlertTestAt: timestamp({ withTimezone: true }),
   },
-  (t) => [index("idx_push_user").on(t.userId)],
+  (t) => [
+    index("idx_push_user").on(t.userId),
+    index("idx_push_hunger_geom").using("gist", t.hungerAlertGeom).where(sql`hunger_alert_enabled`),
+  ],
 );
+
+/* ------------------------------------------------------------------ */
+/* 14b. batch_photos (tonight's display-case photo, one per batch)     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Who may see a photo is decided on every read (src/server/services/batch-photos.ts):
+ * public only for pilot warung, demo-account uploads only for demo sessions for
+ * DEMO_BATCH_PHOTO_TTL_MINUTES, everything else only for the owning warung. Rows are hard
+ * deleted when the batch ends (purge in the minute jobs).
+ */
+export const batchPhotos = pgTable(
+  "batch_photos",
+  {
+    surplusBatchId: uuid()
+      .primaryKey()
+      .references(() => surplusBatches.id, { onDelete: "cascade" }),
+    /** Version id, refreshed on every upload; used as the ?v= cache buster. */
+    id: uuid().notNull().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    bytes: bytea().notNull(),
+    contentType: varchar({ length: 20 }).notNull(),
+    byteSize: integer().notNull(),
+    /** Uploaded by a shared demo account. */
+    demoOnly: boolean().notNull().default(false),
+    uploadedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_batch_photos_merchant").on(t.merchantId),
+    // BATCH_PHOTO_MAX_BYTES (400 KB). The client always re-encodes to JPEG.
+    check("batch_photos_size", sql`${t.byteSize} BETWEEN 1 AND 409600`),
+    check("batch_photos_type", sql`${t.contentType} = 'image/jpeg'`),
+  ],
+);
+
+/** One row per accepted photo upload, for the per-warung hourly limit. Pruned after a day. */
+export const batchPhotoUploads = pgTable(
+  "batch_photo_uploads",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_batch_photo_uploads_merchant").on(t.merchantId, t.createdAt.desc())],
+);
+
+/* ------------------------------------------------------------------ */
+/* 14c. delivery_interests ("Titip Antar Kolektif" waiting list)       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Interest in collective delivery, which does not exist yet (display only; self-pickup
+ * stays the rule). The kos/asrama name is never shown publicly, only the count.
+ */
+export const deliveryInterests = pgTable("delivery_interests", {
+  userId: uuid()
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  kosName: varchar({ length: 60 }).notNull(),
+  ...timestamps,
+});
 
 /* ------------------------------------------------------------------ */
 /* 15. pickup_code_failures (lockout against 4-digit code guessing)    */
@@ -627,3 +766,6 @@ export type SurplusBatch = typeof surplusBatches.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type LeftoverReport = typeof leftoverReports.$inferSelect;
+export type BatchPhoto = typeof batchPhotos.$inferSelect;
+export type DeliveryInterest = typeof deliveryInterests.$inferSelect;
+export type Review = typeof reviews.$inferSelect;

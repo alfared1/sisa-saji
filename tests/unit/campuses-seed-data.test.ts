@@ -8,7 +8,9 @@ import {
   DEMO_MERCHANT_OWNER,
   DEMO_MERCHANT_SLUG,
   SEED_MERCHANTS,
+  floorPrice,
 } from "@/db/seed/data";
+import { normalizeItems } from "@/lib/lauk";
 import {
   campusById,
   campusIdByName,
@@ -120,9 +122,100 @@ describe("seed fixtures", () => {
         expect(x.priceIdr % 500, x.name).toBe(0);
         expect(x.priceIdr).toBeGreaterThanOrEqual(5_000);
         expect(x.priceIdr).toBeLessThanOrEqual(50_000);
-        expect(Boolean(x.isMysteryBag), x.name).toBe(x.category === "MYSTERY_BAG");
+        expect(x.category, x.name).not.toBe("MYSTERY_BAG");
         expect(x.baseSurplus).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("seed menus are transparent and priced for the research", () => {
+  const BOGOR_HUBS = new Set(["ipb", "bogor", "cibinong"]);
+  const menus = SEED_MERCHANTS.flatMap((m) => m.menus.map((x) => ({ m, x })));
+
+  it("has no surprise items: every menu lists its contents", () => {
+    for (const { m, x } of menus) {
+      const label = `${m.slug} / ${x.name}`;
+      expect(x.name, label).not.toMatch(/kejutan|surprise|misteri|mystery/i);
+      expect(x.description, label).not.toMatch(/isi acak|kejutan/i);
+      expect(x.contents.length, label).toBeGreaterThanOrEqual(1);
+      expect(x.contents.length, label).toBeLessThanOrEqual(12);
+      expect(x.laukOptions?.length ?? 0, label).toBeLessThanOrEqual(8);
+      for (const item of [...x.contents, ...(x.laukOptions ?? [])]) {
+        expect(item.length, `${label}: ${item}`).toBeGreaterThan(0);
+        expect(item.length, `${label}: ${item}`).toBeLessThanOrEqual(40);
+      }
+      // The same normalisation the API applies: trimmed, no case-insensitive duplicates.
+      expect(normalizeItems(x.contents), label).toEqual(x.contents);
+      expect(normalizeItems(x.laukOptions ?? []), label).toEqual(x.laukOptions ?? []);
+    }
+  });
+
+  it("offers a lauk choice at the demo warung and at a few others", () => {
+    expect(SEED_MERCHANTS[0].menus[0].laukOptions?.length).toBeGreaterThanOrEqual(2);
+    expect(menus.filter(({ x }) => (x.laukOptions?.length ?? 0) > 0).length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("prices every menu at Rp 16.000 or more, and Bogor menus at Rp 18.000 to 25.000", () => {
+    for (const { m, x } of menus) {
+      const label = `${m.slug} / ${x.name}`;
+      expect(x.priceIdr, label).toBeGreaterThanOrEqual(16_000);
+      if (BOGOR_HUBS.has(m.hub)) {
+        expect(x.priceIdr, label).toBeGreaterThanOrEqual(18_000);
+        expect(x.priceIdr, label).toBeLessThanOrEqual(25_000);
+      }
+    }
+  });
+
+  it("floors at Rp 10.000, so even the floor price is a discount of at least 35%", () => {
+    expect(floorPrice(18_000)).toBe(10_000);
+    expect(floorPrice(8_000)).toBe(8_000);
+    for (const { x } of menus) {
+      const floor = floorPrice(x.priceIdr);
+      expect(floor).toBeLessThanOrEqual(10_000);
+      expect(Math.round((1 - floor / x.priceIdr) * 100), x.name).toBeGreaterThanOrEqual(35);
+    }
+    // The demo warung's first two menus stay the cheapest (checkout tests use HEMAT2K on them).
+    const demo = SEED_MERCHANTS[0].menus.map((x) => x.priceIdr);
+    expect(demo[0]).toBeLessThan(20_000);
+    expect(Math.max(demo[0], demo[1])).toBeLessThanOrEqual(Math.min(...demo.slice(2)));
+  });
+
+  it("puts 6 warung within walking distance (500 m) of IPB and 10 within 1 km", () => {
+    const ipb = campusById("ipb");
+    const d = SEED_MERCHANTS.map((m) => distanceMeters(m, ipb));
+    expect(d.filter((x) => x <= 500).length).toBeGreaterThanOrEqual(6);
+    expect(d.filter((x) => x <= 1_000).length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("keeps the renamed Bogor warung at their hub, and the slugs other tests use", () => {
+    const bySlug = new Map(SEED_MERCHANTS.map((m) => [m.slug, m]));
+    const renamed: [string, string][] = [
+      ["warteg-bahari-kang-iwan-babakan-lebak", "ipb"],
+      ["angkringan-mang-didin-babakan-lebak", "ipb"],
+      ["mie-ayam-kang-asep-pakuan", "bogor"],
+      ["warteg-bu-enok-cilibende", "bogor"],
+      ["angkringan-mang-ade-cilibende", "bogor"],
+      ["roti-unyil-saung-kenari-taman-kencana", "bogor"],
+    ];
+    for (const [slug, hub] of renamed) {
+      const m = bySlug.get(slug);
+      expect(m, slug).toBeDefined();
+      if (m) expect(nearestCampus(m)?.campus.id, slug).toBe(hub);
+    }
+    for (const slug of [
+      "toko-roti-wangi-gandum-babakan-raya",
+      "soto-kuning-mang-oyo-dramaga",
+      "geprek-kang-dadan-babakan-tengah",
+      "seblak-cireng-teh-yuyun-babakan-tengah",
+      "doclang-toge-goreng-ma-icih-babakan-doneng",
+      "nasi-timbel-ceu-iyah-sindang-barang",
+      "laksa-asinan-bu-nining-loji",
+      "warung-vegetarian-saung-hejo-balio",
+    ]) {
+      expect(bySlug.has(slug), slug).toBe(true);
+    }
+    expect(SEED_MERCHANTS.filter((m) => BOGOR_HUBS.has(m.hub))).toHaveLength(28);
+    expect(SEED_MERCHANTS).toHaveLength(95);
   });
 });

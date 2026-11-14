@@ -25,12 +25,19 @@ import { useStoresHydrated } from "@/stores/hydration";
 import { selectTicketList, useTicketsStore } from "@/stores/tickets";
 import { LoginCta, OrderStatusChip, TabTitle } from "../bits";
 import { formatDateTimeId } from "../lib/format";
-import { ORDER_TABS, defaultOrderTab, groupOrdersByTab, parseOrderTab, type OrderTabKey } from "../lib/order-status";
+import {
+  ORDER_TABS,
+  defaultOrderTab,
+  groupOrdersByTab,
+  orderLineText,
+  parseOrderTab,
+  type OrderTabKey,
+} from "../lib/order-status";
 import { customerKeys } from "../lib/queries";
 import { pickupCodeLabel } from "./order-bits";
 
 function OrderCard({ order }: { order: OrderDetail }) {
-  const items = order.items.map((i) => `${i.quantity}× ${i.menu_name}`).join(", ");
+  const items = order.items.map(orderLineText).join("; ");
   const ready = order.status === "READY_FOR_PICKUP" || order.status === "PAID";
   const pending = order.status === "PENDING_PAYMENT";
   return (
@@ -70,14 +77,14 @@ function OrderCard({ order }: { order: OrderDetail }) {
             <p className="text-[11px] font-semibold text-secondary-foreground">Kode pengambilan</p>
             <p className="text-xl leading-tight font-black tracking-[0.1em] tabular-nums">{pickupCodeLabel(order)}</p>
           </div>
-          <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil" overLabel="Lewat batas" variant="solid" />
+          <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil dalam" overLabel="Lewat batas" variant="solid" />
         </div>
       )}
       {pending && (
         <div className="mx-4 mt-3 flex items-center gap-3 rounded-2xl bg-deal-soft p-3">
           <WalletIcon className="size-5 shrink-0 text-deal" />
-          <p className="min-w-0 flex-1 text-xs font-semibold text-balance">Bayar sebelum stok dilepas</p>
-          <CountdownBadge endIso={order.payment_expires_at} prefix="Bayar" overLabel="Habis" variant="solid" />
+          <p className="min-w-0 flex-1 text-xs font-semibold text-balance">Bayar sebelum porsi dilepas</p>
+          <CountdownBadge endIso={order.payment_expires_at} prefix="Bayar dalam" overLabel="Habis" variant="solid" />
         </div>
       )}
 

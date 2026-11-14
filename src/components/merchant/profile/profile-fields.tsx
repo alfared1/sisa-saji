@@ -8,7 +8,7 @@ import { LocationPickerMap } from "@/components/map/location-picker-map";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MENU_CATEGORIES, MENU_CATEGORY_LABELS, MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
+import { MENU_CATEGORY_LABELS, MERCHANT_MENU_CATEGORIES, MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { sanitizePhone, stripEmpty } from "../lib/logic";
 import { FieldError } from "../ui";
@@ -88,7 +88,7 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
           name="merchant_category"
           render={({ field }) => (
             <div role="radiogroup" aria-label="Kategori warung" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {MENU_CATEGORIES.filter((c) => c !== "MYSTERY_BAG").map((c) => {
+              {MERCHANT_MENU_CATEGORIES.map((c) => {
                 const active = (field.value ?? "MAKANAN_BERAT") === c;
                 return (
                   <button

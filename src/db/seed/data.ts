@@ -8,10 +8,17 @@
  * realistically. Each warung belongs to its nearest hub (`hub`).
  *
  * Index 0 is the demo merchant (Warung Nasi Teh Euis, Babakan Raya, next to
- * IPB Dramaga). Two IPB-area warung (Sindang Barang, Loji) sit ~3.7 and
- * ~4.7 km from the campus, and two Yogyakarta warung (Seturan, Condongcatur)
- * ~3–4 km from UGM, to exercise the 2 km radius filter and the "expand radius" flow. The
- * original 15 Yogyakarta warung are kept unchanged.
+ * IPB Dramaga). Around IPB, 6 warung sit within 500 m (walking distance from
+ * the kos area) and 10 within 1 km. Two IPB-area warung (Sindang Barang, Loji)
+ * sit ~3.7 and ~4.7 km from the campus, and two Yogyakarta warung (Seturan,
+ * Condongcatur) ~3–4 km from UGM, to exercise the 2 km radius filter and the
+ * "expand radius" flow. Yogyakarta keeps its 15 warung.
+ *
+ * Menus are transparent: every menu lists what is in the portion (`contents`),
+ * and some let the buyer pick one lauk (`laukOptions`, at most 8). There are no
+ * closed "surprise" items. Prices: every menu costs at least Rp 16.000, Bogor
+ * menus Rp 18.000–25.000, so with the Rp 10.000 floor (see seed/index.ts) even
+ * the floor price is a discount of at least 37%.
  */
 import type { CampusId } from "@/lib/constants";
 import type { menuCategory } from "../schema";
@@ -24,7 +31,10 @@ export interface SeedMenu {
   priceIdr: number;
   portionWeightGrams?: number;
   description: string;
-  isMysteryBag?: boolean;
+  /** What is in every portion, always shown to buyers (1–12 items, max 40 chars each). */
+  contents: string[];
+  /** Lauk (or variant) the buyer picks one of; tonight's batch may offer a subset. */
+  laukOptions?: string[];
   /** Typical evening surplus portions on an ordinary weekday. */
   baseSurplus: number;
 }
@@ -50,6 +60,18 @@ export interface SeedMerchant {
   menus: SeedMenu[];
 }
 
+/** Seed floor price (`min_recovery_price_idr`). */
+export const SEED_FLOOR_PRICE_IDR = 10_000;
+
+/**
+ * Rp 10.000, or the normal price when lower, so the headline "mulai Rp 10.000" holds
+ * for seed data. Every seed menu costs at least Rp 16.000, so the floor is still a
+ * discount of at least 37%.
+ */
+export function floorPrice(priceIdr: number): number {
+  return Math.min(SEED_FLOOR_PRICE_IDR, priceIdr);
+}
+
 /** Demo merchant (index 0): owner logs in as demo.mitra@sisasaji.test / +6281300000001. */
 export const DEMO_MERCHANT_SLUG = "warung-nasi-teh-euis-babakan-raya";
 export const DEMO_MERCHANT_NAME = "Warung Nasi Teh Euis";
@@ -73,9 +95,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.82,
     description: "Prasmanan masakan Sunda rumahan langganan mahasiswa IPB di Bara.",
     menus: [
-      { name: "Nasi Timbel Ayam Goreng + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi timbel, ayam goreng, tahu, tempe, lalapan, sambal terasi, sayur asem.", baseSurplus: 6 },
-      { name: "Nasi Pepes Ikan Mas + Tumis Kangkung", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 250, description: "Pepes ikan mas daun kemangi, tumis kangkung, sambal dadak.", baseSurplus: 5 },
-      { name: "Paket Kejutan Teh Euis", category: "MYSTERY_BAG", priceIdr: 20000, portionWeightGrams: 350, description: "Isi acak lauk Sunda & sayur sisa prasmanan hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Nasi Timbel + Lauk Pilihan", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi timbel hangat, sayur asem, lalapan, sambal terasi, pilih satu lauk.", contents: ["Nasi timbel", "Sayur asem", "Lalapan", "Sambal terasi"], laukOptions: ["Ayam goreng", "Pepes ikan mas", "Tahu tempe bacem"], baseSurplus: 6 },
+      { name: "Nasi Pepes Ikan Mas + Tumis Kangkung", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 250, description: "Pepes ikan mas daun kemangi, tumis kangkung, sambal dadak.", contents: ["Nasi putih", "Pepes ikan mas kemangi", "Tumis kangkung", "Sambal dadak"], baseSurplus: 5 },
+      { name: "Nasi Rames Teh Euis + 1 Lauk", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 350, description: "Nasi rames prasmanan Sunda dengan satu lauk pilihan.", contents: ["Nasi putih", "Sayur asem", "Orek tempe", "Sambal", "Kerupuk"], laukOptions: ["Ayam bakar", "Telur balado", "Ikan asin peda", "Perkedel jagung"], baseSurplus: 3 },
     ],
   },
   {
@@ -89,14 +111,14 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     lat: -6.5563,
     lng: 106.7327,
     open: "07:00",
-    close: "21:00",
+    close: "23:00",
     premium: true,
     sellRate: 0.87,
-    description: "Roti unyil & roti sobek dipanggang tiap pagi, favorit buat sarapan anak kos.",
+    description: "Roti dipanggang tiap pagi, malamnya jadi roti bakar teman begadang anak kos.",
     menus: [
-      { name: "Roti Unyil Campur (isi 10)", category: "ROTI_PASTRY", priceIdr: 15000, description: "Sepuluh roti unyil aneka isi: cokelat, keju, sosis, abon.", baseSurplus: 6 },
-      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 220, description: "Roti sobek pandan isi selai srikaya.", baseSurplus: 4 },
-      { name: "Paket Kejutan Wangi Gandum", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran roti & kue yang belum terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Bakar Cokelat Keju + Teh Manis", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 250, description: "Roti bakar tebal isi cokelat dan keju, dengan teh manis hangat.", contents: ["Roti bakar cokelat keju", "Teh manis hangat"], baseSurplus: 6 },
+      { name: "Roti Bakar 2 Lapis, Isi Pilihan", category: "ROTI_PASTRY", priceIdr: 20000, portionWeightGrams: 250, description: "Roti bakar dua lapis dengan mentega, pilih satu isi.", contents: ["Roti bakar 2 lapis", "Mentega", "Susu kental manis"], laukOptions: ["Cokelat", "Keju", "Srikaya", "Kacang"], baseSurplus: 4 },
+      { name: "Paket Roti Malam (isi 4)", category: "ROTI_PASTRY", priceIdr: 22000, portionWeightGrams: 320, description: "Empat roti yang dipanggang sore ini: sobek pandan, cokelat, abon, keju.", contents: ["Roti sobek pandan srikaya", "Roti cokelat", "Roti abon", "Roti keju"], baseSurplus: 3 },
     ],
   },
   {
@@ -115,28 +137,28 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.79,
     description: "Geprek sambal dadak level 0-10, nasi bisa nambah.",
     menus: [
-      { name: "Ayam Geprek Sambal Dadak", category: "MAKANAN_BERAT", priceIdr: 14000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal dadak, lalapan.", baseSurplus: 7 },
-      { name: "Nasi Telur Geprek", category: "MAKANAN_BERAT", priceIdr: 11000, description: "Telur dadar crispy digeprek sambal bawang.", baseSurplus: 4 },
+      { name: "Ayam Geprek + Nasi + Es Teh", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi, ayam geprek sambal dadak, lalapan, es teh manis.", contents: ["Nasi putih", "Ayam geprek", "Sambal dadak", "Lalapan", "Es teh manis"], baseSurplus: 7 },
+      { name: "Ayam Geprek Keju + Nasi", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 280, description: "Ayam geprek dengan keju leleh, nasi, lalapan.", contents: ["Nasi putih", "Ayam geprek", "Keju leleh", "Sambal bawang", "Lalapan"], baseSurplus: 4 },
     ],
   },
   {
-    slug: "warmindo-kang-iwan-babakan-lebak",
-    name: "Warmindo Kang Iwan",
+    slug: "warteg-bahari-kang-iwan-babakan-lebak",
+    name: "Warteg Bahari Kang Iwan",
     owner: "Iwan Kurniadi",
     hub: "ipb",
     city: "Kota Bogor",
     category: "MAKANAN_BERAT",
     address: "Babakan Lebak (Balebak), Balumbang Jaya, Bogor Barat, Kota Bogor",
-    lat: -6.5551,
-    lng: 106.7378,
-    open: "00:00",
-    close: "23:59",
+    lat: -6.5545,
+    lng: 106.7345,
+    open: "06:00",
+    close: "23:00",
     premium: false,
     sellRate: 0.74,
-    description: "Warmindo 24 jam teman begadang praktikum: mi rebus, nasi telur, es teh.",
+    description: "Warteg langganan anak kos Balebak, lauk ditata di etalase kaca, pilih sendiri.",
     menus: [
-      { name: "Mi Rebus Telur Kornet", category: "MAKANAN_BERAT", priceIdr: 13000, portionWeightGrams: 300, description: "Mi rebus, telur, kornet, sawi, cabai rawit.", baseSurplus: 4 },
-      { name: "Nasi Telur Kornet + Oseng Sayur", category: "MAKANAN_BERAT", priceIdr: 13000, description: "Telur orak-arik kornet, oseng sayur, kerupuk.", baseSurplus: 3 },
+      { name: "Nasi Rames Pilih 1 Lauk", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi, sayur hari ini, orek tempe, sambal, pilih satu lauk.", contents: ["Nasi putih", "Sayur hari ini", "Orek tempe", "Sambal"], laukOptions: ["Telur balado", "Ayam goreng", "Tongkol balado", "Cumi asin"], baseSurplus: 4 },
+      { name: "Nasi Rames Komplit", category: "MAKANAN_BERAT", priceIdr: 23000, portionWeightGrams: 350, description: "Nasi, ayam goreng, telur balado, sayur, tempe, sambal, kerupuk.", contents: ["Nasi putih", "Ayam goreng", "Telur balado", "Sayur hari ini", "Tempe goreng", "Sambal", "Kerupuk"], baseSurplus: 3 },
     ],
   },
   {
@@ -150,13 +172,13 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     lat: -6.5592,
     lng: 106.729,
     open: "06:30",
-    close: "21:00",
+    close: "22:00",
     premium: true,
     sellRate: 0.8,
     description: "Soto kuning khas Bogor kuah santan kunyit, jeroan lengkap.",
     menus: [
-      { name: "Soto Kuning Daging + Nasi", category: "MAKANAN_BERAT", priceIdr: 27000, portionWeightGrams: 350, description: "Soto kuning daging sapi, emping, sambal, nasi.", baseSurplus: 5 },
-      { name: "Soto Kuning Babat Paru + Nasi", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Babat, paru goreng, kikil, kuah kuning, nasi.", baseSurplus: 3 },
+      { name: "Soto Kuning Daging + Nasi", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Soto kuning daging sapi, emping, sambal, nasi.", contents: ["Soto kuning daging sapi", "Emping", "Sambal", "Nasi putih"], baseSurplus: 5 },
+      { name: "Soto Kuning Babat Paru + Nasi", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 350, description: "Babat, paru goreng, kikil, kuah kuning, nasi.", contents: ["Babat", "Paru goreng", "Kikil", "Kuah kuning", "Nasi putih"], baseSurplus: 3 },
     ],
   },
   {
@@ -175,8 +197,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.63,
     description: "Menu nabati ala Sunda, sayur dari petani sekitar Dramaga.",
     menus: [
-      { name: "Nasi Tutug Oncom + Karedok", category: "MAKANAN_VEGAN", priceIdr: 14000, portionWeightGrams: 250, description: "Nasi tutug oncom, karedok bumbu kacang, kerupuk.", baseSurplus: 5 },
-      { name: "Nasi Timbel Pepes Jamur Tahu", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 250, description: "Pepes jamur tiram & tahu, lalapan, sambal tomat.", baseSurplus: 4 },
+      { name: "Nasi Tutug Oncom + Karedok", category: "MAKANAN_VEGAN", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi tutug oncom, karedok bumbu kacang, kerupuk.", contents: ["Nasi tutug oncom", "Karedok bumbu kacang", "Kerupuk"], baseSurplus: 5 },
+      { name: "Nasi Timbel Pepes Jamur Tahu", category: "MAKANAN_VEGAN", priceIdr: 20000, portionWeightGrams: 250, description: "Pepes jamur tiram & tahu, lalapan, sambal tomat.", contents: ["Nasi timbel", "Pepes jamur tiram", "Pepes tahu", "Lalapan", "Sambal tomat"], baseSurplus: 4 },
     ],
   },
   {
@@ -190,13 +212,13 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     lat: -6.561,
     lng: 106.7343,
     open: "06:00",
-    close: "20:30",
+    close: "21:30",
     premium: false,
     sellRate: 0.68,
     description: "Doclang & toge goreng khas Bogor, bumbu kacang ulek dadakan.",
     menus: [
-      { name: "Doclang Bogor", category: "MAKANAN_BERAT", priceIdr: 13000, portionWeightGrams: 300, description: "Lontong daun patat, tahu, kentang, telur, bumbu kacang.", baseSurplus: 4 },
-      { name: "Toge Goreng", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 300, description: "Toge, mi kuning, ketupat, bumbu tauco kacang.", baseSurplus: 3 },
+      { name: "Doclang Bogor + Es Teh", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Lontong daun patat, tahu, kentang, telur, bumbu kacang, es teh manis.", contents: ["Lontong daun patat", "Tahu", "Kentang", "Telur", "Bumbu kacang", "Es teh manis"], baseSurplus: 4 },
+      { name: "Toge Goreng + Telur", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Toge, mi kuning, ketupat, telur rebus, bumbu tauco kacang.", contents: ["Toge", "Mi kuning", "Ketupat", "Telur rebus", "Bumbu tauco kacang"], baseSurplus: 3 },
     ],
   },
   {
@@ -208,24 +230,24 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     category: "MAKANAN_RINGAN",
     address: "Babakan Tengah (Bateng), Babakan, Dramaga, Kab. Bogor",
     lat: -6.5555,
-    lng: 106.7363,
+    lng: 106.7352,
     open: "11:00",
     close: "22:00",
     premium: false,
     sellRate: 0.69,
     description: "Seblak kencur pedas & cireng rujak buat ngemil malam.",
     menus: [
-      { name: "Seblak Ceker Kerupuk", category: "MAKANAN_RINGAN", priceIdr: 14000, portionWeightGrams: 300, description: "Kerupuk, ceker, makaroni, sawi, kuah kencur pedas.", baseSurplus: 5 },
-      { name: "Cireng Rujak (isi 8)", category: "MAKANAN_RINGAN", priceIdr: 10000, portionWeightGrams: 180, description: "Delapan cireng garing dengan sambal rujak.", baseSurplus: 6 },
+      { name: "Seblak Ceker + Nasi", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 350, description: "Seblak kerupuk ceker kuah kencur pedas, dengan nasi putih.", contents: ["Kerupuk basah", "Ceker", "Makaroni", "Sawi", "Kuah kencur pedas", "Nasi putih"], baseSurplus: 5 },
+      { name: "Cireng Rujak (isi 12) + Es Teh", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 260, description: "Dua belas cireng garing dengan sambal rujak, es teh manis.", contents: ["12 cireng", "Sambal rujak", "Es teh manis"], baseSurplus: 6 },
     ],
   },
   {
-    slug: "bandrek-bajigur-mang-didin-babakan-lebak",
-    name: "Bandrek & Bajigur Mang Didin",
+    slug: "angkringan-mang-didin-babakan-lebak",
+    name: "Angkringan Mang Didin",
     owner: "Didin Saepulloh",
     hub: "ipb",
     city: "Kota Bogor",
-    category: "MINUMAN",
+    category: "MAKANAN_BERAT",
     address: "Babakan Lebak (Balebak), Balumbang Jaya, Bogor Barat, Kota Bogor",
     lat: -6.5543,
     lng: 106.7388,
@@ -233,10 +255,10 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     close: "23:30",
     premium: false,
     sellRate: 0.6,
-    description: "Bandrek, bajigur, dan rebusan hangat untuk malam Bogor yang sering hujan.",
+    description: "Angkringan gerobak: nasi kucing, sate-satean, wedang jahe untuk malam Bogor yang sering hujan.",
     menus: [
-      { name: "Bandrek Susu Jahe Merah (2 gelas)", category: "MINUMAN", priceIdr: 14000, portionWeightGrams: 400, description: "Dua gelas bandrek jahe merah gula aren + susu.", baseSurplus: 5 },
-      { name: "Paket Rebusan Ubi & Kacang", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 300, description: "Ubi, singkong, dan kacang tanah rebus.", baseSurplus: 4 },
+      { name: "Nasi Kucing 2 + Sate Usus + Wedang Jahe", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Dua bungkus nasi kucing, dua tusuk sate usus, segelas wedang jahe.", contents: ["2 nasi kucing sambal teri", "2 tusuk sate usus", "Wedang jahe"], baseSurplus: 5 },
+      { name: "Paket Angkringan Pilih Sate", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 320, description: "Tiga nasi kucing, tempe bacem, teh hangat, pilih satu jenis sate (3 tusuk).", contents: ["3 nasi kucing", "Tempe bacem", "Teh hangat"], laukOptions: ["Sate usus", "Sate telur puyuh", "Sate kulit", "Sate ati ampela"], baseSurplus: 4 },
     ],
   },
   {
@@ -248,15 +270,15 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     category: "MAKANAN_BERAT",
     address: "Cibanteng, Ciampea, Kab. Bogor",
     lat: -6.5605,
-    lng: 106.7215,
+    lng: 106.7233,
     open: "15:00",
     close: "22:30",
     premium: false,
     sellRate: 0.76,
     description: "Sate maranggi bakar arang, sambal oncom & sambal tomat.",
     menus: [
-      { name: "Sate Maranggi Sapi (10 tusuk) + Nasi", category: "MAKANAN_BERAT", priceIdr: 28000, portionWeightGrams: 250, description: "Sate sapi bumbu kecap ketumbar, nasi, sambal tomat.", baseSurplus: 4 },
-      { name: "Nasi Liwet + Sate Maranggi Ayam", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri, 5 tusuk sate ayam, lalapan.", baseSurplus: 4 },
+      { name: "Sate Maranggi Sapi (10 tusuk) + Nasi", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 250, description: "Sate sapi bumbu kecap ketumbar, nasi, sambal tomat.", contents: ["10 tusuk sate maranggi sapi", "Nasi putih", "Sambal tomat"], baseSurplus: 4 },
+      { name: "Nasi Liwet + Sate Maranggi Ayam", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri, 5 tusuk sate ayam, lalapan.", contents: ["Nasi liwet teri", "5 tusuk sate ayam", "Lalapan"], baseSurplus: 4 },
     ],
   },
   {
@@ -275,8 +297,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.83,
     description: "Katering kos rumahan, menu Sunda ganti tiap hari.",
     menus: [
-      { name: "Nasi Box Ayam Bakar Kecap", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Ayam bakar kecap, tumis buncis, sambal terasi.", baseSurplus: 5 },
-      { name: "Nasi Box Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 300, description: "Pepes ikan mas, sayur lodeh, kerupuk.", baseSurplus: 4 },
+      { name: "Nasi Box Lauk Pilihan", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi, tumis buncis, sambal terasi, pilih satu lauk.", contents: ["Nasi putih", "Tumis buncis", "Sambal terasi"], laukOptions: ["Ayam bakar kecap", "Pepes ikan mas", "Telur balado"], baseSurplus: 5 },
+      { name: "Nasi Box Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 300, description: "Pepes ikan mas, sayur lodeh, kerupuk.", contents: ["Nasi putih", "Pepes ikan mas", "Sayur lodeh", "Kerupuk"], baseSurplus: 4 },
     ],
   },
   {
@@ -295,8 +317,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.57,
     description: "Sayur & buah petani Cikarawang sisa hari ini, pas buat anak kos yang masak.",
     menus: [
-      { name: "Paket Sayur Asem (1 kg)", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Labu siam, kacang panjang, jagung, melinjo, asam.", baseSurplus: 4 },
-      { name: "Kantong Buah Jambu Kristal & Pisang", category: "MYSTERY_BAG", priceIdr: 18000, portionWeightGrams: 1200, description: "Jambu kristal & pisang matang yang harus segera dimakan.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Paket Sayur Asem (2 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 2000, description: "Labu siam, kacang panjang, jagung, melinjo, asam. Cukup untuk 8 porsi.", contents: ["Labu siam", "Kacang panjang", "Jagung", "Melinjo", "Asam"], baseSurplus: 4 },
+      { name: "Kantong Jambu Kristal & Pisang (1,2 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 1200, description: "Jambu kristal dan pisang matang yang harus segera dimakan.", contents: ["Jambu kristal", "Pisang ambon"], baseSurplus: 3 },
     ],
   },
   {
@@ -315,8 +337,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.81,
     description: "Nasi timbel & liwet Sunda, sambal ulek dadakan.",
     menus: [
-      { name: "Nasi Timbel Pepes Ikan Peda", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi timbel, pepes peda, tahu tempe, lalapan, sambal.", baseSurplus: 5 },
-      { name: "Nasi Liwet Teri + Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri peda, ayam goreng, sambal terasi.", baseSurplus: 4 },
+      { name: "Nasi Timbel Pepes Ikan Peda", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi timbel, pepes peda, tahu tempe, lalapan, sambal.", contents: ["Nasi timbel", "Pepes peda", "Tahu", "Tempe", "Lalapan", "Sambal"], baseSurplus: 5 },
+      { name: "Nasi Liwet Teri + Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri peda, ayam goreng, sambal terasi.", contents: ["Nasi liwet teri peda", "Ayam goreng", "Sambal terasi"], baseSurplus: 4 },
     ],
   },
   {
@@ -335,8 +357,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.69,
     description: "Laksa Bogor kuah santan oncom dan asinan sayur segar.",
     menus: [
-      { name: "Laksa Bogor Ayam", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Bihun, ketupat, ayam suwir, oncom, kuah kuning santan.", baseSurplus: 4 },
-      { name: "Asinan Sayur Bogor", category: "MAKANAN_RINGAN", priceIdr: 15000, portionWeightGrams: 300, description: "Sawi asin, kol, toge, tahu, kuah cuka kacang pedas.", baseSurplus: 3 },
+      { name: "Laksa Bogor Ayam", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Bihun, ketupat, ayam suwir, oncom, kuah kuning santan.", contents: ["Bihun", "Ketupat", "Ayam suwir", "Oncom", "Kuah kuning santan"], baseSurplus: 4 },
+      { name: "Asinan Sayur Bogor + Kerupuk Mi", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 300, description: "Sawi asin, kol, toge, tahu, kuah cuka kacang pedas, kerupuk mi.", contents: ["Sawi asin", "Kol", "Toge", "Tahu", "Kuah cuka kacang pedas", "Kerupuk mi"], baseSurplus: 3 },
     ],
   },
   // --- Bogor: Kota Bogor (Baranangsiang) -----------------------------
@@ -356,28 +378,28 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.84,
     description: "Soto kuning santan kunyit khas Suryakencana, isian bisa pilih sendiri.",
     menus: [
-      { name: "Soto Kuning Daging + Nasi", category: "MAKANAN_BERAT", priceIdr: 28000, portionWeightGrams: 350, description: "Kuah kuning santan, daging sapi, emping, sambal, nasi.", baseSurplus: 5 },
-      { name: "Soto Kuning Kikil & Paru + Nasi", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Kikil, paru goreng, kuah kuning, nasi putih.", baseSurplus: 4 },
+      { name: "Soto Kuning Daging + Nasi", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Kuah kuning santan, daging sapi, emping, sambal, nasi.", contents: ["Kuah kuning santan", "Daging sapi", "Emping", "Sambal", "Nasi putih"], baseSurplus: 5 },
+      { name: "Soto Kuning Kikil & Paru + Nasi", category: "MAKANAN_BERAT", priceIdr: 23000, portionWeightGrams: 350, description: "Kikil, paru goreng, kuah kuning, nasi putih.", contents: ["Kikil", "Paru goreng", "Kuah kuning", "Nasi putih"], baseSurplus: 4 },
     ],
   },
   {
-    slug: "warmindo-kang-asep-jalan-bangka",
-    name: "Warmindo Kang Asep",
+    slug: "mie-ayam-kang-asep-pakuan",
+    name: "Mie Ayam Kang Asep Pakuan",
     owner: "Asep Hidayat",
     hub: "bogor",
     city: "Kota Bogor",
     category: "MAKANAN_BERAT",
-    address: "Jl. Bangka, Baranangsiang, Bogor Timur, Kota Bogor",
-    lat: -6.6036,
-    lng: 106.8042,
-    open: "00:00",
-    close: "23:59",
+    address: "Jl. Pakuan (dekat Universitas Pakuan), Tegallega, Bogor Tengah, Kota Bogor",
+    lat: -6.599,
+    lng: 106.811,
+    open: "10:00",
+    close: "22:30",
     premium: false,
     sellRate: 0.7,
-    description: "Warmindo 24 jam langganan mahasiswa IPB Baranangsiang.",
+    description: "Mi ayam buatan sendiri langganan mahasiswa Universitas Pakuan.",
     menus: [
-      { name: "Mi Rebus Telur Kornet", category: "MAKANAN_BERAT", priceIdr: 12000, portionWeightGrams: 300, description: "Mi instan kuah, telur, kornet, cabai rawit.", baseSurplus: 4 },
-      { name: "Nasi Telur Orak-arik Sosis", category: "MAKANAN_BERAT", priceIdr: 13000, description: "Nasi, telur orak-arik, sosis goreng, kerupuk.", baseSurplus: 5 },
+      { name: "Mie Ayam + Es Teh", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 350, description: "Mi ayam kecap buatan sendiri, sawi, pangsit, es teh manis.", contents: ["Mi ayam kecap", "Sawi", "Pangsit goreng", "Es teh manis"], baseSurplus: 4 },
+      { name: "Mie Ayam Bakso + Es Teh", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 380, description: "Mi ayam kecap, dua bakso urat, sawi, pangsit, es teh manis.", contents: ["Mi ayam kecap", "2 bakso urat", "Sawi", "Pangsit goreng", "Es teh manis"], baseSurplus: 5 },
     ],
   },
   {
@@ -396,8 +418,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Masakan Sunda rumahan, nasi dibungkus daun pisang hangat.",
     menus: [
-      { name: "Nasi Timbel Ayam Goreng + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi timbel, ayam goreng, tahu, tempe, lalapan, sambal terasi.", baseSurplus: 6 },
-      { name: "Nasi + Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Pepes ikan mas kemangi, nasi, lalapan, sambal.", baseSurplus: 4 },
+      { name: "Nasi Timbel Ayam Goreng + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi timbel, ayam goreng, tahu, tempe, lalapan, sambal terasi.", contents: ["Nasi timbel", "Ayam goreng", "Tahu", "Tempe", "Lalapan", "Sambal terasi"], baseSurplus: 6 },
+      { name: "Nasi + Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Pepes ikan mas kemangi, nasi, lalapan, sambal.", contents: ["Nasi putih", "Pepes ikan mas kemangi", "Lalapan", "Sambal"], baseSurplus: 4 },
     ],
   },
   {
@@ -416,13 +438,13 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.71,
     description: "Toge goreng dan doclang khas Bogor, dimasak di kuali tiap pesanan.",
     menus: [
-      { name: "Toge Goreng", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 300, description: "Tauge, mi kuning, ketupat, bumbu oncom dan tauco.", baseSurplus: 5 },
-      { name: "Doclang", category: "MAKANAN_BERAT", priceIdr: 14000, portionWeightGrams: 300, description: "Lontong daun patat, kentang, tahu, telur, bumbu kacang.", baseSurplus: 4 },
+      { name: "Toge Goreng + Es Teh", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Tauge, mi kuning, ketupat, bumbu oncom dan tauco, es teh manis.", contents: ["Tauge", "Mi kuning", "Ketupat", "Bumbu oncom tauco", "Es teh manis"], baseSurplus: 5 },
+      { name: "Doclang + Telur", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Lontong daun patat, kentang, tahu, dua telur, bumbu kacang.", contents: ["Lontong daun patat", "Kentang", "Tahu", "2 telur rebus", "Bumbu kacang"], baseSurplus: 4 },
     ],
   },
   {
     slug: "roti-unyil-saung-kenari-taman-kencana",
-    name: "Roti Unyil Saung Kenari",
+    name: "Roti Bakar Malam Saung Kenari",
     owner: "Rina Kurniasih",
     hub: "bogor",
     city: "Kota Bogor",
@@ -431,14 +453,14 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     lat: -6.5887,
     lng: 106.8019,
     open: "08:00",
-    close: "21:00",
+    close: "23:00",
     premium: true,
     sellRate: 0.88,
-    description: "Roti unyil mini aneka isi, dipanggang dua kali sehari.",
+    description: "Roti unyil dipanggang siang hari, malamnya roti bakar Bandung buat anak kos.",
     menus: [
-      { name: "Roti Unyil Isi 10", category: "ROTI_PASTRY", priceIdr: 20000, description: "Sepuluh roti mini isi sosis, abon, cokelat, keju.", baseSurplus: 6 },
-      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 17000, portionWeightGrams: 220, description: "Roti sobek pandan isi selai srikaya.", baseSurplus: 4 },
-      { name: "Paket Kejutan Saung Kenari", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran roti unyil & roti manis yang belum terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Unyil Isi 10", category: "ROTI_PASTRY", priceIdr: 20000, description: "Sepuluh roti mini isi sosis, abon, cokelat, keju.", contents: ["Roti unyil sosis", "Roti unyil abon", "Roti unyil cokelat", "Roti unyil keju"], baseSurplus: 6 },
+      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 220, description: "Roti sobek pandan isi selai srikaya.", contents: ["Roti sobek pandan", "Selai srikaya"], baseSurplus: 4 },
+      { name: "Roti Bakar Bandung, Isi Pilihan", category: "ROTI_PASTRY", priceIdr: 22000, portionWeightGrams: 300, description: "Roti bakar Bandung tebal dengan mentega, pilih satu isi.", contents: ["Roti bakar Bandung", "Mentega", "Susu kental manis"], laukOptions: ["Cokelat keju", "Srikaya", "Kacang", "Stroberi"], baseSurplus: 3 },
     ],
   },
   {
@@ -457,8 +479,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.76,
     description: "Geprek sambal dadak, favorit anak kos sekitar Malabar.",
     menus: [
-      { name: "Ayam Geprek Sambal Dadak", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal dadak, lalapan.", baseSurplus: 7 },
-      { name: "Lele Goreng Sambal Terasi", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Nasi, lele goreng, tahu, sambal terasi.", baseSurplus: 5 },
+      { name: "Ayam Geprek Sambal Dadak + Nasi", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal dadak, lalapan.", contents: ["Nasi putih", "Ayam geprek", "Sambal dadak", "Lalapan"], baseSurplus: 7 },
+      { name: "Lele Goreng Sambal Terasi + Nasi", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi, lele goreng, tahu, sambal terasi.", contents: ["Nasi putih", "Lele goreng", "Tahu goreng", "Sambal terasi", "Lalapan"], baseSurplus: 5 },
     ],
   },
   {
@@ -477,8 +499,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.63,
     description: "Menu nabati khas Sunda, tanpa daging, sambal dipisah.",
     menus: [
-      { name: "Karedok + Nasi", category: "MAKANAN_VEGAN", priceIdr: 15000, portionWeightGrams: 250, description: "Sayur mentah segar, bumbu kacang kencur, nasi.", baseSurplus: 4 },
-      { name: "Nasi Pepes Tahu Jamur", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 250, description: "Pepes tahu jamur tiram, lalapan, sambal tomat.", baseSurplus: 4 },
+      { name: "Karedok + Nasi", category: "MAKANAN_VEGAN", priceIdr: 18000, portionWeightGrams: 250, description: "Sayur mentah segar, bumbu kacang kencur, nasi.", contents: ["Karedok sayur segar", "Bumbu kacang kencur", "Nasi putih"], baseSurplus: 4 },
+      { name: "Nasi Pepes Tahu Jamur", category: "MAKANAN_VEGAN", priceIdr: 19000, portionWeightGrams: 250, description: "Pepes tahu jamur tiram, lalapan, sambal tomat.", contents: ["Nasi putih", "Pepes tahu jamur tiram", "Lalapan", "Sambal tomat"], baseSurplus: 4 },
     ],
   },
   {
@@ -497,51 +519,51 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.6,
     description: "Sayur dan lalapan segar dari petani Ciawi dan Caringin.",
     menus: [
-      { name: "Paket Sayur Asem Mentah", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Labu siam, kacang panjang, jagung, melinjo, asam. Cukup untuk 4 porsi.", baseSurplus: 4 },
-      { name: "Paket Lalapan Segar", category: "BAHAN_MAKANAN", priceIdr: 10000, portionWeightGrams: 600, description: "Selada air, kemangi, timun, terong bulat, leunca.", baseSurplus: 5 },
-      { name: "Paket Kejutan Sayur & Buah", category: "MYSTERY_BAG", priceIdr: 15000, portionWeightGrams: 1200, description: "Isi acak sayur dan buah lokal yang masih layak hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Paket Sayur Asem Mentah (2 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 2000, description: "Labu siam, kacang panjang, jagung, melinjo, asam. Cukup untuk 8 porsi.", contents: ["Labu siam", "Kacang panjang", "Jagung", "Melinjo", "Asam"], baseSurplus: 4 },
+      { name: "Paket Lalapan Segar (1 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 1000, description: "Selada air, kemangi, timun, terong bulat, leunca.", contents: ["Selada air", "Kemangi", "Timun", "Terong bulat", "Leunca"], baseSurplus: 5 },
+      { name: "Paket Sayur Sop & Pisang", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 1200, description: "Sayur sop siap masak dan satu sisir pisang matang.", contents: ["Wortel", "Kentang", "Kol", "Buncis", "Daun bawang", "Pisang"], baseSurplus: 3 },
     ],
   },
   {
-    slug: "laksa-asinan-ceu-enok-warung-jambu",
-    name: "Laksa & Asinan Ceu Enok",
+    slug: "warteg-bu-enok-cilibende",
+    name: "Warteg Bu Enok Cilibende",
     owner: "Enok Sumiati",
     hub: "bogor",
     city: "Kota Bogor",
-    category: "MAKANAN_RINGAN",
-    address: "Jl. Raya Pajajaran (Warung Jambu), Bantarjati, Bogor Utara, Kota Bogor",
-    lat: -6.5715,
-    lng: 106.8078,
-    open: "09:00",
-    close: "21:00",
+    category: "MAKANAN_BERAT",
+    address: "Jl. Cilibende, Tegallega, Bogor Tengah, Kota Bogor",
+    lat: -6.5935,
+    lng: 106.803,
+    open: "07:00",
+    close: "22:00",
     premium: false,
     sellRate: 0.72,
-    description: "Laksa Bogor kuah oncom dan asinan segar racikan sendiri.",
+    description: "Warteg rumahan dekat kos-kosan Cilibende, lauk pilih sendiri, laksa Bogor tiap hari.",
     menus: [
-      { name: "Asinan Bogor Sayur", category: "MAKANAN_RINGAN", priceIdr: 15000, portionWeightGrams: 300, description: "Kol, sawi asin, tauge, tahu, kuah cuka pedas, kacang.", baseSurplus: 5 },
-      { name: "Asinan Bogor Buah", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Mangga muda, kedondong, bengkuang, nanas, kuah cabai.", baseSurplus: 4 },
-      { name: "Laksa Bogor Ayam", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 350, description: "Bihun, ketupat, oncom, tauge, kuah santan kunyit, ayam suwir.", baseSurplus: 4 },
+      { name: "Nasi Rames Pilih Lauk", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi, sayur lodeh, orek tempe, sambal, pilih satu lauk.", contents: ["Nasi putih", "Sayur lodeh", "Orek tempe", "Sambal"], laukOptions: ["Ayam goreng", "Telur balado", "Ikan tongkol balado", "Perkedel kentang"], baseSurplus: 5 },
+      { name: "Nasi Sayur Asem + Ikan Asin", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 300, description: "Nasi, sayur asem, ikan asin jambal, tempe goreng, sambal terasi.", contents: ["Nasi putih", "Sayur asem", "Ikan asin jambal", "Tempe goreng", "Sambal terasi"], baseSurplus: 4 },
+      { name: "Laksa Bogor Ayam", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Bihun, ketupat, oncom, tauge, kuah santan kunyit, ayam suwir.", contents: ["Bihun", "Ketupat", "Oncom", "Tauge", "Kuah santan kunyit", "Ayam suwir"], baseSurplus: 4 },
     ],
   },
   {
-    slug: "bir-kotjok-mang-ade-tanah-sareal",
-    name: "Bir Kotjok & Cungkring Mang Ade",
+    slug: "angkringan-mang-ade-cilibende",
+    name: "Angkringan Mang Ade Cilibende",
     owner: "Ade Rukmana",
     hub: "bogor",
     city: "Kota Bogor",
-    category: "MINUMAN",
-    address: "Jl. Pemuda, Tanah Sareal, Kota Bogor",
-    lat: -6.5735,
-    lng: 106.7965,
+    category: "MAKANAN_BERAT",
+    address: "Jl. Cilibende, Tegallega, Bogor Tengah, Kota Bogor",
+    lat: -6.5925,
+    lng: 106.805,
     open: "16:00",
     close: "23:00",
     premium: false,
     sellRate: 0.68,
-    description: "Minuman rempah hangat tanpa alkohol, teman cungkring malam-malam.",
+    description: "Angkringan malam: sate taichan, nasi kucing, cungkring, dan bir kotjok rempah tanpa alkohol.",
     menus: [
-      { name: "Bir Kotjok Hangat", category: "MINUMAN", priceIdr: 10000, portionWeightGrams: 300, description: "Secang, jahe, kayu manis, cengkeh, dikocok sampai berbusa.", baseSurplus: 6 },
-      { name: "Bandrek Susu", category: "MINUMAN", priceIdr: 10000, portionWeightGrams: 300, description: "Bandrek jahe gula aren dengan susu kental manis.", baseSurplus: 5 },
-      { name: "Cungkring", category: "MAKANAN_RINGAN", priceIdr: 15000, description: "Kikil, lontong, bumbu kacang, sambal.", baseSurplus: 4 },
+      { name: "Sate Taichan + Nasi + Es Teh", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 280, description: "Sepuluh tusuk sate taichan, sambal, jeruk limau, nasi, es teh manis.", contents: ["10 tusuk sate taichan", "Sambal taichan", "Nasi putih", "Es teh manis"], baseSurplus: 6 },
+      { name: "Nasi Kucing Komplit + Bir Kotjok", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 320, description: "Dua nasi kucing, sate usus, tempe bacem, bir kotjok hangat tanpa alkohol.", contents: ["2 nasi kucing", "Sate usus", "Tempe bacem", "Bir kotjok hangat"], baseSurplus: 5 },
+      { name: "Cungkring Komplit", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 280, description: "Kikil, lontong, bumbu kacang, sambal, kerupuk.", contents: ["Kikil", "Lontong", "Bumbu kacang", "Sambal", "Kerupuk"], baseSurplus: 4 },
     ],
   },
   // --- Bogor: Cibinong, Kab. Bogor -----------------------------------
@@ -561,9 +583,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.79,
     description: "Nasi liwet kastrol langganan pegawai Pemkab dan mahasiswa.",
     menus: [
-      { name: "Nasi Liwet Ayam Goreng + Lalapan", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri, ayam goreng, tahu, lalapan, sambal.", baseSurplus: 6 },
-      { name: "Nasi Liwet Ikan Asin Peda", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi liwet, peda goreng, tempe, sambal terasi.", baseSurplus: 4 },
-      { name: "Paket Kejutan Liwetan", category: "MYSTERY_BAG", priceIdr: 22000, portionWeightGrams: 400, description: "Nasi liwet dengan lauk acak yang tersisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Nasi Liwet Ayam Goreng + Lalapan", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi liwet teri, ayam goreng, tahu, lalapan, sambal.", contents: ["Nasi liwet teri", "Ayam goreng", "Tahu", "Lalapan", "Sambal"], baseSurplus: 6 },
+      { name: "Nasi Liwet Ikan Asin Peda", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi liwet, peda goreng, tempe, sambal terasi.", contents: ["Nasi liwet", "Peda goreng", "Tempe", "Sambal terasi"], baseSurplus: 4 },
+      { name: "Nasi Liwet Pilih Lauk", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 350, description: "Nasi liwet teri, tahu goreng, lalapan, sambal terasi, pilih satu lauk.", contents: ["Nasi liwet teri", "Tahu goreng", "Lalapan", "Sambal terasi"], laukOptions: ["Ayam goreng", "Ikan asin peda", "Empal daging", "Pepes tahu"], baseSurplus: 3 },
     ],
   },
   {
@@ -582,8 +604,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.74,
     description: "Mi ayam kenyal buatan sendiri, ramai sehabis nonton di Pakansari.",
     menus: [
-      { name: "Mie Ayam Bakso", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 350, description: "Mi ayam kecap, sawi, 2 bakso, pangsit.", baseSurplus: 5 },
-      { name: "Bakso Urat Kuah", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 350, description: "Bakso urat, bihun, tahu bakso, kuah kaldu sapi.", baseSurplus: 4 },
+      { name: "Mie Ayam Bakso", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 350, description: "Mi ayam kecap, sawi, 2 bakso, pangsit.", contents: ["Mi ayam kecap", "Sawi", "2 bakso", "Pangsit"], baseSurplus: 5 },
+      { name: "Bakso Urat Kuah", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 350, description: "Bakso urat, bihun, tahu bakso, kuah kaldu sapi.", contents: ["Bakso urat", "Bihun", "Tahu bakso", "Kuah kaldu sapi"], baseSurplus: 4 },
     ],
   },
   {
@@ -602,8 +624,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.77,
     description: "Tenda nasi uduk malam, sambal kacang dan sambal terasi.",
     menus: [
-      { name: "Nasi Uduk Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi uduk, ayam goreng, tempe orek, sambal kacang.", baseSurplus: 6 },
-      { name: "Pecel Lele + Nasi Uduk", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Lele goreng, lalapan, sambal terasi, nasi uduk.", baseSurplus: 5 },
+      { name: "Nasi Uduk Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi uduk, ayam goreng, tempe orek, sambal kacang.", contents: ["Nasi uduk", "Ayam goreng", "Tempe orek", "Sambal kacang"], baseSurplus: 6 },
+      { name: "Pecel Lele + Nasi Uduk", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Lele goreng, lalapan, sambal terasi, nasi uduk.", contents: ["Lele goreng", "Lalapan", "Sambal terasi", "Nasi uduk"], baseSurplus: 5 },
     ],
   },
   {
@@ -622,8 +644,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.81,
     description: "Bolu lapis talas Bogor dan kue basah untuk oleh-oleh.",
     menus: [
-      { name: "Bolu Lapis Talas (1/2 Loyang)", category: "ROTI_PASTRY", priceIdr: 32000, portionWeightGrams: 350, description: "Bolu talas ungu berlapis krim keju.", baseSurplus: 4 },
-      { name: "Paket Kue Basah Isi 6", category: "ROTI_PASTRY", priceIdr: 15000, portionWeightGrams: 250, description: "Kue lumpur, putu ayu, nagasari, risoles, lapis legit, bika.", baseSurplus: 5 },
+      { name: "Bolu Lapis Talas (1/3 Loyang)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 250, description: "Bolu talas ungu berlapis krim keju.", contents: ["Bolu talas ungu", "Krim keju"], baseSurplus: 4 },
+      { name: "Paket Kue Basah Isi 8", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 330, description: "Kue lumpur, putu ayu, nagasari, risoles, lapis legit, bika, dua kue talas.", contents: ["Kue lumpur", "Putu ayu", "Nagasari", "Risoles", "Lapis legit", "Bika", "2 kue talas"], baseSurplus: 5 },
     ],
   },
   // --- Jabodetabek: UI Depok -----------------------------------------
@@ -643,8 +665,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.72,
     description: "Warmindo 24 jam andalan anak teknik yang begadang di Kutek.",
     menus: [
-      { name: "Mi Goreng Telur Kornet", category: "MAKANAN_BERAT", priceIdr: 13000, portionWeightGrams: 250, description: "Mi goreng, telur ceplok, kornet, sawi, cabai rawit.", baseSurplus: 5 },
-      { name: "Nasi Telur Orak-Arik Sambal Matah", category: "MAKANAN_BERAT", priceIdr: 12000, description: "Nasi, telur orak-arik, sambal matah, kerupuk.", baseSurplus: 6 },
+      { name: "Mi Goreng Telur Kornet + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Mi goreng, telur ceplok, kornet, sawi, cabai rawit, es teh manis.", contents: ["Mi goreng", "Telur ceplok", "Kornet", "Sawi", "Cabai rawit", "Es teh manis"], baseSurplus: 5 },
+      { name: "Nasi Telur Sambal Matah + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, telur orak-arik, sambal matah, kerupuk, es teh manis.", contents: ["Nasi putih", "Telur orak-arik", "Sambal matah", "Kerupuk", "Es teh manis"], baseSurplus: 6 },
     ],
   },
   {
@@ -663,9 +685,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.84,
     description: "Nasi uduk Betawi gurih santan, langganan anak kos Kober.",
     menus: [
-      { name: "Nasi Uduk Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 250, description: "Nasi uduk, ayam goreng, bihun, orek tempe, sambal kacang.", baseSurplus: 6 },
-      { name: "Nasi Uduk Semur Jengkol", category: "MAKANAN_BERAT", priceIdr: 15000, description: "Nasi uduk, semur jengkol, telur balado, bawang goreng.", baseSurplus: 4 },
-      { name: "Paket Kejutan Mpok Romlah", category: "MYSTERY_BAG", priceIdr: 18000, portionWeightGrams: 350, description: "Isi acak nasi uduk & lauk sisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Nasi Uduk Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 250, description: "Nasi uduk, ayam goreng, bihun, orek tempe, sambal kacang.", contents: ["Nasi uduk", "Ayam goreng", "Bihun", "Orek tempe", "Sambal kacang"], baseSurplus: 6 },
+      { name: "Nasi Uduk Semur Jengkol", category: "MAKANAN_BERAT", priceIdr: 17000, description: "Nasi uduk, semur jengkol, telur balado, bawang goreng.", contents: ["Nasi uduk", "Semur jengkol", "Telur balado", "Bawang goreng"], baseSurplus: 4 },
+      { name: "Nasi Uduk Pilih Lauk", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi uduk, bihun goreng, orek tempe, sambal kacang, pilih satu lauk.", contents: ["Nasi uduk", "Bihun goreng", "Orek tempe", "Sambal kacang", "Bawang goreng"], laukOptions: ["Ayam goreng", "Semur jengkol", "Telur balado", "Empal"], baseSurplus: 3 },
     ],
   },
   {
@@ -684,9 +706,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.79,
     description: "Roti sobek dan roti manis panggang setiap pagi.",
     menus: [
-      { name: "Roti Sobek Cokelat Keju", category: "ROTI_PASTRY", priceIdr: 22000, portionWeightGrams: 300, description: "Roti sobek empuk isi cokelat dan keju parut.", baseSurplus: 5 },
-      { name: "Paket Roti Manis Isi 4", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 280, description: "Roti abon, sosis, srikaya, dan kismis.", baseSurplus: 4 },
-      { name: "Paket Kejutan Rumah Lumer", category: "MYSTERY_BAG", priceIdr: 30000, portionWeightGrams: 400, description: "Isi acak roti & pastry yang belum terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Sobek Cokelat Keju", category: "ROTI_PASTRY", priceIdr: 22000, portionWeightGrams: 300, description: "Roti sobek empuk isi cokelat dan keju parut.", contents: ["Roti sobek", "Isi cokelat", "Keju parut"], baseSurplus: 5 },
+      { name: "Paket Roti Manis Isi 4", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 280, description: "Roti abon, sosis, srikaya, dan kismis.", contents: ["Roti abon", "Roti sosis", "Roti srikaya", "Roti kismis"], baseSurplus: 4 },
+      { name: "Paket Pastry Malam (isi 5)", category: "ROTI_PASTRY", priceIdr: 30000, portionWeightGrams: 400, description: "Lima roti dan pastry yang dipanggang hari ini.", contents: ["Croissant", "Roti sobek cokelat", "Roti abon", "Danish keju", "Donat gula"], baseSurplus: 3 },
     ],
   },
   {
@@ -705,8 +727,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Ketoprak dan gado-gado ulek dadakan, bisa tanpa telur.",
     menus: [
-      { name: "Gado-Gado Lontong Vegan", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Sayur rebus, tahu, tempe, lontong, saus kacang, tanpa telur & kerupuk udang.", baseSurplus: 5 },
-      { name: "Ketoprak Bihun Tahu", category: "MAKANAN_VEGAN", priceIdr: 15000, portionWeightGrams: 280, description: "Ketupat, bihun, tahu goreng, tauge, bumbu kacang bawang putih.", baseSurplus: 4 },
+      { name: "Gado-Gado Lontong Vegan", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Sayur rebus, tahu, tempe, lontong, saus kacang, tanpa telur & kerupuk udang.", contents: ["Sayur rebus", "Tahu", "Tempe", "Lontong", "Saus kacang", "Kerupuk"], baseSurplus: 5 },
+      { name: "Ketoprak Bihun Tahu", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 280, description: "Ketupat, bihun, tahu goreng, tauge, bumbu kacang bawang putih.", contents: ["Ketupat", "Bihun", "Tahu goreng", "Tauge", "Bumbu kacang bawang putih"], baseSurplus: 4 },
     ],
   },
   // --- Jabodetabek: UNJ Rawamangun, Jakarta --------------------------
@@ -726,8 +748,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.78,
     description: "Nasi rames murah meriah dekat kampus UNJ.",
     menus: [
-      { name: "Nasi Rames Ayam Bumbu Kuning", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi, ayam bumbu kuning, sayur nangka, sambal, kerupuk.", baseSurplus: 6 },
-      { name: "Nasi Rames Telur Balado + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Nasi, telur balado, sayur asem, tempe orek.", baseSurplus: 5 },
+      { name: "Nasi Rames Ayam Bumbu Kuning", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi, ayam bumbu kuning, sayur nangka, sambal, kerupuk.", contents: ["Nasi", "Ayam bumbu kuning", "Sayur nangka", "Sambal", "Kerupuk"], baseSurplus: 6 },
+      { name: "Nasi Rames Telur Balado + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, telur balado, sayur asem, tempe orek.", contents: ["Nasi", "Telur balado", "Sayur asem", "Tempe orek"], baseSurplus: 5 },
     ],
   },
   {
@@ -746,8 +768,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.76,
     description: "Geprek sambal bawang pedas nampol, porsi mahasiswa.",
     menus: [
-      { name: "Ayam Geprek Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi, ayam krispi geprek, sambal bawang, lalapan.", baseSurplus: 7 },
-      { name: "Ayam Geprek Keju Mozzarella", category: "MAKANAN_BERAT", priceIdr: 21000, portionWeightGrams: 270, description: "Ayam geprek dengan lelehan keju mozzarella.", baseSurplus: 3 },
+      { name: "Ayam Geprek Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi, ayam krispi geprek, sambal bawang, lalapan.", contents: ["Nasi", "Ayam krispi geprek", "Sambal bawang", "Lalapan"], baseSurplus: 7 },
+      { name: "Ayam Geprek Keju Mozzarella", category: "MAKANAN_BERAT", priceIdr: 21000, portionWeightGrams: 270, description: "Ayam geprek dengan lelehan keju mozzarella.", contents: ["Nasi putih", "Ayam geprek", "Keju mozzarella", "Sambal bawang"], baseSurplus: 3 },
     ],
   },
   {
@@ -766,8 +788,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.6,
     description: "Sayur dan buah lokal sisa lapak hari ini, masih segar.",
     menus: [
-      { name: "Paket Sayur Asem Siap Masak", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Labu siam, kacang panjang, jagung, melinjo, asam, bumbu.", baseSurplus: 5 },
-      { name: "Paket Buah Lokal Matang", category: "BAHAN_MAKANAN", priceIdr: 15000, portionWeightGrams: 1200, description: "Pisang, pepaya, dan jeruk matang pohon, campur.", baseSurplus: 4 },
+      { name: "Paket Sayur Asem Siap Masak (2 kg)", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 2000, description: "Labu siam, kacang panjang, jagung, melinjo, asam, bumbu.", contents: ["Labu siam", "Kacang panjang", "Jagung", "Melinjo", "Asam", "Bumbu sayur asem"], baseSurplus: 5 },
+      { name: "Paket Buah Lokal Matang (2 kg)", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 2000, description: "Pisang, pepaya, dan jeruk matang pohon, campur.", contents: ["Pisang", "Pepaya", "Jeruk"], baseSurplus: 4 },
     ],
   },
   {
@@ -786,9 +808,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Soto Betawi kuah santan susu, daging empuk direbus sejak subuh.",
     menus: [
-      { name: "Soto Betawi Daging", category: "MAKANAN_BERAT", priceIdr: 28000, portionWeightGrams: 350, description: "Daging sapi, kentang, tomat, emping, kuah santan susu.", baseSurplus: 4 },
-      { name: "Nasi Soto Betawi Ayam", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi, soto ayam kuah santan, acar, emping.", baseSurplus: 5 },
-      { name: "Paket Kejutan Bang Ojan", category: "MYSTERY_BAG", priceIdr: 22000, portionWeightGrams: 350, description: "Isi acak soto & lauk sisa hari ini.", isMysteryBag: true, baseSurplus: 2 },
+      { name: "Soto Betawi Daging", category: "MAKANAN_BERAT", priceIdr: 28000, portionWeightGrams: 350, description: "Daging sapi, kentang, tomat, emping, kuah santan susu.", contents: ["Daging sapi", "Kentang", "Tomat", "Emping", "Kuah santan susu"], baseSurplus: 4 },
+      { name: "Nasi Soto Betawi Ayam", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi, soto ayam kuah santan, acar, emping.", contents: ["Nasi", "Soto ayam kuah santan", "Acar", "Emping"], baseSurplus: 5 },
+      { name: "Nasi Soto Betawi + Perkedel", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 400, description: "Nasi, soto Betawi daging, perkedel kentang, emping, acar.", contents: ["Nasi putih", "Soto Betawi daging", "Perkedel kentang", "Emping", "Acar"], baseSurplus: 2 },
     ],
   },
   // --- Jawa Barat: ITB Bandung ---------------------------------------
@@ -808,8 +830,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.68,
     description: "Surabi tungku tanah liat, oncom pedas dan kinca gula aren.",
     menus: [
-      { name: "Surabi Oncom Isi 4", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 180, description: "Surabi tepung beras dengan topping oncom pedas.", baseSurplus: 6 },
-      { name: "Surabi Kinca Isi 4", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 200, description: "Surabi polos siram kinca gula aren dan santan.", baseSurplus: 5 },
+      { name: "Surabi Oncom Isi 6", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 180, description: "Enam surabi tepung beras dengan topping oncom pedas.", contents: ["6 surabi tepung beras", "Topping oncom pedas"], baseSurplus: 6 },
+      { name: "Surabi Kinca Isi 6", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 200, description: "Enam surabi polos siram kinca gula aren dan santan.", contents: ["6 surabi polos", "Kinca gula aren", "Santan"], baseSurplus: 5 },
     ],
   },
   {
@@ -828,8 +850,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.83,
     description: "Nasi timbel bungkus daun pisang, sambal dadak ulek.",
     menus: [
-      { name: "Nasi Timbel Komplit", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Nasi timbel, ayam goreng, tahu tempe, sayur asem, lalab, sambal.", baseSurplus: 5 },
-      { name: "Nasi Timbel Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi timbel, pepes ikan mas kemangi, lalab, sambal terasi.", baseSurplus: 3 },
+      { name: "Nasi Timbel Komplit", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Nasi timbel, ayam goreng, tahu tempe, sayur asem, lalab, sambal.", contents: ["Nasi timbel", "Ayam goreng", "Tahu tempe", "Sayur asem", "Lalab", "Sambal"], baseSurplus: 5 },
+      { name: "Nasi Timbel Pepes Ikan Mas", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Nasi timbel, pepes ikan mas kemangi, lalab, sambal terasi.", contents: ["Nasi timbel", "Pepes ikan mas kemangi", "Lalab", "Sambal terasi"], baseSurplus: 3 },
     ],
   },
   {
@@ -848,8 +870,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.75,
     description: "Batagor ikan tenggiri dan cuanki kuah kaldu hangat.",
     menus: [
-      { name: "Batagor Isi 6", category: "MAKANAN_RINGAN", priceIdr: 15000, portionWeightGrams: 250, description: "Batagor & siomay tenggiri, bumbu kacang, kecap, jeruk limau.", baseSurplus: 6 },
-      { name: "Cuanki Lengkap", category: "MAKANAN_RINGAN", priceIdr: 13000, portionWeightGrams: 300, description: "Bakso, siomay, tahu, pangsit goreng, kuah kaldu sapi.", baseSurplus: 5 },
+      { name: "Batagor Isi 8", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 250, description: "Batagor & siomay tenggiri, bumbu kacang, kecap, jeruk limau.", contents: ["Batagor", "Siomay tenggiri", "Bumbu kacang", "Kecap", "Jeruk limau"], baseSurplus: 6 },
+      { name: "Cuanki Lengkap", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Bakso, siomay, tahu, pangsit goreng, kuah kaldu sapi.", contents: ["Bakso", "Siomay", "Tahu", "Pangsit goreng", "Kuah kaldu sapi"], baseSurplus: 5 },
     ],
   },
   {
@@ -868,9 +890,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Roti rumahan dan molen pisang hangat dekat kampus Ganesha.",
     menus: [
-      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 20000, portionWeightGrams: 300, description: "Roti sobek pandan isi srikaya buatan sendiri.", baseSurplus: 4 },
-      { name: "Molen Pisang Isi 6", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 240, description: "Kulit pastry renyah isi pisang tanduk dan cokelat.", baseSurplus: 5 },
-      { name: "Paket Kejutan Saung Roti", category: "MYSTERY_BAG", priceIdr: 28000, portionWeightGrams: 400, description: "Isi acak roti & kue yang tersisa sore ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 20000, portionWeightGrams: 300, description: "Roti sobek pandan isi srikaya buatan sendiri.", contents: ["Roti sobek pandan", "Selai srikaya"], baseSurplus: 4 },
+      { name: "Molen Pisang Isi 6", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 240, description: "Kulit pastry renyah isi pisang tanduk dan cokelat.", contents: ["6 molen pisang tanduk", "Isi cokelat"], baseSurplus: 5 },
+      { name: "Paket Roti Sore (isi 5)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 400, description: "Lima roti dan kue yang dipanggang sore ini.", contents: ["Roti sobek pandan", "Molen pisang", "Roti cokelat", "Roti keju", "Bolu potong"], baseSurplus: 3 },
     ],
   },
   // --- Jawa Barat: UNPAD Jatinangor ----------------------------------
@@ -890,8 +912,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.77,
     description: "Seblak kencur level pedas dan cireng rujak favorit mahasiswa Jatinangor.",
     menus: [
-      { name: "Seblak Kerupuk Ceker", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Kerupuk basah, ceker, sosis, sawi, bumbu kencur pedas.", baseSurplus: 5 },
-      { name: "Cireng Rujak Isi 8", category: "MAKANAN_RINGAN", priceIdr: 10000, portionWeightGrams: 180, description: "Cireng aci garing dengan sambal rujak gula merah.", baseSurplus: 7 },
+      { name: "Seblak Kerupuk Ceker", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Kerupuk basah, ceker, sosis, sawi, bumbu kencur pedas.", contents: ["Kerupuk basah", "Ceker", "Sosis", "Sawi", "Bumbu kencur pedas"], baseSurplus: 5 },
+      { name: "Cireng Rujak Isi 12 + Es Teh", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 260, description: "Dua belas cireng aci garing dengan sambal rujak gula merah, es teh manis.", contents: ["12 cireng aci", "Sambal rujak gula merah", "Es teh manis"], baseSurplus: 7 },
     ],
   },
   {
@@ -910,8 +932,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.81,
     description: "Prasmanan masakan Sunda rumahan, lalab dan sambal tak terbatas.",
     menus: [
-      { name: "Nasi Ayam Goreng Kampung + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi, ayam goreng kampung, sayur asem, lalab, sambal terasi.", baseSurplus: 5 },
-      { name: "Nasi Pepes Tahu Jamur", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Nasi, pepes tahu jamur kemangi, tempe goreng, lalab.", baseSurplus: 4 },
+      { name: "Nasi Ayam Goreng Kampung + Sayur Asem", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nasi, ayam goreng kampung, sayur asem, lalab, sambal terasi.", contents: ["Nasi", "Ayam goreng kampung", "Sayur asem", "Lalab", "Sambal terasi"], baseSurplus: 5 },
+      { name: "Nasi Pepes Tahu Jamur", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, pepes tahu jamur kemangi, tempe goreng, lalab.", contents: ["Nasi", "Pepes tahu jamur kemangi", "Tempe goreng", "Lalab"], baseSurplus: 4 },
     ],
   },
   {
@@ -930,8 +952,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.62,
     description: "Bandrek jahe hangat dan es cincau hijau gula aren.",
     menus: [
-      { name: "Bandrek Susu Panas", category: "MINUMAN", priceIdr: 10000, portionWeightGrams: 250, description: "Bandrek jahe, gula aren, kayu manis, susu kental.", baseSurplus: 6 },
-      { name: "Es Cincau Hijau Santan", category: "MINUMAN", priceIdr: 8000, portionWeightGrams: 300, description: "Cincau hijau daun asli, santan, gula aren cair.", baseSurplus: 5 },
+      { name: "Bandrek Susu + Pisang Goreng", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 250, description: "Bandrek jahe, gula aren, kayu manis, susu kental, tiga pisang goreng.", contents: ["Bandrek susu jahe", "3 pisang goreng"], baseSurplus: 6 },
+      { name: "Es Cincau Hijau Santan (2 gelas)", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 500, description: "Dua gelas cincau hijau daun asli, santan, gula aren cair.", contents: ["2 gelas es cincau hijau", "Santan", "Gula aren cair"], baseSurplus: 5 },
     ],
   },
   // --- DI Yogyakarta: UGM Yogyakarta ---------------------------------
@@ -951,9 +973,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.82,
     description: "Masakan rumahan prasmanan langganan mahasiswa Pogung.",
     menus: [
-      { name: "Nasi Sayur Lodeh + Telur Balado", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Nasi, sayur lodeh, telur balado, kerupuk.", baseSurplus: 6 },
-      { name: "Nasi Ayam Goreng Lengkuas", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Ayam goreng lengkuas, sambal, lalapan.", baseSurplus: 5 },
-      { name: "Paket Kejutan Bu Sri", category: "MYSTERY_BAG", priceIdr: 20000, portionWeightGrams: 350, description: "Isi acak lauk & sayur sisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Nasi Sayur Lodeh + Telur Balado", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, sayur lodeh, telur balado, kerupuk.", contents: ["Nasi", "Sayur lodeh", "Telur balado", "Kerupuk"], baseSurplus: 6 },
+      { name: "Nasi Ayam Goreng Lengkuas", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Ayam goreng lengkuas, sambal, lalapan.", contents: ["Nasi putih", "Ayam goreng lengkuas", "Sambal", "Lalapan"], baseSurplus: 5 },
+      { name: "Nasi Rames Pilih Lauk", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Nasi, sayur lodeh, tempe bacem, sambal, kerupuk, pilih satu lauk.", contents: ["Nasi putih", "Sayur lodeh", "Tempe bacem", "Sambal", "Kerupuk"], laukOptions: ["Ayam goreng lengkuas", "Telur balado", "Tongkol suwir", "Perkedel"], baseSurplus: 3 },
     ],
   },
   {
@@ -972,8 +994,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.74,
     description: "Ayam & lele penyet sambal bawang level 1–5.",
     menus: [
-      { name: "Ayam Penyet Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 250, description: "Nasi, ayam penyet, tahu, tempe, sambal bawang.", baseSurplus: 6 },
-      { name: "Lele Penyet", category: "MAKANAN_BERAT", priceIdr: 15000, description: "Nasi, lele goreng, lalapan, sambal.", baseSurplus: 5 },
+      { name: "Ayam Penyet Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 250, description: "Nasi, ayam penyet, tahu, tempe, sambal bawang.", contents: ["Nasi", "Ayam penyet", "Tahu", "Tempe", "Sambal bawang"], baseSurplus: 6 },
+      { name: "Lele Penyet", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, lele goreng, lalapan, sambal.", contents: ["Nasi", "Lele goreng", "Lalapan", "Sambal"], baseSurplus: 5 },
     ],
   },
   {
@@ -992,8 +1014,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Bakmi godhog & goreng masak arang.",
     menus: [
-      { name: "Bakmi Godhog", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Bakmi kuah kaldu ayam kampung.", baseSurplus: 4 },
-      { name: "Nasi Goreng Magelangan", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi goreng campur mi, telur, suwiran ayam.", baseSurplus: 4 },
+      { name: "Bakmi Godhog", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Bakmi kuah kaldu ayam kampung.", contents: ["Bakmi kuning", "Kuah kaldu ayam kampung"], baseSurplus: 4 },
+      { name: "Nasi Goreng Magelangan", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi goreng campur mi, telur, suwiran ayam.", contents: ["Nasi goreng campur mi", "Telur", "Suwiran ayam"], baseSurplus: 4 },
     ],
   },
   {
@@ -1012,9 +1034,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.88,
     description: "Roti sobek & pastry dipanggang tiap pagi.",
     menus: [
-      { name: "Roti Sobek Cokelat Keju", category: "ROTI_PASTRY", priceIdr: 15000, portionWeightGrams: 220, description: "Roti sobek isi cokelat & keju.", baseSurplus: 6 },
-      { name: "Croissant Butter (2 pcs)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 140, description: "Dua croissant butter.", baseSurplus: 5 },
-      { name: "Bakery Surprise Box", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran roti & pastry yang tidak terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Sobek Cokelat Keju", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 220, description: "Roti sobek isi cokelat & keju.", contents: ["Roti sobek isi cokelat", "Keju"], baseSurplus: 6 },
+      { name: "Croissant Butter (2 pcs)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 140, description: "Dua croissant butter.", contents: ["2 croissant butter"], baseSurplus: 5 },
+      { name: "Paket Roti & Pastry (isi 5)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 400, description: "Lima roti dan pastry yang dipanggang hari ini.", contents: ["Croissant butter", "Roti sobek cokelat keju", "Pain au chocolat", "Roti kismis", "Donat gula"], baseSurplus: 3 },
     ],
   },
   {
@@ -1033,8 +1055,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.62,
     description: "Menu nabati, tanpa MSG, porsi mahasiswa.",
     menus: [
-      { name: "Nasi Tempe Bacem + Urap", category: "MAKANAN_VEGAN", priceIdr: 15000, description: "Tempe bacem, urap sayur, sambal tomat.", baseSurplus: 5 },
-      { name: "Gado-gado Lontong", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Sayur rebus, lontong, saus kacang.", baseSurplus: 4 },
+      { name: "Nasi Tempe Bacem + Urap", category: "MAKANAN_VEGAN", priceIdr: 16000, description: "Tempe bacem, urap sayur, sambal tomat.", contents: ["Nasi putih", "Tempe bacem", "Urap sayur", "Sambal tomat"], baseSurplus: 5 },
+      { name: "Gado-gado Lontong", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Sayur rebus, lontong, saus kacang.", contents: ["Sayur rebus", "Lontong", "Saus kacang"], baseSurplus: 4 },
     ],
   },
   {
@@ -1053,8 +1075,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.78,
     description: "Geprek sambal korek, nasi bisa nambah.",
     menus: [
-      { name: "Ayam Geprek Sambal Korek", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal korek.", baseSurplus: 7 },
-      { name: "Ayam Geprek Keju", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 260, description: "Geprek dengan lelehan keju mozarella.", baseSurplus: 4 },
+      { name: "Ayam Geprek Sambal Korek", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal korek.", contents: ["Nasi", "Ayam geprek", "Sambal korek"], baseSurplus: 7 },
+      { name: "Ayam Geprek Keju", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 260, description: "Geprek dengan lelehan keju mozarella.", contents: ["Nasi putih", "Ayam geprek", "Keju mozarella"], baseSurplus: 4 },
     ],
   },
   {
@@ -1073,8 +1095,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.6,
     description: "Wedangan klasik, nasi bakar & jadah bakar.",
     menus: [
-      { name: "Nasi Bakar Teri (2 pcs)", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 220, description: "Dua nasi bakar isi teri pedas.", baseSurplus: 6 },
-      { name: "Jadah Tempe Bakar (4 pcs)", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 200, description: "Jadah ketan + tempe bacem dibakar.", baseSurplus: 5 },
+      { name: "Nasi Bakar Teri (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 220, description: "Tiga nasi bakar isi teri pedas.", contents: ["3 nasi bakar", "Isi teri pedas"], baseSurplus: 6 },
+      { name: "Jadah Tempe Bakar + Wedang Jahe", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 200, description: "Empat jadah ketan dan tempe bacem dibakar, segelas wedang jahe.", contents: ["4 jadah ketan bakar", "4 tempe bacem bakar", "Wedang jahe"], baseSurplus: 5 },
     ],
   },
   // --- DI Yogyakarta: UNY Yogyakarta ---------------------------------
@@ -1094,9 +1116,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.86,
     description: "Masakan Padang porsi kenyang, rendang dimasak 6 jam.",
     menus: [
-      { name: "Nasi Rendang", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 250, description: "Nasi, rendang sapi, daun singkong, sambal hijau.", baseSurplus: 7 },
-      { name: "Nasi Ayam Pop", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Nasi, ayam pop, sayur nangka, sambal merah.", baseSurplus: 5 },
-      { name: "Nasi Telur Dadar Padang", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Telur dadar tebal khas Padang + gulai.", baseSurplus: 4 },
+      { name: "Nasi Rendang", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 250, description: "Nasi, rendang sapi, daun singkong, sambal hijau.", contents: ["Nasi", "Rendang sapi", "Daun singkong", "Sambal hijau"], baseSurplus: 7 },
+      { name: "Nasi Ayam Pop", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Nasi, ayam pop, sayur nangka, sambal merah.", contents: ["Nasi", "Ayam pop", "Sayur nangka", "Sambal merah"], baseSurplus: 5 },
+      { name: "Nasi Telur Dadar Padang", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Telur dadar tebal khas Padang + gulai.", contents: ["Nasi putih", "Telur dadar Padang", "Kuah gulai", "Sambal lado"], baseSurplus: 4 },
     ],
   },
   {
@@ -1115,8 +1137,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.66,
     description: "Nasi kucing, sate-satean, wedang jahe.",
     menus: [
-      { name: "Paket 3 Nasi Kucing + 2 Sate", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 250, description: "3 bungkus nasi kucing + 2 tusuk sate usus/telur puyuh.", baseSurplus: 8 },
-      { name: "Paket Gorengan Isi 6", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 180, description: "Tempe, tahu isi, bakwan, 6 potong.", baseSurplus: 6 },
+      { name: "Paket 3 Nasi Kucing + 3 Sate", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 250, description: "Tiga bungkus nasi kucing, dua tusuk sate usus, satu sate telur puyuh, teh hangat.", contents: ["3 nasi kucing", "2 tusuk sate usus", "1 tusuk sate telur puyuh", "Teh hangat"], baseSurplus: 8 },
+      { name: "Paket Gorengan Isi 10", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 180, description: "Tempe, tahu isi, bakwan, pisang goreng, 10 potong.", contents: ["Tempe goreng", "Tahu isi", "Bakwan", "Pisang goreng"], baseSurplus: 6 },
     ],
   },
   {
@@ -1135,8 +1157,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Gudeg kering khas Jogja, krecek pedas.",
     menus: [
-      { name: "Nasi Gudeg Telur", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Gudeg, krecek, telur pindang, areh.", baseSurplus: 6 },
-      { name: "Nasi Gudeg Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 21000, portionWeightGrams: 250, description: "Gudeg, krecek, ayam suwir opor.", baseSurplus: 4 },
+      { name: "Nasi Gudeg Telur", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Gudeg, krecek, telur pindang, areh.", contents: ["Gudeg", "Krecek", "Telur pindang", "Areh"], baseSurplus: 6 },
+      { name: "Nasi Gudeg Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 21000, portionWeightGrams: 250, description: "Gudeg, krecek, ayam suwir opor.", contents: ["Gudeg", "Krecek", "Ayam suwir opor"], baseSurplus: 4 },
     ],
   },
   {
@@ -1155,7 +1177,7 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.72,
     description: "Soto ayam koya gurih.",
     menus: [
-      { name: "Soto Ayam Lamongan + Nasi", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 350, description: "Soto ayam koya, nasi, kerupuk.", baseSurplus: 6 },
+      { name: "Soto Ayam Lamongan + Nasi", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 350, description: "Soto ayam koya, nasi, kerupuk.", contents: ["Soto ayam koya", "Nasi", "Kerupuk"], baseSurplus: 6 },
     ],
   },
   {
@@ -1174,8 +1196,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.58,
     description: "Sayur & buah segar sisa hari ini, cocok untuk anak kos yang masak.",
     menus: [
-      { name: "Paket Sayur Sop (1 kg)", category: "BAHAN_MAKANAN", priceIdr: 15000, portionWeightGrams: 1000, description: "Wortel, kentang, kol, buncis, daun bawang.", baseSurplus: 4 },
-      { name: "Kantong Buah Campur", category: "MYSTERY_BAG", priceIdr: 18000, portionWeightGrams: 1200, description: "Buah matang yang harus segera dimakan.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Paket Sayur Sop (1,5 kg)", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 1500, description: "Wortel, kentang, kol, buncis, daun bawang.", contents: ["Wortel", "Kentang", "Kol", "Buncis", "Daun bawang"], baseSurplus: 4 },
+      { name: "Kantong Pisang & Pepaya Matang (1,5 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 1500, description: "Pisang dan pepaya matang yang harus segera dimakan.", contents: ["Pisang", "Pepaya"], baseSurplus: 3 },
     ],
   },
   {
@@ -1194,8 +1216,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.75,
     description: "Warmindo 24 jam: magelangan, nasi telur, es teh.",
     menus: [
-      { name: "Nasi Telur Orak-Arik + Sayur", category: "MAKANAN_BERAT", priceIdr: 12000, description: "Telur orak-arik, oseng sayur, sambal.", baseSurplus: 4 },
-      { name: "Nasi Sarden Pedas", category: "MAKANAN_BERAT", priceIdr: 13000, description: "Sarden saus pedas, nasi, kerupuk.", baseSurplus: 3 },
+      { name: "Nasi Telur Orak-Arik + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Telur orak-arik, oseng sayur, sambal, nasi, es teh manis.", contents: ["Nasi putih", "Telur orak-arik", "Oseng sayur", "Sambal", "Es teh manis"], baseSurplus: 4 },
+      { name: "Nasi Sarden Pedas + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Sarden saus pedas, nasi, kerupuk, es teh manis.", contents: ["Sarden saus pedas", "Nasi putih", "Kerupuk", "Es teh manis"], baseSurplus: 3 },
     ],
   },
   {
@@ -1214,8 +1236,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Pecel lele & ayam goreng tenda.",
     menus: [
-      { name: "Pecel Lele + Nasi", category: "MAKANAN_BERAT", priceIdr: 15000, description: "Lele goreng, lalapan, sambal terasi.", baseSurplus: 5 },
-      { name: "Ayam Goreng Kremes + Nasi", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Ayam goreng kremes renyah.", baseSurplus: 4 },
+      { name: "Pecel Lele + Nasi", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Lele goreng, lalapan, sambal terasi.", contents: ["Nasi putih", "Lele goreng", "Lalapan", "Sambal terasi"], baseSurplus: 5 },
+      { name: "Ayam Goreng Kremes + Nasi", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Ayam goreng kremes renyah.", contents: ["Nasi putih", "Ayam goreng kremes", "Sambal", "Lalapan"], baseSurplus: 4 },
     ],
   },
   {
@@ -1234,8 +1256,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.84,
     description: "Masakan rumahan katering kos, menu ganti tiap hari.",
     menus: [
-      { name: "Nasi Box Ayam Bakar", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Ayam bakar kecap, tumis buncis, sambal.", baseSurplus: 6 },
-      { name: "Nasi Box Ikan Nila Asam Manis", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nila goreng saus asam manis, capcay.", baseSurplus: 4 },
+      { name: "Nasi Box Ayam Bakar", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Ayam bakar kecap, tumis buncis, sambal.", contents: ["Nasi putih", "Ayam bakar kecap", "Tumis buncis", "Sambal"], baseSurplus: 6 },
+      { name: "Nasi Box Ikan Nila Asam Manis", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 300, description: "Nila goreng saus asam manis, capcay.", contents: ["Nasi putih", "Nila goreng asam manis", "Capcay"], baseSurplus: 4 },
     ],
   },
   // --- Jawa Tengah: UNDIP Tembalang, Semarang ------------------------
@@ -1255,8 +1277,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.81,
     description: "Nasi ayam khas Semarang dengan kuah opor dan sayur labu siam.",
     menus: [
-      { name: "Nasi Ayam Semarang", category: "MAKANAN_BERAT", priceIdr: 13000, description: "Nasi gurih, ayam suwir, sayur labu siam, telur pindang, krecek.", baseSurplus: 6 },
-      { name: "Nasi Ayam + Ati Ampela", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi ayam lengkap ditambah sate ati ampela bacem.", baseSurplus: 4 },
+      { name: "Nasi Ayam Semarang", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi gurih, ayam suwir, sayur labu siam, telur pindang, krecek.", contents: ["Nasi gurih", "Ayam suwir", "Sayur labu siam", "Telur pindang", "Krecek"], baseSurplus: 6 },
+      { name: "Nasi Ayam + Ati Ampela", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi ayam lengkap ditambah sate ati ampela bacem.", contents: ["Nasi ayam lengkap", "Sate ati ampela bacem"], baseSurplus: 4 },
     ],
   },
   {
@@ -1275,8 +1297,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.73,
     description: "Tahu gimbal bumbu kacang petis, gimbal udang digoreng dadakan.",
     menus: [
-      { name: "Tahu Gimbal Lontong", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 350, description: "Tahu goreng, gimbal udang, lontong, kol, bumbu kacang petis.", baseSurplus: 6 },
-      { name: "Gimbal Udang (5 pcs)", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 150, description: "Bakwan udang renyah, pas buat camilan malam.", baseSurplus: 4 },
+      { name: "Tahu Gimbal Lontong", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 350, description: "Tahu goreng, gimbal udang, lontong, kol, bumbu kacang petis.", contents: ["Tahu goreng", "Gimbal udang", "Lontong", "Kol", "Bumbu kacang petis"], baseSurplus: 6 },
+      { name: "Gimbal Udang (8 pcs)", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 250, description: "Bakwan udang renyah, pas buat camilan malam.", contents: ["8 gimbal udang"], baseSurplus: 4 },
     ],
   },
   {
@@ -1295,9 +1317,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.84,
     description: "Lumpia rebung isi udang & telur, resep keluarga Semarangan.",
     menus: [
-      { name: "Lumpia Goreng Rebung (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 240, description: "Lumpia goreng isi rebung, udang, telur, saus tauco & acar.", baseSurplus: 5 },
-      { name: "Lumpia Basah (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 17000, portionWeightGrams: 240, description: "Kulit lumpia lembut isi rebung ayam, daun bawang & cabai rawit.", baseSurplus: 4 },
-      { name: "Paket Kejutan Lumpia", category: "MYSTERY_BAG", priceIdr: 20000, portionWeightGrams: 350, description: "Isi acak lumpia & jajanan pasar sisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Lumpia Goreng Rebung (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 240, description: "Lumpia goreng isi rebung, udang, telur, saus tauco & acar.", contents: ["Lumpia goreng isi rebung", "Udang", "Telur", "Saus tauco", "Acar"], baseSurplus: 5 },
+      { name: "Lumpia Basah (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 17000, portionWeightGrams: 240, description: "Kulit lumpia lembut isi rebung ayam, daun bawang & cabai rawit.", contents: ["Kulit lumpia lembut isi rebung ayam", "Daun bawang", "Cabai rawit"], baseSurplus: 4 },
+      { name: "Paket Lumpia & Jajanan (isi 5)", category: "MAKANAN_RINGAN", priceIdr: 20000, portionWeightGrams: 350, description: "Dua lumpia goreng rebung, satu lumpia basah, tahu bakso, wingko babat.", contents: ["2 lumpia goreng rebung", "Lumpia basah", "Tahu bakso", "Wingko babat"], baseSurplus: 3 },
     ],
   },
   {
@@ -1316,8 +1338,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.68,
     description: "Bandeng presto duri lunak khas Semarang, digoreng saat dipesan.",
     menus: [
-      { name: "Nasi Bandeng Presto Goreng", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Bandeng presto goreng, nasi, lalapan, sambal terasi.", baseSurplus: 5 },
-      { name: "Otak-otak Bandeng (2 pcs)", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 180, description: "Otak-otak bandeng panggang dalam daun pisang.", baseSurplus: 3 },
+      { name: "Nasi Bandeng Presto Goreng", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Bandeng presto goreng, nasi, lalapan, sambal terasi.", contents: ["Bandeng presto goreng", "Nasi", "Lalapan", "Sambal terasi"], baseSurplus: 5 },
+      { name: "Otak-otak Bandeng (2 pcs)", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 180, description: "Otak-otak bandeng panggang dalam daun pisang.", contents: ["2 otak-otak bandeng panggang"], baseSurplus: 3 },
     ],
   },
   // --- Jawa Tengah: UNS Surakarta ------------------------------------
@@ -1337,8 +1359,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.83,
     description: "Timlo kuah bening & selat Solo, resep turun-temurun dekat Pasar Gede.",
     menus: [
-      { name: "Timlo Komplit + Nasi", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Sosis Solo, ati ampela, telur pindang, kuah kaldu bening.", baseSurplus: 5 },
-      { name: "Selat Solo", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Galantin daging, sayur rebus, kentang, kuah kecap manis-asam.", baseSurplus: 4 },
+      { name: "Timlo Komplit + Nasi", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Sosis Solo, ati ampela, telur pindang, kuah kaldu bening.", contents: ["Sosis Solo", "Ati ampela", "Telur pindang", "Kuah kaldu bening"], baseSurplus: 5 },
+      { name: "Selat Solo", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Galantin daging, sayur rebus, kentang, kuah kecap manis-asam.", contents: ["Galantin daging", "Sayur rebus", "Kentang", "Kuah kecap manis-asam"], baseSurplus: 4 },
     ],
   },
   {
@@ -1357,8 +1379,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.77,
     description: "Nasi liwet pincuk daun pisang, areh kental, khas lesehan Solo.",
     menus: [
-      { name: "Nasi Liwet Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi gurih, sayur labu siam, ayam suwir, areh, telur.", baseSurplus: 6 },
-      { name: "Nasi Liwet Telur Pindang", category: "MAKANAN_BERAT", priceIdr: 12000, description: "Nasi liwet, labu siam, telur pindang, areh.", baseSurplus: 4 },
+      { name: "Nasi Liwet Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi gurih, sayur labu siam, ayam suwir, areh, telur.", contents: ["Nasi gurih", "Sayur labu siam", "Ayam suwir", "Areh", "Telur"], baseSurplus: 6 },
+      { name: "Nasi Liwet Telur Pindang", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi liwet, labu siam, telur pindang, areh.", contents: ["Nasi liwet", "Labu siam", "Telur pindang", "Areh"], baseSurplus: 4 },
     ],
   },
   {
@@ -1377,8 +1399,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.61,
     description: "Menu vegetarian rumahan, tanpa daging dan tanpa MSG.",
     menus: [
-      { name: "Nasi Pecel Solo + Tempe Garit", category: "MAKANAN_VEGAN", priceIdr: 13000, description: "Sayur rebus, sambal pecel kencur, tempe garit, rempeyek.", baseSurplus: 5 },
-      { name: "Tengkleng Jamur Tiram", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Jamur tiram bumbu tengkleng kuah rempah, plus nasi.", baseSurplus: 3 },
+      { name: "Nasi Pecel Solo + Tempe Garit", category: "MAKANAN_VEGAN", priceIdr: 16000, description: "Sayur rebus, sambal pecel kencur, tempe garit, rempeyek.", contents: ["Nasi putih", "Sayur rebus", "Sambal pecel kencur", "Tempe garit", "Rempeyek"], baseSurplus: 5 },
+      { name: "Tengkleng Jamur Tiram", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Jamur tiram bumbu tengkleng kuah rempah, plus nasi.", contents: ["Jamur tiram bumbu tengkleng", "Nasi putih"], baseSurplus: 3 },
     ],
   },
   {
@@ -1397,9 +1419,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.87,
     description: "Roti manis dan serabi Solo dipanggang tiap pagi.",
     menus: [
-      { name: "Roti Manis Isi (4 pcs)", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 240, description: "Roti isi cokelat, keju, srikaya & abon.", baseSurplus: 6 },
-      { name: "Serabi Solo (5 pcs)", category: "ROTI_PASTRY", priceIdr: 15000, portionWeightGrams: 220, description: "Serabi santan polos & cokelat, legit dan lembut.", baseSurplus: 5 },
-      { name: "Paket Kejutan Omah Gandum", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran roti & kue yang tidak terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Roti Manis Isi (4 pcs)", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 240, description: "Roti isi cokelat, keju, srikaya & abon.", contents: ["Roti isi cokelat", "Keju", "Srikaya", "Abon"], baseSurplus: 6 },
+      { name: "Serabi Solo (6 pcs)", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 220, description: "Serabi santan polos dan cokelat, legit dan lembut.", contents: ["3 serabi polos", "3 serabi cokelat"], baseSurplus: 5 },
+      { name: "Paket Roti Malam (isi 5)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 400, description: "Lima roti dan kue yang dipanggang hari ini.", contents: ["Roti cokelat", "Roti keju", "Roti srikaya", "Roti abon", "Serabi cokelat"], baseSurplus: 3 },
     ],
   },
   // --- Jawa Timur: ITS Surabaya --------------------------------------
@@ -1419,8 +1441,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.79,
     description: "Rawon kluwek kuah hitam pekat, lengkap dengan telur asin.",
     menus: [
-      { name: "Nasi Rawon Daging", category: "MAKANAN_BERAT", priceIdr: 23000, portionWeightGrams: 350, description: "Rawon daging sapi, tauge pendek, telur asin, sambal.", baseSurplus: 5 },
-      { name: "Nasi Empal Penyet", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Empal daging goreng, tahu, tempe, sambal bajak.", baseSurplus: 3 },
+      { name: "Nasi Rawon Daging", category: "MAKANAN_BERAT", priceIdr: 23000, portionWeightGrams: 350, description: "Rawon daging sapi, tauge pendek, telur asin, sambal.", contents: ["Rawon daging sapi", "Tauge pendek", "Telur asin", "Sambal"], baseSurplus: 5 },
+      { name: "Nasi Empal Penyet", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "Empal daging goreng, tahu, tempe, sambal bajak.", contents: ["Empal daging goreng", "Tahu", "Tempe", "Sambal bajak"], baseSurplus: 3 },
     ],
   },
   {
@@ -1439,8 +1461,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.72,
     description: "Lontong balap & tahu tek petis khas Suroboyo, porsi anak kos.",
     menus: [
-      { name: "Lontong Balap", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 350, description: "Lontong, tauge, tahu goreng, lentho, kuah, sambal petis.", baseSurplus: 6 },
-      { name: "Tahu Tek Telur", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Tahu & telur goreng, lontong, kentang, saus kacang petis.", baseSurplus: 5 },
+      { name: "Lontong Balap", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 350, description: "Lontong, tauge, tahu goreng, lentho, kuah, sambal petis.", contents: ["Lontong", "Tauge", "Tahu goreng", "Lentho", "Kuah", "Sambal petis"], baseSurplus: 6 },
+      { name: "Tahu Tek Telur", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Tahu & telur goreng, lontong, kentang, saus kacang petis.", contents: ["Tahu", "Telur goreng", "Lontong", "Kentang", "Saus kacang petis"], baseSurplus: 5 },
     ],
   },
   {
@@ -1459,8 +1481,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.57,
     description: "Sayur & buah segar sisa pasar pagi, pas buat anak kos yang masak.",
     menus: [
-      { name: "Paket Sayur Asem (800 g)", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 800, description: "Kacang panjang, labu siam, jagung, melinjo, asam jawa.", baseSurplus: 4 },
-      { name: "Paket Kejutan Buah Campur", category: "MYSTERY_BAG", priceIdr: 18000, portionWeightGrams: 1200, description: "Buah matang yang harus segera dimakan.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Paket Sayur Asem (1,5 kg)", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 1500, description: "Kacang panjang, labu siam, jagung, melinjo, asam jawa.", contents: ["Kacang panjang", "Labu siam", "Jagung", "Melinjo", "Asam jawa"], baseSurplus: 4 },
+      { name: "Kantong Pisang & Jeruk Matang (1,5 kg)", category: "BAHAN_MAKANAN", priceIdr: 18000, portionWeightGrams: 1500, description: "Pisang dan jeruk matang yang harus segera dimakan.", contents: ["Pisang", "Jeruk"], baseSurplus: 3 },
     ],
   },
   {
@@ -1479,8 +1501,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Sego sambel bawang super pedas, iwak pe & telur dadar tebal.",
     menus: [
-      { name: "Sego Sambel Iwak Pe + Telur", category: "MAKANAN_BERAT", priceIdr: 15000, description: "Nasi, ikan pari asap, telur dadar, tahu tempe, sambal bawang.", baseSurplus: 6 },
-      { name: "Sego Sambel Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 250, description: "Ayam goreng, tahu tempe, sambal bawang, lalapan.", baseSurplus: 4 },
+      { name: "Sego Sambel Iwak Pe + Telur", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, ikan pari asap, telur dadar, tahu tempe, sambal bawang.", contents: ["Nasi", "Ikan pari asap", "Telur dadar", "Tahu tempe", "Sambal bawang"], baseSurplus: 6 },
+      { name: "Sego Sambel Ayam Goreng", category: "MAKANAN_BERAT", priceIdr: 19000, portionWeightGrams: 250, description: "Ayam goreng, tahu tempe, sambal bawang, lalapan.", contents: ["Nasi putih", "Ayam goreng", "Tahu tempe", "Sambal bawang", "Lalapan"], baseSurplus: 4 },
     ],
   },
   // --- Jawa Timur: UB Malang -----------------------------------------
@@ -1500,9 +1522,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.85,
     description: "Bakso Malang komplit dengan siomay, pangsit goreng & tahu bakso.",
     menus: [
-      { name: "Bakso Malang Komplit", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 350, description: "Bakso halus, bakso urat, tahu bakso, siomay, pangsit goreng.", baseSurplus: 7 },
-      { name: "Bakso Bakar (5 tusuk)", category: "MAKANAN_RINGAN", priceIdr: 15000, description: "Bakso bakar bumbu kecap pedas manis.", baseSurplus: 4 },
-      { name: "Paket Kejutan Cak Gito", category: "MYSTERY_BAG", priceIdr: 20000, portionWeightGrams: 400, description: "Isi acak bakso, tahu & siomay sisa hari ini.", isMysteryBag: true, baseSurplus: 2 },
+      { name: "Bakso Malang Komplit", category: "MAKANAN_BERAT", priceIdr: 17000, portionWeightGrams: 350, description: "Bakso halus, bakso urat, tahu bakso, siomay, pangsit goreng.", contents: ["Bakso halus", "Bakso urat", "Tahu bakso", "Siomay", "Pangsit goreng"], baseSurplus: 7 },
+      { name: "Bakso Bakar (6 tusuk)", category: "MAKANAN_RINGAN", priceIdr: 16000, description: "Bakso bakar bumbu kecap pedas manis.", contents: ["6 tusuk bakso bakar", "Bumbu kecap pedas manis"], baseSurplus: 4 },
+      { name: "Bakso Malang Pilih Isi", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 400, description: "Bakso halus, tahu bakso, siomay, kuah kaldu, pilih satu isian tambahan.", contents: ["Bakso halus", "Tahu bakso", "Siomay", "Kuah kaldu sapi"], laukOptions: ["Bakso urat", "Bakso telur", "Pangsit goreng"], baseSurplus: 2 },
     ],
   },
   {
@@ -1521,8 +1543,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.74,
     description: "Cwie mie ayam cincang khas Malang dan orem-orem kuah santan.",
     menus: [
-      { name: "Cwie Mie Ayam", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 280, description: "Mi lembut, ayam cincang, selada, pangsit goreng, kuah kaldu.", baseSurplus: 5 },
-      { name: "Orem-orem Ayam + Lontong", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 350, description: "Tempe, ayam, tauge, kuah santan kuning, lontong.", baseSurplus: 4 },
+      { name: "Cwie Mie Ayam", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 280, description: "Mi lembut, ayam cincang, selada, pangsit goreng, kuah kaldu.", contents: ["Mi lembut", "Ayam cincang", "Selada", "Pangsit goreng", "Kuah kaldu"], baseSurplus: 5 },
+      { name: "Orem-orem Ayam + Lontong", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 350, description: "Tempe, ayam, tauge, kuah santan kuning, lontong.", contents: ["Tempe", "Ayam", "Tauge", "Kuah santan kuning", "Lontong"], baseSurplus: 4 },
     ],
   },
   {
@@ -1541,8 +1563,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.63,
     description: "Wedang angsle & ronde jahe hangat, teman malam dingin Malang.",
     menus: [
-      { name: "Angsle Hangat", category: "MINUMAN", priceIdr: 12000, portionWeightGrams: 300, description: "Ketan, mutiara, roti tawar, kacang, kuah santan jahe.", baseSurplus: 5 },
-      { name: "Wedang Ronde", category: "MINUMAN", priceIdr: 10000, portionWeightGrams: 300, description: "Ronde isi kacang, kolang-kaling, kuah jahe sereh.", baseSurplus: 4 },
+      { name: "Angsle Hangat (2 mangkuk)", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 500, description: "Dua mangkuk ketan, mutiara, roti tawar, kacang, kuah santan jahe.", contents: ["Ketan", "Mutiara", "Roti tawar", "Kacang", "Kuah santan jahe"], baseSurplus: 5 },
+      { name: "Wedang Ronde (2 mangkuk)", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 500, description: "Dua mangkuk ronde isi kacang, kolang-kaling, kuah jahe sereh.", contents: ["Ronde isi kacang", "Kolang-kaling", "Kuah jahe sereh"], baseSurplus: 4 },
     ],
   },
   {
@@ -1561,8 +1583,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.75,
     description: "Warmindo 24 jam: geprek, mi goreng telur, es teh jumbo.",
     menus: [
-      { name: "Nasi Ayam Geprek + Telur", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 260, description: "Ayam geprek sambal bawang, telur ceplok, nasi.", baseSurplus: 4 },
-      { name: "Mi Goreng Telur Kornet", category: "MAKANAN_BERAT", priceIdr: 12000, portionWeightGrams: 250, description: "Mi goreng, telur, kornet, sawi, cabai rawit.", baseSurplus: 3 },
+      { name: "Nasi Ayam Geprek + Telur", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 260, description: "Ayam geprek sambal bawang, telur ceplok, nasi.", contents: ["Ayam geprek sambal bawang", "Telur ceplok", "Nasi"], baseSurplus: 4 },
+      { name: "Mi Goreng Telur Kornet + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Mi goreng, telur, kornet, sawi, cabai rawit, es teh manis.", contents: ["Mi goreng", "Telur", "Kornet", "Sawi", "Cabai rawit", "Es teh manis"], baseSurplus: 3 },
     ],
   },
   // --- Sumatera Utara: USU Medan -------------------------------------
@@ -1582,8 +1604,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Soto Medan kuah santan kuning, langganan anak kos Padang Bulan.",
     menus: [
-      { name: "Soto Medan Ayam + Nasi", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Soto santan kuning, ayam suwir, perkedel, emping, nasi.", baseSurplus: 6 },
-      { name: "Lontong Medan Komplit", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Lontong, sayur labu siam, tauco, telur balado, kerupuk merah.", baseSurplus: 5 },
+      { name: "Soto Medan Ayam + Nasi", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 300, description: "Soto santan kuning, ayam suwir, perkedel, emping, nasi.", contents: ["Soto santan kuning", "Ayam suwir", "Perkedel", "Emping", "Nasi"], baseSurplus: 6 },
+      { name: "Lontong Medan Komplit", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Lontong, sayur labu siam, tauco, telur balado, kerupuk merah.", contents: ["Lontong", "Sayur labu siam", "Tauco", "Telur balado", "Kerupuk merah"], baseSurplus: 5 },
     ],
   },
   {
@@ -1602,8 +1624,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.72,
     description: "Mi lidi khas Toba berbumbu andaliman, semua menu tanpa babi.",
     menus: [
-      { name: "Mie Gomak Goreng Andaliman", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 250, description: "Mi gomak goreng, telur, sawi, sambal andaliman.", baseSurplus: 5 },
-      { name: "Mie Gomak Kuah Santan", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Mi gomak kuah santan pedas, telur rebus.", baseSurplus: 4 },
+      { name: "Mie Gomak Goreng Andaliman", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Mi gomak goreng, telur, sawi, sambal andaliman.", contents: ["Mi gomak goreng", "Telur", "Sawi", "Sambal andaliman"], baseSurplus: 5 },
+      { name: "Mie Gomak Kuah Santan", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Mi gomak kuah santan pedas, telur rebus.", contents: ["Mi gomak kuah santan pedas", "Telur rebus"], baseSurplus: 4 },
     ],
   },
   {
@@ -1622,9 +1644,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.68,
     description: "Bika ambon bersarang dan bolu gulung dipanggang tiap pagi.",
     menus: [
-      { name: "Bika Ambon (4 potong)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 250, description: "Empat potong bika ambon pandan & original.", baseSurplus: 5 },
-      { name: "Bolu Gulung Srikaya", category: "ROTI_PASTRY", priceIdr: 20000, portionWeightGrams: 300, description: "Satu gulung bolu lembut isi srikaya.", baseSurplus: 4 },
-      { name: "Paket Kejutan Kue Medan", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran bika, bolu, dan kue basah yang tidak terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Bika Ambon (4 potong)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 250, description: "Empat potong bika ambon pandan & original.", contents: ["2 potong bika ambon pandan", "2 potong bika ambon original"], baseSurplus: 5 },
+      { name: "Bolu Gulung Srikaya", category: "ROTI_PASTRY", priceIdr: 20000, portionWeightGrams: 300, description: "Satu gulung bolu lembut isi srikaya.", contents: ["Bolu gulung", "Isi srikaya"], baseSurplus: 4 },
+      { name: "Paket Kue Medan (isi 6)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 400, description: "Bika ambon, bolu gulung, lapis legit, dan kue lapis yang dipanggang hari ini.", contents: ["2 potong bika ambon", "2 potong bolu gulung", "Lapis legit", "Kue lapis"], baseSurplus: 3 },
     ],
   },
   // --- Sumatera Barat: UNAND Padang ----------------------------------
@@ -1644,8 +1666,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.84,
     description: "Nasi kapau gulai kental dan sambal lado mudo, porsi mahasiswa.",
     menus: [
-      { name: "Nasi Kapau Gulai Tunjang", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 300, description: "Nasi, gulai tunjang, gulai nangka, sambal lado mudo.", baseSurplus: 4 },
-      { name: "Nasi Kapau Ayam Bakar", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 280, description: "Nasi, ayam bakar bumbu kuning, sayur kapau, sambal.", baseSurplus: 5 },
+      { name: "Nasi Kapau Gulai Tunjang", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 300, description: "Nasi, gulai tunjang, gulai nangka, sambal lado mudo.", contents: ["Nasi", "Gulai tunjang", "Gulai nangka", "Sambal lado mudo"], baseSurplus: 4 },
+      { name: "Nasi Kapau Ayam Bakar", category: "MAKANAN_BERAT", priceIdr: 22000, portionWeightGrams: 280, description: "Nasi, ayam bakar bumbu kuning, sayur kapau, sambal.", contents: ["Nasi", "Ayam bakar bumbu kuning", "Sayur kapau", "Sambal"], baseSurplus: 5 },
     ],
   },
   {
@@ -1664,8 +1686,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.76,
     description: "Sate Padang kuah kuning kental, tusuk daging dan lidah sapi.",
     menus: [
-      { name: "Sate Padang Daging + Ketupat", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "10 tusuk sate daging sapi, ketupat, kuah kuning, bawang goreng.", baseSurplus: 6 },
-      { name: "Sate Padang Lidah + Ketupat", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 250, description: "10 tusuk sate lidah sapi, ketupat, kuah kuning.", baseSurplus: 3 },
+      { name: "Sate Padang Daging + Ketupat", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 250, description: "10 tusuk sate daging sapi, ketupat, kuah kuning, bawang goreng.", contents: ["10 tusuk sate daging sapi", "Ketupat", "Kuah kuning", "Bawang goreng"], baseSurplus: 6 },
+      { name: "Sate Padang Lidah + Ketupat", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 250, description: "10 tusuk sate lidah sapi, ketupat, kuah kuning.", contents: ["10 tusuk sate lidah sapi", "Ketupat", "Kuah kuning"], baseSurplus: 3 },
     ],
   },
   {
@@ -1684,8 +1706,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.62,
     description: "Kawa daun dalam batok dan teh talua, teman begadang tugas.",
     menus: [
-      { name: "Teh Talua", category: "MINUMAN", priceIdr: 12000, portionWeightGrams: 250, description: "Teh kocok kuning telur, susu kental, dan jeruk nipis.", baseSurplus: 5 },
-      { name: "Kawa Daun + Pisang Goreng", category: "MINUMAN", priceIdr: 13000, portionWeightGrams: 300, description: "Seduhan daun kopi dalam batok + 3 pisang goreng.", baseSurplus: 4 },
+      { name: "Teh Talua (2 gelas)", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 500, description: "Dua gelas teh kocok kuning telur, susu kental, dan jeruk nipis.", contents: ["2 gelas teh talua", "Susu kental", "Jeruk nipis"], baseSurplus: 5 },
+      { name: "Kawa Daun + Pisang Goreng", category: "MINUMAN", priceIdr: 16000, portionWeightGrams: 300, description: "Seduhan daun kopi dalam batok + 3 pisang goreng.", contents: ["Kawa daun dalam batok", "3 pisang goreng"], baseSurplus: 4 },
     ],
   },
   // --- Sumatera Selatan: UNSRI Bukit Besar, Palembang ----------------
@@ -1705,8 +1727,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.85,
     description: "Pempek ikan tenggiri asli, cuko kental gula aren.",
     menus: [
-      { name: "Pempek Kapal Selam", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 220, description: "Satu kapal selam telur besar, mi kuning, timun, cuko.", baseSurplus: 5 },
-      { name: "Paket Pempek Campur (6 pcs)", category: "MAKANAN_RINGAN", priceIdr: 25000, portionWeightGrams: 300, description: "Lenjer, adaan, kulit, dan telur kecil + cuko.", baseSurplus: 6 },
+      { name: "Pempek Kapal Selam", category: "MAKANAN_RINGAN", priceIdr: 18000, portionWeightGrams: 220, description: "Satu kapal selam telur besar, mi kuning, timun, cuko.", contents: ["Satu kapal selam telur besar", "Mi kuning", "Timun", "Cuko"], baseSurplus: 5 },
+      { name: "Paket Pempek Campur (6 pcs)", category: "MAKANAN_RINGAN", priceIdr: 25000, portionWeightGrams: 300, description: "Lenjer, adaan, kulit, dan telur kecil + cuko.", contents: ["Pempek lenjer", "Pempek adaan", "Pempek kulit", "Pempek telur kecil", "Cuko"], baseSurplus: 6 },
     ],
   },
   {
@@ -1725,8 +1747,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.74,
     description: "Mie celor kuah santan udang dan tekwan kuah bening.",
     menus: [
-      { name: "Mie Celor Udang", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Mi kuning kuah santan kaldu udang, telur rebus, tauge.", baseSurplus: 4 },
-      { name: "Tekwan Kuah Bening", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 300, description: "Bola ikan, bengkuang, jamur kuping, soun, kuah udang.", baseSurplus: 5 },
+      { name: "Mie Celor Udang", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Mi kuning kuah santan kaldu udang, telur rebus, tauge.", contents: ["Mi kuning kuah santan kaldu udang", "Telur rebus", "Tauge"], baseSurplus: 4 },
+      { name: "Tekwan Kuah Bening", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Bola ikan, bengkuang, jamur kuping, soun, kuah udang.", contents: ["Bola ikan", "Bengkuang", "Jamur kuping", "Soun", "Kuah udang"], baseSurplus: 5 },
     ],
   },
   {
@@ -1745,8 +1767,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.6,
     description: "Warmindo 24 jam, andalan begadang anak Unsri.",
     menus: [
-      { name: "Mi Goreng Telur Kornet", category: "MAKANAN_BERAT", priceIdr: 12000, portionWeightGrams: 250, description: "Mi instan goreng, telur ceplok, kornet, sawi.", baseSurplus: 6 },
-      { name: "Nasi Ayam Geprek Sambal Terasi", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal terasi, lalapan.", baseSurplus: 5 },
+      { name: "Mi Goreng Telur Kornet + Es Teh", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Mi instan goreng, telur ceplok, kornet, sawi, es teh manis.", contents: ["Mi goreng", "Telur ceplok", "Kornet", "Sawi", "Es teh manis"], baseSurplus: 6 },
+      { name: "Nasi Ayam Geprek Sambal Terasi", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal terasi, lalapan.", contents: ["Nasi", "Ayam geprek", "Sambal terasi", "Lalapan"], baseSurplus: 5 },
     ],
   },
   // --- Kalimantan Barat: UNTAN Pontianak -----------------------------
@@ -1766,8 +1788,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Bubur pedas Melayu sarat sayur, daun kesum, dan kacang tanah.",
     menus: [
-      { name: "Bubur Pedas Komplit", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 300, description: "Bubur beras sangrai, pakis, kangkung, daun kesum, teri, kacang.", baseSurplus: 5 },
-      { name: "Pisang Goreng Srikaya (3 pcs)", category: "MAKANAN_RINGAN", priceIdr: 14000, portionWeightGrams: 220, description: "Pisang goreng khas Pontianak dengan cocolan srikaya.", baseSurplus: 6 },
+      { name: "Bubur Pedas Komplit", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 300, description: "Bubur beras sangrai, pakis, kangkung, daun kesum, teri, kacang.", contents: ["Bubur beras sangrai", "Pakis", "Kangkung", "Daun kesum", "Teri", "Kacang"], baseSurplus: 5 },
+      { name: "Pisang Goreng Srikaya (5 pcs)", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 220, description: "Pisang goreng khas Pontianak dengan cocolan srikaya.", contents: ["5 pisang goreng", "Selai srikaya"], baseSurplus: 6 },
     ],
   },
   {
@@ -1786,8 +1808,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Choi pan kukus isi bengkuang dan kwetiau sayur, sepenuhnya nabati.",
     menus: [
-      { name: "Choi Pan Bengkuang (8 pcs)", category: "MAKANAN_VEGAN", priceIdr: 18000, portionWeightGrams: 240, description: "Choi pan kukus isi bengkuang & kucai, minyak bawang putih.", baseSurplus: 5 },
-      { name: "Kwetiau Goreng Sayur", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Kwetiau goreng sawi, tauge, jamur, kecap asin.", baseSurplus: 4 },
+      { name: "Choi Pan Bengkuang (8 pcs)", category: "MAKANAN_VEGAN", priceIdr: 18000, portionWeightGrams: 240, description: "Choi pan kukus isi bengkuang & kucai, minyak bawang putih.", contents: ["8 choi pan isi bengkuang", "Kucai", "Minyak bawang putih"], baseSurplus: 5 },
+      { name: "Kwetiau Goreng Sayur", category: "MAKANAN_VEGAN", priceIdr: 17000, portionWeightGrams: 300, description: "Kwetiau goreng sawi, tauge, jamur, kecap asin.", contents: ["Kwetiau goreng sawi", "Tauge", "Jamur", "Kecap asin"], baseSurplus: 4 },
     ],
   },
   // --- Bali: Universitas Udayana, Denpasar ---------------------------
@@ -1807,8 +1829,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.86,
     description: "Nasi jinggo bungkus daun pisang, lauk ayam dan ikan, tanpa babi.",
     menus: [
-      { name: "Paket 3 Nasi Jinggo Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 450, description: "Tiga bungkus nasi jinggo: ayam suwir, mi, tempe, sambal matah. Tanpa babi.", baseSurplus: 8 },
-      { name: "Nasi Campur Bali Ayam Betutu", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 300, description: "Nasi, ayam betutu, lawar kacang, sate lilit ikan, sambal matah. Tanpa babi.", baseSurplus: 4 },
+      { name: "Paket 3 Nasi Jinggo Ayam Suwir", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 450, description: "Tiga bungkus nasi jinggo: ayam suwir, mi, tempe, sambal matah. Tanpa babi.", contents: ["3 nasi jinggo", "Ayam suwir", "Mi", "Tempe", "Sambal matah"], baseSurplus: 8 },
+      { name: "Nasi Campur Bali Ayam Betutu", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 300, description: "Nasi, ayam betutu, lawar kacang, sate lilit ikan, sambal matah. Tanpa babi.", contents: ["Nasi", "Ayam betutu", "Lawar kacang", "Sate lilit ikan", "Sambal matah"], baseSurplus: 4 },
     ],
   },
   {
@@ -1827,8 +1849,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.73,
     description: "Tipat cantok bumbu kacang ulek dadakan, menu nabati tanpa babi.",
     menus: [
-      { name: "Tipat Cantok", category: "MAKANAN_VEGAN", priceIdr: 13000, portionWeightGrams: 300, description: "Ketupat, kangkung, tauge, kacang panjang, tahu, bumbu kacang.", baseSurplus: 6 },
-      { name: "Jukut Urab + Nasi Sela", category: "MAKANAN_VEGAN", priceIdr: 14000, description: "Nasi sela (campur ubi), urap sayur bumbu Bali, tempe manis.", baseSurplus: 4 },
+      { name: "Tipat Cantok", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Ketupat, kangkung, tauge, kacang panjang, tahu, bumbu kacang.", contents: ["Ketupat", "Kangkung", "Tauge", "Kacang panjang", "Tahu", "Bumbu kacang"], baseSurplus: 6 },
+      { name: "Jukut Urab + Nasi Sela", category: "MAKANAN_VEGAN", priceIdr: 16000, description: "Nasi sela (campur ubi), urap sayur bumbu Bali, tempe manis.", contents: ["Nasi sela (campur ubi)", "Urap sayur bumbu Bali", "Tempe manis"], baseSurplus: 4 },
     ],
   },
   {
@@ -1847,9 +1869,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.8,
     description: "Pie susu renyah dan roti sobek pandan, dipanggang tiap pagi.",
     menus: [
-      { name: "Pie Susu (6 pcs)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 180, description: "Enam pie susu original, kulit renyah.", baseSurplus: 6 },
-      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 220, description: "Roti sobek pandan isi srikaya.", baseSurplus: 4 },
-      { name: "Paket Kejutan Dapur Dewi", category: "MYSTERY_BAG", priceIdr: 25000, portionWeightGrams: 400, description: "Campuran pie dan roti yang tidak terjual hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Pie Susu (6 pcs)", category: "ROTI_PASTRY", priceIdr: 18000, portionWeightGrams: 180, description: "Enam pie susu original, kulit renyah.", contents: ["6 pie susu original"], baseSurplus: 6 },
+      { name: "Roti Sobek Pandan Srikaya", category: "ROTI_PASTRY", priceIdr: 16000, portionWeightGrams: 220, description: "Roti sobek pandan isi srikaya.", contents: ["Roti sobek pandan isi srikaya"], baseSurplus: 4 },
+      { name: "Paket Pie Susu & Roti (isi 6)", category: "ROTI_PASTRY", priceIdr: 25000, portionWeightGrams: 400, description: "Empat pie susu dan dua roti sobek pandan yang dipanggang hari ini.", contents: ["4 pie susu", "2 roti sobek pandan"], baseSurplus: 3 },
     ],
   },
   // --- Sulawesi Selatan: UNHAS Tamalanrea, Makassar ------------------
@@ -1869,8 +1891,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.83,
     description: "Coto daging sapi kuah kacang, ketupat dimasak sendiri.",
     menus: [
-      { name: "Coto Makassar + 2 Ketupat", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Coto daging & jeroan sapi, dua ketupat, sambal tauco.", baseSurplus: 5 },
-      { name: "Pallubasa + Nasi", category: "MAKANAN_BERAT", priceIdr: 27000, portionWeightGrams: 350, description: "Pallubasa kuah kelapa sangrai, kuning telur, nasi.", baseSurplus: 3 },
+      { name: "Coto Makassar + 2 Ketupat", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 350, description: "Coto daging & jeroan sapi, dua ketupat, sambal tauco.", contents: ["Coto daging", "Jeroan sapi", "Dua ketupat", "Sambal tauco"], baseSurplus: 5 },
+      { name: "Pallubasa + Nasi", category: "MAKANAN_BERAT", priceIdr: 27000, portionWeightGrams: 350, description: "Pallubasa kuah kelapa sangrai, kuning telur, nasi.", contents: ["Pallubasa kuah kelapa sangrai", "Kuning telur", "Nasi"], baseSurplus: 3 },
     ],
   },
   {
@@ -1889,8 +1911,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.78,
     description: "Sop konro iga sapi kuah kluwek dan pisang epe gula merah.",
     menus: [
-      { name: "Sop Konro + Nasi", category: "MAKANAN_BERAT", priceIdr: 30000, portionWeightGrams: 400, description: "Iga sapi kuah kluwek, nasi, sambal.", baseSurplus: 4 },
-      { name: "Pisang Epe Gula Merah", category: "MAKANAN_RINGAN", priceIdr: 12000, portionWeightGrams: 180, description: "Pisang kepok bakar dijepit, siram gula merah durian.", baseSurplus: 5 },
+      { name: "Sop Konro + Nasi", category: "MAKANAN_BERAT", priceIdr: 30000, portionWeightGrams: 400, description: "Iga sapi kuah kluwek, nasi, sambal.", contents: ["Iga sapi kuah kluwek", "Nasi", "Sambal"], baseSurplus: 4 },
+      { name: "Pisang Epe Gula Merah (2 porsi)", category: "MAKANAN_RINGAN", priceIdr: 16000, portionWeightGrams: 180, description: "Pisang kepok bakar dijepit, siram gula merah durian.", contents: ["Pisang kepok bakar", "Gula merah durian"], baseSurplus: 5 },
     ],
   },
   {
@@ -1909,9 +1931,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.7,
     description: "Geprek & penyet sambal level 1–5, porsi kenyang anak kos.",
     menus: [
-      { name: "Ayam Geprek Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal bawang, lalapan.", baseSurplus: 6 },
-      { name: "Lele Penyet + Tahu Tempe", category: "MAKANAN_BERAT", priceIdr: 14000, description: "Nasi, lele goreng, tahu, tempe, sambal terasi.", baseSurplus: 4 },
-      { name: "Paket Kejutan Anak Rantau", category: "MYSTERY_BAG", priceIdr: 18000, portionWeightGrams: 350, description: "Isi acak lauk penyet sisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Ayam Geprek Sambal Bawang", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 250, description: "Nasi, ayam geprek, sambal bawang, lalapan.", contents: ["Nasi", "Ayam geprek", "Sambal bawang", "Lalapan"], baseSurplus: 6 },
+      { name: "Lele Penyet + Tahu Tempe", category: "MAKANAN_BERAT", priceIdr: 16000, description: "Nasi, lele goreng, tahu, tempe, sambal terasi.", contents: ["Nasi", "Lele goreng", "Tahu", "Tempe", "Sambal terasi"], baseSurplus: 4 },
+      { name: "Nasi Penyet Pilih Lauk", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 300, description: "Nasi, tahu, tempe, lalapan, sambal terasi, pilih satu lauk penyet.", contents: ["Nasi putih", "Tahu", "Tempe", "Lalapan", "Sambal terasi"], laukOptions: ["Ayam penyet", "Lele penyet", "Telur penyet"], baseSurplus: 3 },
     ],
   },
   // --- Sulawesi Utara: UNSRAT Manado ---------------------------------
@@ -1931,8 +1953,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.77,
     description: "Tinutuan dan nasi kuning Manado, semua menu tanpa babi.",
     menus: [
-      { name: "Tinutuan + Perkedel Nike", category: "MAKANAN_BERAT", priceIdr: 15000, portionWeightGrams: 350, description: "Bubur Manado labu, jagung, kangkung, bayam, perkedel nike, dabu-dabu.", baseSurplus: 5 },
-      { name: "Nasi Kuning Cakalang Fufu", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi kuning, cakalang fufu rica, telur, abon, bawang goreng.", baseSurplus: 5 },
+      { name: "Tinutuan + Perkedel Nike", category: "MAKANAN_BERAT", priceIdr: 16000, portionWeightGrams: 350, description: "Bubur Manado labu, jagung, kangkung, bayam, perkedel nike, dabu-dabu.", contents: ["Bubur Manado labu", "Jagung", "Kangkung", "Bayam", "Perkedel nike", "Dabu-dabu"], baseSurplus: 5 },
+      { name: "Nasi Kuning Cakalang Fufu", category: "MAKANAN_BERAT", priceIdr: 18000, portionWeightGrams: 250, description: "Nasi kuning, cakalang fufu rica, telur, abon, bawang goreng.", contents: ["Nasi kuning", "Cakalang fufu rica", "Telur", "Abon", "Bawang goreng"], baseSurplus: 5 },
     ],
   },
   {
@@ -1951,8 +1973,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.58,
     description: "Sayur segar kiriman Tomohon dan bumbu rica siap ulek.",
     menus: [
-      { name: "Paket Sayur Bunga Pepaya + Kangkung", category: "BAHAN_MAKANAN", priceIdr: 12000, portionWeightGrams: 1000, description: "Bunga pepaya, daun pepaya, kangkung, cukup untuk 3–4 porsi.", baseSurplus: 4 },
-      { name: "Paket Bumbu Rica", category: "BAHAN_MAKANAN", priceIdr: 10000, portionWeightGrams: 400, description: "Cabai rawit, tomat, bawang merah, daun jeruk, serai.", baseSurplus: 5 },
+      { name: "Paket Sayur Bunga Pepaya + Kangkung", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 1000, description: "Bunga pepaya, daun pepaya, kangkung, cukup untuk 3–4 porsi.", contents: ["Bunga pepaya", "Daun pepaya", "Kangkung"], baseSurplus: 4 },
+      { name: "Paket Bumbu Rica & Tomat (1 kg)", category: "BAHAN_MAKANAN", priceIdr: 16000, portionWeightGrams: 1000, description: "Cabai rawit, tomat, bawang merah, daun jeruk, serai.", contents: ["Cabai rawit", "Tomat", "Bawang merah", "Daun jeruk", "Serai"], baseSurplus: 5 },
     ],
   },
   // --- Papua: UNCEN Abepura, Jayapura --------------------------------
@@ -1972,8 +1994,8 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.79,
     description: "Papeda sagu segar dengan ikan kuah kuning kemangi.",
     menus: [
-      { name: "Papeda + Ikan Kuah Kuning", category: "MAKANAN_BERAT", priceIdr: 35000, portionWeightGrams: 400, description: "Papeda sagu, ikan kakap kuah kuning kemangi, sayur ganemo.", baseSurplus: 4 },
-      { name: "Ikan Bakar Colo-colo + Nasi", category: "MAKANAN_BERAT", priceIdr: 32000, portionWeightGrams: 350, description: "Ikan bakar, sambal colo-colo, nasi, tumis bunga pepaya.", baseSurplus: 4 },
+      { name: "Papeda + Ikan Kuah Kuning", category: "MAKANAN_BERAT", priceIdr: 35000, portionWeightGrams: 400, description: "Papeda sagu, ikan kakap kuah kuning kemangi, sayur ganemo.", contents: ["Papeda sagu", "Ikan kakap kuah kuning kemangi", "Sayur ganemo"], baseSurplus: 4 },
+      { name: "Ikan Bakar Colo-colo + Nasi", category: "MAKANAN_BERAT", priceIdr: 32000, portionWeightGrams: 350, description: "Ikan bakar, sambal colo-colo, nasi, tumis bunga pepaya.", contents: ["Ikan bakar", "Sambal colo-colo", "Nasi", "Tumis bunga pepaya"], baseSurplus: 4 },
     ],
   },
   {
@@ -1992,9 +2014,9 @@ export const SEED_MERCHANTS: SeedMerchant[] = [
     sellRate: 0.66,
     description: "Masakan rumahan Papua, ikan asar dan keladi porsi anak kos.",
     menus: [
-      { name: "Nasi Ikan Asar Rica", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 280, description: "Nasi, ikan asar (ikan asap) masak rica, tumis kangkung.", baseSurplus: 5 },
-      { name: "Keladi Rebus + Sayur Ganemo", category: "MAKANAN_VEGAN", priceIdr: 15000, portionWeightGrams: 300, description: "Keladi rebus, tumis daun & bunga ganemo, sambal.", baseSurplus: 3 },
-      { name: "Paket Kejutan Kaka Yohan", category: "MYSTERY_BAG", priceIdr: 20000, portionWeightGrams: 350, description: "Isi acak lauk & sayur sisa hari ini.", isMysteryBag: true, baseSurplus: 3 },
+      { name: "Nasi Ikan Asar Rica", category: "MAKANAN_BERAT", priceIdr: 25000, portionWeightGrams: 280, description: "Nasi, ikan asar (ikan asap) masak rica, tumis kangkung.", contents: ["Nasi", "Ikan asar (ikan asap) masak rica", "Tumis kangkung"], baseSurplus: 5 },
+      { name: "Keladi Rebus + Sayur Ganemo", category: "MAKANAN_VEGAN", priceIdr: 16000, portionWeightGrams: 300, description: "Keladi rebus, tumis daun & bunga ganemo, sambal.", contents: ["Keladi rebus", "Tumis daun", "Bunga ganemo", "Sambal"], baseSurplus: 3 },
+      { name: "Nasi Ikan Kuah Kuning + Sayur", category: "MAKANAN_BERAT", priceIdr: 20000, portionWeightGrams: 350, description: "Nasi, ikan kuah kuning, tumis kangkung, sambal.", contents: ["Nasi putih", "Ikan kuah kuning", "Tumis kangkung", "Sambal"], baseSurplus: 3 },
     ],
   },
 ];
@@ -2011,7 +2033,7 @@ export const LAST_NAMES = [
 ];
 
 export const REVIEW_TAGS = [
-  "Porsi Banyak",
+  "Lauk sesuai pilihan",
   "Masih Hangat",
   "Pelayanan Ramah",
   "Rasa Enak",

@@ -16,13 +16,24 @@ import { Switch } from "@/components/ui/switch";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
-import { MENU_CATEGORY_LABELS, type MenuCreateBody, type MenuUpdateBody, type MenuView, type MerchantMeResponse } from "@/lib/contracts";
+import {
+  MENU_CATEGORY_LABELS,
+  MERCHANT_MENU_CATEGORIES,
+  type MenuCategory,
+  type MenuCreateBody,
+  type MenuUpdateBody,
+  type MenuView,
+  type MerchantMeResponse,
+} from "@/lib/contracts";
+import { laukNoun } from "@/lib/lauk";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { stripEmpty } from "../lib/logic";
+import { menuPatch, stripEmpty } from "../lib/logic";
 import { MERCHANT_ME_QUERY_KEY, merchantKeys, useMerchantMe } from "../lib/queries";
 import { MerchantPage, MerchantPageHeader } from "../ui";
-import { EMPTY_MENU, MenuForm, menuToFormValues, type MenuFormOutput } from "./menu-form";
+import { EMPTY_MENU, MenuForm, menuToFormValues } from "./menu-form";
+
+export { menuPatch };
 
 type MenuResponse = { menu: MenuView };
 type Editing = { mode: "create" } | { mode: "edit"; menu: MenuView } | null;
@@ -31,20 +42,6 @@ function upsertMenu(old: MerchantMeResponse | undefined, menu: MenuView): Mercha
   if (!old) return old;
   const exists = old.menus.some((m) => m.id === menu.id);
   return { ...old, menus: exists ? old.menus.map((m) => (m.id === menu.id ? menu : m)) : [...old.menus, menu] };
-}
-
-/** Only the fields that changed, as a MenuUpdateBody (description "" → null). */
-export function menuPatch(before: MenuView, after: MenuFormOutput): MenuUpdateBody {
-  const patch: MenuUpdateBody = {};
-  if (after.menu_name !== before.menu_name) patch.menu_name = after.menu_name;
-  if (after.category !== before.category) patch.category = after.category;
-  const desc = after.description?.trim() ? after.description.trim() : null;
-  if (desc !== (before.description ?? null)) patch.description = desc;
-  if (after.original_price_idr !== before.original_price_idr) patch.original_price_idr = after.original_price_idr;
-  if (after.min_recovery_price_idr !== before.min_recovery_price_idr) patch.min_recovery_price_idr = after.min_recovery_price_idr;
-  if (after.portion_weight_grams !== before.portion_weight_grams) patch.portion_weight_grams = after.portion_weight_grams;
-  if (after.is_mystery_bag !== before.is_mystery_bag) patch.is_mystery_bag = after.is_mystery_bag;
-  return patch;
 }
 
 function MenuCard({
@@ -67,7 +64,6 @@ function MenuCard({
       <div className="flex items-start gap-3">
         <FoodThumb
           category={menu.category}
-          mystery={menu.is_mystery_bag}
           imageUrl={menu.image_url}
           alt=""
           className={cn("size-12 shrink-0 rounded-2xl", !menu.is_active && "grayscale")}
@@ -75,13 +71,30 @@ function MenuCard({
         <div className="min-w-0 flex-1">
           <h3 className="text-base leading-snug font-semibold">{menu.menu_name}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {menu.is_mystery_bag ? "Paket Kejutan" : MENU_CATEGORY_LABELS[menu.category]}
+            {(MERCHANT_MENU_CATEGORIES as readonly MenuCategory[]).includes(menu.category)
+              ? MENU_CATEGORY_LABELS[menu.category]
+              : "Paket lama, tulis isi dan kategorinya dulu"}
           </p>
         </div>
         <label className={cn("flex h-11 shrink-0 items-center gap-2 text-xs font-semibold", locked ? "cursor-not-allowed" : "cursor-pointer")}>
           <span className={menu.is_active ? "text-primary" : "text-muted-foreground"}>{menu.is_active ? "Aktif" : "Nonaktif"}</span>
           <Switch checked={menu.is_active} disabled={locked || toggling} onCheckedChange={onToggle} aria-label={`${menu.is_active ? "Nonaktifkan" : "Aktifkan"} ${menu.menu_name}`} />
         </label>
+      </div>
+      <div className="mt-2 space-y-0.5 text-sm leading-snug">
+        {menu.contents.length > 0 ? (
+          <p className="line-clamp-2">
+            <span className="font-semibold">Isi:</span> <span className="text-muted-foreground">{menu.contents.join(", ")}</span>
+          </p>
+        ) : menu.lauk_options.length === 0 ? (
+          <p className="rounded-xl bg-warning-soft px-2.5 py-1.5 text-xs text-foreground">Isi porsi belum ditulis. Ketuk Ubah untuk melengkapinya.</p>
+        ) : null}
+        {menu.lauk_options.length > 0 && (
+          <p className="line-clamp-2">
+            <span className="font-semibold">{laukNoun(menu.category)}:</span>{" "}
+            <span className="text-muted-foreground">{menu.lauk_options.join(", ")}</span>
+          </p>
+        )}
       </div>
       {menu.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{menu.description}</p>}
       <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
@@ -233,7 +246,7 @@ export function MerchantMenusView() {
         <ErrorState error={me.error} onRetry={() => void me.refetch()} />
       ) : menus.length === 0 ? (
         <div className="rounded-3xl bg-card ring-1 ring-border">
-          <EmptyState icon={UtensilsCrossedIcon} title="Belum ada menu" description="Tambahkan menu yang sering tersisa, atau buat Paket Kejutan berisi campuran sisa hari itu." />
+          <EmptyState icon={UtensilsCrossedIcon} title="Belum ada menu" description="Tambahkan menu yang sering tersisa, lengkap dengan isi porsinya supaya pembeli tahu apa yang mereka dapat." />
         </div>
       ) : (
         <div className="space-y-6">

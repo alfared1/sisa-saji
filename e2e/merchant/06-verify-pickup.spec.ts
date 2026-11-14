@@ -60,10 +60,16 @@ test("merchant verifies a customer's SJ code; customer sees COMPLETED, reviews, 
   const review = phone.getByRole("dialog", { name: "Gimana pesananmu?" });
   await expect(review).toBeVisible();
   await review.getByRole("radio", { name: "5 bintang" }).click();
+  // Optional questions: hygiene (1-5) and portion.
+  await review.getByRole("radiogroup", { name: /Seberapa bersih tempat dan makanannya/ }).getByRole("radio", { name: /^4 dari 5/ }).click();
+  await review.getByRole("radiogroup", { name: /Porsinya sesuai porsi normal/ }).getByRole("radio", { name: "Ya, kenyang" }).click();
   const sent = phone.waitForResponse((r) => r.url().includes(`/orders/${order.id}/review`));
   await review.getByRole("button", { name: "Kirim ulasan" }).click();
-  expect((await sent).status()).toBe(200);
+  const reviewRes = await sent;
+  expect(reviewRes.status()).toBe(200);
+  expect(reviewRes.request().postDataJSON()).toMatchObject({ rating: 5, hygiene_rating: 4, portion_full: true });
   await expect(phone.getByText("Ulasanmu terkirim")).toBeVisible();
+  await expect(phone.getByText("Kebersihan 4/5")).toBeVisible();
 
   // Impact totals increased (API + /impact page).
   const after = await ok<ImpactSummary>(await customer.get("/api/v1/profile/impact"));

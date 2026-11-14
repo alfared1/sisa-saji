@@ -61,6 +61,10 @@ export function markerFromMerchant(m: MerchantSummary): SurplusMapMarker {
 
 export type PinState = "normal" | "deal" | "hot" | "urgent" | "closed";
 
+/** From these discounts a pin turns "hot" / "deal" (the same 50 % as the "Diskon Tertinggi" row). */
+export const PIN_HOT_DISCOUNT_PCT = 50;
+export const PIN_DEAL_DISCOUNT_PCT = 30;
+
 /** Urgency colour of a pin: closed (sold out / past close) → urgent (< 45 min) → by discount. */
 export function pinState(marker: Pick<SurplusMapMarker, "discount_pct" | "stock" | "closes_at">, nowMs: number | null): PinState {
   const closeMs = marker.closes_at ? Date.parse(marker.closes_at) : NaN;
@@ -70,8 +74,8 @@ export function pinState(marker: Pick<SurplusMapMarker, "discount_pct" | "stock"
     if (minutes <= 0) return "closed";
     if (minutes < PIN_URGENT_MINUTES) return "urgent";
   }
-  if (marker.discount_pct >= 60) return "hot";
-  if (marker.discount_pct >= 40) return "deal";
+  if (marker.discount_pct >= PIN_HOT_DISCOUNT_PCT) return "hot";
+  if (marker.discount_pct >= PIN_DEAL_DISCOUNT_PCT) return "deal";
   return "normal";
 }
 

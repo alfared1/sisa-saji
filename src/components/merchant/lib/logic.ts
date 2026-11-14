@@ -2,7 +2,8 @@
  * Pure merchant-app helpers (no React, no DOM) — unit-tested in
  * tests/unit/fem-merchant-logic.test.ts.
  */
-import type { InsightsResponse, MerchantBatchView } from "@/lib/contracts";
+import type { z } from "zod";
+import type { InsightsResponse, MenuCreateBody, MenuUpdateBody, MenuView, MerchantBatchView } from "@/lib/contracts";
 import { PICKUP_CODE_LENGTH, PICKUP_CODE_PREFIX, PRICE_ROUNDING_IDR } from "@/lib/constants";
 import { MINUTE_MS, atWib, formatClockId, wibDate, wibTime } from "@/lib/time";
 
@@ -348,4 +349,31 @@ export function sanitizePhone(raw: string): string {
 /** WIB "YYYY-MM-DD" n days before `nowMs`. */
 export function wibDateDaysAgo(nowMs: number, days: number): string {
   return wibDate(new Date(nowMs - days * 24 * 60 * MINUTE_MS));
+}
+
+/* ------------------------------------------------------------------ */
+/* Menu edits                                                          */
+/* ------------------------------------------------------------------ */
+
+/** The menu form's parsed values (MenuCreateBody output). */
+export type MenuFormValues = z.output<typeof MenuCreateBody>;
+
+/** Same entries in the same order. */
+export function sameItems(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
+/** Only the fields that changed, as a MenuUpdateBody (description "" → null). */
+export function menuPatch(before: MenuView, after: MenuFormValues): MenuUpdateBody {
+  const patch: MenuUpdateBody = {};
+  if (after.menu_name !== before.menu_name) patch.menu_name = after.menu_name;
+  if (after.category !== before.category) patch.category = after.category;
+  const desc = after.description?.trim() ? after.description.trim() : null;
+  if (desc !== (before.description ?? null)) patch.description = desc;
+  if (after.original_price_idr !== before.original_price_idr) patch.original_price_idr = after.original_price_idr;
+  if (after.min_recovery_price_idr !== before.min_recovery_price_idr) patch.min_recovery_price_idr = after.min_recovery_price_idr;
+  if (after.portion_weight_grams !== before.portion_weight_grams) patch.portion_weight_grams = after.portion_weight_grams;
+  if (!sameItems(after.contents, before.contents)) patch.contents = after.contents;
+  if (!sameItems(after.lauk_options, before.lauk_options)) patch.lauk_options = after.lauk_options;
+  return patch;
 }

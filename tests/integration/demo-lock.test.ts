@@ -1,12 +1,13 @@
 /**
  * Shared demo accounts: the route handlers refuse changes to identity, warung profile,
  * payout details, menus and opening state (403 DEMO_LOCKED), while the demo flow itself
- * (publishing and cancelling surplus) keeps working. Other accounts are not affected.
+ * (publishing and cancelling surplus, tonight's lauk and portion, the batch photo) keeps
+ * working. Demo photos are demo_only. Other accounts are not affected.
  */
-import { asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/client";
-import { menus, merchants, users } from "@/db/schema";
+import { batchPhotos, menus, merchants, users } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import type { AuthMeResponse } from "@/lib/contracts";
 import {
@@ -49,7 +50,20 @@ beforeAll(async () => {
   await reseed(db);
   [demoMerchant] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
   demoOwnerId = demoMerchant.ownerUserId;
-  [{ id: demoMenuId }] = await db.select({ id: menus.id }).from(menus).where(eq(menus.merchantId, demoMerchant.id)).orderBy(asc(menus.id)).limit(1);
+  // An active listed menu (old surprise menus can no longer be published).
+  [{ id: demoMenuId }] = await db
+    .select({ id: menus.id })
+    .from(menus)
+    .where(
+      and(
+        eq(menus.merchantId, demoMerchant.id),
+        eq(menus.isActive, true),
+        eq(menus.isMysteryBag, false),
+        ne(menus.category, "MYSTERY_BAG"),
+      ),
+    )
+    .orderBy(asc(menus.id))
+    .limit(1);
   [{ id: demoBuyerId }] = await db.select({ id: users.id }).from(users).where(eq(users.email, DEMO_ACCOUNTS.CUSTOMER.email));
   [{ ownerUserId: otherOwnerId }] = await db.select().from(merchants).where(ne(merchants.slug, DEMO_MERCHANT_SLUG)).limit(1);
 });
@@ -142,6 +156,47 @@ describe("demo warung", () => {
       params: Promise.resolve({ batchId: data.batch.id }),
     });
     expect(cancelled.status).toBe(200);
+  });
+
+  it("can set tonight's portion and upload a batch photo, which stays demo_only", async () => {
+    const { POST } = await import("@/app/api/v1/merchant/surplus/publish/route");
+    const { PATCH } = await import("@/app/api/v1/merchant/surplus/[batchId]/route");
+    const photoRoute = await import("@/app/api/v1/merchant/surplus/[batchId]/photo/route");
+    await as(demoOwnerId);
+    const published = await POST(
+      req("POST", "/merchant/surplus/publish", {
+        menu_id: demoMenuId,
+        initial_stock: 3,
+        pickup_end_time: new Date(Date.now() + 90 * 60_000).toISOString(),
+      }),
+      undefined,
+    );
+    expect(published.status).toBe(201);
+    const batchId = ((await published.json()) as { data: { batch: { id: string } } }).data.batch.id;
+    const ctx = { params: Promise.resolve({ batchId }) };
+
+    const patched = await PATCH(req("PATCH", `/merchant/surplus/${batchId}`, { full_portion: false }), ctx);
+    expect(patched.status).toBe(200);
+    expect(((await patched.json()) as { data: { batch: { full_portion: boolean } } }).data.batch.full_portion).toBe(false);
+
+    // SOI, SOF0 640 × 480, SOS, EOI.
+    const jpeg = Uint8Array.from([
+      0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0xe0, 0x02, 0x80, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1,
+      0xff, 0xda, 0x00, 0x0c, 0x03, 1, 0, 2, 0x11, 3, 0x11, 0x00, 0x3f, 0x00, 0x12, 0x34, 0xff, 0xd9,
+    ]);
+    const uploaded = await photoRoute.POST(
+      new Request(`http://localhost/api/v1/merchant/surplus/${batchId}/photo`, {
+        method: "POST",
+        headers: { "content-type": "image/jpeg" },
+        body: jpeg,
+      }),
+      ctx,
+    );
+    expect(uploaded.status).toBe(201);
+    const body = (await uploaded.json()) as { data: { photo: { visibility: string; demo_only: boolean } } };
+    expect(body.data.photo).toMatchObject({ visibility: "DEMO", demo_only: true });
+    const [row] = await db.select().from(batchPhotos).where(eq(batchPhotos.surplusBatchId, batchId));
+    expect(row.demoOnly).toBe(true);
   });
 
   it(`publishes at most ${DEMO_MAX_BATCH_STOCK} portions per batch`, async () => {

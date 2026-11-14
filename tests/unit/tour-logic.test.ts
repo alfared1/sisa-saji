@@ -178,6 +178,19 @@ describe("tour content", () => {
     expect(all).toContain("dikunci 10 menit");
     expect(all).toContain("radius 2 km");
   });
+
+  it("matches the research update: no 70% claim, the lock button, cash hold and quick filters", () => {
+    const all = plain(
+      JSON.stringify(Object.values(TOUR_STEPS).flat().map((s) => [s.title, s.body, s.mockLabel, ...s.bullets.map((b) => b.text)])),
+    );
+    expect(all).not.toContain("70%");
+    expect(all).not.toMatch(/kejutan|OVO/i);
+    expect(plain(TOUR_STEPS.pembeli[0].title)).toBe("Makan malam kenyang mulai Rp 10.000");
+    expect(TOUR_STEPS.pembeli[0].bullets.at(-1)?.text).toContain("CO₂e");
+    expect(all).toContain("Kunci Porsi Sekarang");
+    expect(all).toContain("Bayar tunai di warung dengan porsi ditahan 30 menit");
+    expect(all).toContain("< 500 m");
+  });
 });
 
 describe("keepTogether", () => {

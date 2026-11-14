@@ -3,12 +3,15 @@
  * Secrets are viewer-dependent:
  *  - customer: pickup_code / pickup_qr_token once paid; qris_string while unpaid
  *  - merchant: never sees the pickup code or token (it is the customer's proof)
+ * merchant.is_demo_data is read at load time (isDemoData()), so a non-pilot warung on a
+ * demo deployment can be told apart from a real self-registered one.
  */
 import "server-only";
 import { inArray, eq } from "drizzle-orm";
 import type { DbOrTx } from "@/db/client";
 import { merchants, orderItems, orders, reviews, users } from "@/db/schema";
 import type { OrderDetail } from "@/lib/contracts";
+import { isDemoData } from "@/lib/env";
 
 export type OrderViewer = "customer" | "merchant";
 
@@ -27,6 +30,7 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
     .where(inArray(orders.id, orderIds));
 
   const items = await db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds));
+  const demoData = isDemoData();
   const revs = await db.select().from(reviews).where(inArray(reviews.orderId, orderIds));
 
   const itemsByOrder = new Map<string, (typeof items)[number][]>();
@@ -55,6 +59,8 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
         lat: m.latitude,
         lng: m.longitude,
         whatsapp_number: m.whatsappNumber,
+        is_pilot: m.isPilot,
+        is_demo_data: demoData,
       },
       customer: {
         id: c.id,
@@ -70,6 +76,7 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
         unit_selling_price_idr: i.unitSellingPriceIdr,
         discount_pct: i.discountPctApplied,
         portion_weight_grams: i.portionWeightGrams,
+        lauk: i.laukChoice,
       })),
       subtotal_original_idr: o.subtotalOriginalIdr,
       subtotal_recovery_idr: o.subtotalRecoveryIdr,
@@ -92,7 +99,15 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
       food_saved_grams: o.status === "COMPLETED" ? o.totalFoodSavedGrams : foodGrams,
       co2_avoided_grams: o.status === "COMPLETED" ? o.totalCo2AvoidedGrams : Math.round(foodGrams * 2.5),
       cancel_reason: o.cancelReason,
-      review: rev ? { rating: rev.rating, tags: rev.tags ?? [], comment: rev.comment } : null,
+      review: rev
+        ? {
+            rating: rev.rating,
+            tags: rev.tags ?? [],
+            comment: rev.comment,
+            hygiene_rating: rev.hygieneRating,
+            portion_full: rev.portionFull,
+          }
+        : null,
       created_at: o.createdAt.toISOString(),
     });
   }

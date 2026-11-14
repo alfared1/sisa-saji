@@ -21,6 +21,7 @@ function merchant(
     tier: o.premium ? "PREMIUM" : "REGULAR",
     rating_avg: 5,
     total_reviews: 0,
+    trust: { hygiene: null, portion_full: null },
     logo_url: null,
     is_open: true,
     max_discount_pct: o.maxDisc,

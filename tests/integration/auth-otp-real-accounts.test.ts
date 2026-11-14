@@ -3,18 +3,21 @@
  * warung owners and their buyers) cannot be opened with OTP at all; demo and demo-data
  * accounts keep working. With real delivery the same accounts log in normally.
  */
-import { eq, ne } from "drizzle-orm";
+import { asc, eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/client";
-import { merchants, orders, otpCodes, users } from "@/db/schema";
+import { menus, merchants, orders, otpCodes, surplusBatches, users } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { OTP_MAX_REQUESTS_PER_WINDOW } from "@/lib/constants";
-import { OtpRequestBody, OtpVerifyBody, REAL_OTP_REQUIRED_REASON } from "@/lib/contracts";
+import { CheckoutBody, OtpRequestBody, OtpVerifyBody, REAL_OTP_REQUIRED_REASON } from "@/lib/contracts";
 import { DEMO_ACCOUNTS, isDemoAccount } from "@/lib/demo-accounts";
+import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
 import { hashOtp, requestOtp, verifyOtp } from "@/server/services/auth/otp";
 import { isRealPersonAccount } from "@/server/services/auth/real-accounts";
+import { checkout } from "@/server/services/orders/checkout";
 import { reseed, testDb } from "../helpers/db";
+import { TEST_PICKUP_QR_SECRET } from "../setup/constants";
 
 let db: Db;
 let close: () => Promise<void>;
@@ -74,6 +77,35 @@ describe("isRealPersonAccount", () => {
     expect(await isRealPersonAccount(db, id(ordinary))).toBe(false);
     expect(await isRealPersonAccount(db, { kind: "email", value: DEMO_ACCOUNTS.MERCHANT.email, channel: "EMAIL" })).toBe(false);
     expect(await isRealPersonAccount(db, { kind: "email", value: "belum.terdaftar@contoh.id", channel: "EMAIL" })).toBe(false);
+  });
+
+  it("a bayar di warung ticket at a demo (non-pilot) warung does not make a buyer real", async () => {
+    const [demo] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));
+    expect(demo.isPilot).toBe(false);
+    const [menu] = await db.select().from(menus).where(eq(menus.merchantId, demo.id)).orderBy(asc(menus.id)).limit(1);
+    const now = Date.now();
+    const [batch] = await db
+      .insert(surplusBatches)
+      .values({
+        merchantId: demo.id,
+        menuId: menu.id,
+        batchDate: wibDate(),
+        initialStock: 5,
+        availableStock: 5,
+        originalPriceIdr: menu.originalPriceIdr,
+        currentDiscountPct: 50,
+        currentSellingPriceIdr: Math.round(menu.originalPriceIdr / 2),
+        pickupStartTime: new Date(now - 30 * 60_000),
+        pickupEndTime: new Date(now + 90 * 60_000),
+      })
+      .returning();
+    const ticket = await checkout(db, {
+      userId: ordinary.id,
+      input: CheckoutBody.parse({ merchant_id: demo.id, items: [{ batch_id: batch.id, quantity: 1 }], payment_method: "BAYAR_DI_WARUNG" }),
+      pickupQrSecret: TEST_PICKUP_QR_SECRET,
+    });
+    expect(ticket.payment_method).toBe("BAYAR_DI_WARUNG");
+    expect(await isRealPersonAccount(db, { kind: "phone", value: ordinary.phoneNumber!, channel: "WHATSAPP" })).toBe(false);
   });
 });
 

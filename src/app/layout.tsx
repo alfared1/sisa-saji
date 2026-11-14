@@ -11,17 +11,27 @@ const jakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700", "800"],
 });
 
+const TITLE = "Sisa-Saji: Makan Malam Hemat dari Warung Terdekat";
 const DESCRIPTION =
-  "Selamatkan makanan surplus dari warung di sekitar kampus dengan harga hemat hingga 70%. Pesan, bayar QRIS, lalu ambil sendiri dalam kurang dari 3 menit.";
+  "Makan malam kenyang mulai Rp 10.000 dari warung terdekat sebelum tutup. Menu jelas, porsi normal, ambil sendiri.";
 
 export const metadata: Metadata = {
   title: {
-    default: "Sisa-Saji: Selamatkan Makanan, Hemat Uang",
+    default: TITLE,
     template: "%s · Sisa-Saji",
   },
   description: DESCRIPTION,
   applicationName: "Sisa-Saji",
-  keywords: ["food waste", "makanan surplus", "diskon makanan", "warung", "mahasiswa", "PWA"],
+  keywords: [
+    "makan murah mahasiswa Bogor",
+    "makan malam hemat",
+    "diskon makanan",
+    "warung",
+    "mahasiswa",
+    "food waste",
+    "makanan surplus",
+    "PWA",
+  ],
   appleWebApp: {
     capable: true,
     title: "Sisa-Saji",
@@ -32,7 +42,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     siteName: "Sisa-Saji",
-    title: "Sisa-Saji: Selamatkan Makanan, Hemat Uang",
+    title: TITLE,
     description: DESCRIPTION,
   },
 };

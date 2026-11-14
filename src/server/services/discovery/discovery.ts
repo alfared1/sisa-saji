@@ -2,7 +2,13 @@
  * Customer discovery: PostGIS radius search over live surplus batches, map pins
  * (radius and nationwide), merchant detail, favourites and the SSE change feed.
  *
- * "Live" batch = merchant is_open, batch ACTIVE, available_stock > 0, pickup_end_time > now.
+ * "Live" batch = merchant is_open, batch ACTIVE, available_stock > 0, pickup_end_time > now,
+ * and not a legacy closed "paket kejutan" menu (buyers always see what is in the portion).
+ *
+ * Buyer payloads only carry what the viewer may see: the batch photo follows the visibility
+ * rule of batch-photos.ts (pilot warung public, demo-account photos only for demo sessions,
+ * everything else owner-only and never listed), and the menu-level image_url is only sent
+ * for pilot warung.
  */
 import "server-only";
 import { and, desc, eq, sql, type SQL } from "drizzle-orm";
@@ -25,8 +31,10 @@ import type {
   SubscribeBody,
   WarungMapPin,
 } from "@/lib/contracts";
+import { toTrustSignals } from "@/lib/trust-signals";
 import { ApiError } from "@/server/http";
 import { abbreviateName } from "@/server/services/auth/identifier";
+import { batchPhotoFromRow, photoMetaSql } from "@/server/services/batch-photos";
 
 export type DiscoverInput = z.output<typeof DiscoverQuery>;
 type SubscribeInput = z.output<typeof SubscribeBody>;
@@ -40,7 +48,10 @@ type LiveRow = {
   category: MenuCategory;
   description: string | null;
   image_url: string | null;
-  is_mystery_bag: boolean;
+  contents: string[] | null;
+  lauk_options: string[] | null;
+  lauk_available: string[] | null;
+  full_portion: boolean;
   portion_weight_grams: number;
   original_price_idr: number;
   selling_price_idr: number;
@@ -62,9 +73,16 @@ type LiveRow = {
   tier: MerchantTier;
   rating_avg: string | number;
   total_reviews: number;
+  hygiene_avg: string | number | null;
+  hygiene_count: number | string;
+  portion_full_count: number | string;
+  portion_answer_count: number | string;
   logo_url: string | null;
   is_open: boolean;
   distance_m: number | string | null;
+  photo_id: string | null;
+  photo_uploaded_at: Date | string | null;
+  photo_demo_only: boolean | null;
 };
 
 const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -78,11 +96,16 @@ function point(lat: number, lng: number): SQL {
   return sql`ST_MakePoint(${lng}, ${lat})::geography`;
 }
 
-/** Live batch rows joined with menu & merchant, optionally filtered. */
+/**
+ * Live batch rows joined with menu & merchant, optionally filtered, with the batch photo the
+ * viewer may see (never its bytes). `viewerIsDemo`: a shared demo account is asking, so
+ * photos uploaded by demo accounts are included while they are fresh.
+ */
 async function queryLiveRows(
   db: Db,
   opts: {
     now: Date;
+    viewerIsDemo?: boolean;
     origin?: { lat: number; lng: number };
     radiusM?: number;
     merchantId?: string;
@@ -96,6 +119,9 @@ async function queryLiveRows(
     sql`b.status = 'ACTIVE'`,
     sql`b.available_stock > 0`,
     sql`b.pickup_end_time > ${opts.now}`,
+    // Closed surprise items are no longer shown (the migration deactivated them too).
+    sql`NOT mn.is_mystery_bag`,
+    sql`mn.category <> 'MYSTERY_BAG'`,
   ];
   if (opts.origin && opts.radiusM !== undefined) {
     conds.push(sql`ST_DWithin(m.geom, ${point(opts.origin.lat, opts.origin.lng)}, ${opts.radiusM})`);
@@ -110,22 +136,38 @@ async function queryLiveRows(
   const distance = opts.origin
     ? sql`ST_Distance(m.geom, ${point(opts.origin.lat, opts.origin.lng)})`
     : sql`NULL::float8`;
+  const photo = photoMetaSql({ viewerIsDemo: opts.viewerIsDemo === true, now: opts.now });
 
   const { rows } = await db.execute<LiveRow>(sql`
     SELECT b.id AS batch_id, mn.id AS menu_id, mn.menu_name, mn.category, mn.description, mn.image_url,
-           mn.is_mystery_bag, mn.portion_weight_grams,
+           mn.contents, mn.lauk_options, b.lauk_available, b.full_portion, mn.portion_weight_grams,
            b.original_price_idr, b.current_selling_price_idr AS selling_price_idr,
            b.current_discount_pct AS discount_pct, b.available_stock, b.initial_stock,
            b.auto_discount_enabled, b.pickup_start_time, b.pickup_end_time,
            m.id AS merchant_id, m.slug AS merchant_slug, m.merchant_name, m.merchant_category,
            m.address, m.latitude AS lat, m.longitude AS lng, m.merchant_verified AS is_verified,
-           m.is_pilot, m.subscription_tier AS tier, m.rating_avg, m.total_reviews, m.logo_url, m.is_open,
-           ${distance} AS distance_m
+           m.is_pilot, m.subscription_tier AS tier, m.rating_avg, m.total_reviews,
+           m.hygiene_avg, m.hygiene_count, m.portion_full_count, m.portion_answer_count,
+           m.logo_url, m.is_open,
+           ${distance} AS distance_m,
+           ${photo.select}
     FROM surplus_batches b
     JOIN merchants m ON m.id = b.merchant_id
     JOIN menus mn ON mn.id = b.menu_id
+    ${photo.join}
     WHERE ${sql.join(conds, sql` AND `)}`);
   return rows;
+}
+
+const textList = (v: string[] | null | undefined): string[] => (Array.isArray(v) ? v : []);
+
+function trustOf(r: Pick<LiveRow, "hygiene_avg" | "hygiene_count" | "portion_full_count" | "portion_answer_count">) {
+  return toTrustSignals({
+    hygieneAvg: r.hygiene_avg,
+    hygieneCount: r.hygiene_count,
+    portionFullCount: r.portion_full_count,
+    portionAnswerCount: r.portion_answer_count,
+  });
 }
 
 export function minutesToClose(end: Date, now: Date): number {
@@ -144,8 +186,15 @@ function toBatchCard(r: LiveRow, now: Date): BatchCard {
     menu_name: r.menu_name,
     category: r.category,
     description: r.description,
-    image_url: r.image_url,
-    is_mystery_bag: r.is_mystery_bag,
+    // Menu photos (any host, set by the warung) are only shown for pilot warung, the same
+    // trust level as a public batch photo.
+    image_url: r.is_pilot ? r.image_url : null,
+    contents: textList(r.contents),
+    lauk_options: textList(r.lauk_options),
+    lauk_available: textList(r.lauk_available),
+    full_portion: r.full_portion,
+    photo: batchPhotoFromRow(r),
+    merchant_trust: trustOf(r),
     portion_weight_grams: Number(r.portion_weight_grams),
     original_price_idr: Number(r.original_price_idr),
     selling_price_idr: Number(r.selling_price_idr),
@@ -204,6 +253,7 @@ function groupByMerchant(rows: LiveRow[], now: Date): MerchantSummary[] {
           tier: r.tier,
           rating_avg: Number(r.rating_avg),
           total_reviews: Number(r.total_reviews),
+          trust: trustOf(r),
           logo_url: r.logo_url,
           is_open: r.is_open,
         },
@@ -233,13 +283,18 @@ export function sortMerchants(list: MerchantSummary[], sort: DiscoverInput["sort
   return [...list].sort(cmp[sort]);
 }
 
+/** Who is looking: a shared demo account also sees fresh demo-account photos. */
+export type DiscoveryViewer = { viewerIsDemo?: boolean };
+
 export async function findNearby(
   db: Db,
   q: DiscoverInput,
   now: Date = new Date(),
+  viewer: DiscoveryViewer = {},
 ): Promise<{ radius_m: number; total_batches: number; merchants: MerchantSummary[] }> {
   const rows = await queryLiveRows(db, {
     now,
+    viewerIsDemo: viewer.viewerIsDemo === true,
     origin: { lat: q.lat, lng: q.lng },
     radiusM: q.radius_m,
     category: q.category,
@@ -252,7 +307,7 @@ export async function findNearby(
 
 /** Light payload for map pins. `pickup_end_time` is the soonest closing batch (drives the "hampir tutup" pulse). */
 export async function findMapPins(db: Db, q: DiscoverInput, now: Date = new Date()): Promise<MapPin[]> {
-  const { merchants: list } = await findNearby(db, q, now);
+  const { merchants: list } = await findNearby(db, q, now, { viewerIsDemo: false });
   return list.map((m) => ({
     merchant_id: m.id,
     slug: m.slug,
@@ -316,7 +371,9 @@ export async function findAllMapPins(
              MIN(b.current_selling_price_idr) AS min_price_idr,
              MIN(b.pickup_end_time) AS pickup_end_time
       FROM surplus_batches b
+      JOIN menus mn ON mn.id = b.menu_id
       WHERE b.status = 'ACTIVE' AND b.available_stock > 0 AND b.pickup_end_time > ${now}
+        AND NOT mn.is_mystery_bag AND mn.category <> 'MYSTERY_BAG'
       GROUP BY b.merchant_id
     ) l ON l.merchant_id = m.id AND m.is_open
     ORDER BY (l.merchant_id IS NOT NULL) DESC, m.created_at ASC, m.id ASC
@@ -362,7 +419,7 @@ const hhmm = (t: string) => t.slice(0, 5);
 export async function getMerchantDetail(
   db: Db,
   slugOrId: string,
-  opts: { lat?: number; lng?: number; userId: string | null; now?: Date },
+  opts: { lat?: number; lng?: number; userId: string | null; now?: Date } & DiscoveryViewer,
 ): Promise<MerchantDetail> {
   const now = opts.now ?? new Date();
   const merchantId = await resolveMerchantId(db, slugOrId);
@@ -378,7 +435,9 @@ export async function getMerchantDetail(
   if (!m) throw new ApiError("NOT_FOUND", "Warung tidak ditemukan");
   const mm = m.merchant;
 
-  const rows = mm.isOpen ? await queryLiveRows(db, { now, origin, merchantId }) : [];
+  const rows = mm.isOpen
+    ? await queryLiveRows(db, { now, origin, merchantId, viewerIsDemo: opts.viewerIsDemo === true })
+    : [];
   const batches = rows.map((r) => toBatchCard(r, now));
 
   const revs = await db
@@ -393,6 +452,8 @@ export async function getMerchantDetail(
     rating: r.rating,
     tags: r.tags ?? [],
     comment: r.comment,
+    hygiene_rating: r.hygieneRating ?? null,
+    portion_full: r.portionFull ?? null,
     customer_name: abbreviateName(name),
     created_at: r.createdAt.toISOString(),
   }));
@@ -427,6 +488,12 @@ export async function getMerchantDetail(
       tier: mm.subscriptionTier,
       rating_avg: Number(mm.ratingAvg),
       total_reviews: mm.totalReviews,
+      trust: toTrustSignals({
+        hygieneAvg: mm.hygieneAvg,
+        hygieneCount: mm.hygieneCount,
+        portionFullCount: mm.portionFullCount,
+        portionAnswerCount: mm.portionAnswerCount,
+      }),
       logo_url: mm.logoUrl,
       is_open: mm.isOpen,
     },
@@ -506,11 +573,12 @@ export async function batchChangesSince(
     discount_pct: number;
     selling_price_idr: number;
     status: BatchStatus;
+    lauk_available: string[] | null;
     updated_at: Date | string;
     cursor: string;
   }>(sql`
     SELECT b.id AS batch_id, b.merchant_id, b.available_stock, b.current_discount_pct AS discount_pct,
-           b.current_selling_price_idr AS selling_price_idr, b.status, b.updated_at,
+           b.current_selling_price_idr AS selling_price_idr, b.status, b.lauk_available, b.updated_at,
            b.updated_at::text AS cursor
     FROM surplus_batches b
     JOIN merchants m ON m.id = b.merchant_id
@@ -526,6 +594,7 @@ export async function batchChangesSince(
       discount_pct: Number(r.discount_pct),
       selling_price_idr: Number(r.selling_price_idr),
       status: r.status,
+      lauk_available: textList(r.lauk_available),
       updated_at: toDate(r.updated_at).toISOString(),
     })),
     cursor: rows.length ? rows[rows.length - 1].cursor : cursor,
@@ -576,7 +645,7 @@ export async function pollBatchStream(
   for (const ev of changes.events) {
     const at = Date.parse(ev.updated_at);
     lastMs = Math.max(lastMs, at);
-    const key = `${ev.batch_id}|${ev.updated_at}|${ev.available_stock}|${ev.selling_price_idr}|${ev.status}`;
+    const key = `${ev.batch_id}|${ev.updated_at}|${ev.available_stock}|${ev.selling_price_idr}|${ev.status}|${ev.lauk_available.join(",")}`;
     if (state.seen.has(key)) continue;
     state.seen.set(key, at);
     events.push(ev);

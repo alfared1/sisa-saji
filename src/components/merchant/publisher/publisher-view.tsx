@@ -12,6 +12,7 @@ import {
   Loader2Icon,
   MegaphoneIcon,
   PlusIcon,
+  RotateCwIcon,
   TimerIcon,
   TrendingUpIcon,
   UtensilsCrossedIcon,
@@ -24,10 +25,13 @@ import { Switch } from "@/components/ui/switch";
 import { useNow } from "@/hooks/use-now";
 import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
-import type { PublishBody, PublishResponse, QuoteAiResponse } from "@/lib/contracts";
+import type { BatchPhotoResponse, MenuView, PublishBody, PublishResponse, QuoteAiResponse } from "@/lib/contracts";
 import { DEMO_MAX_BATCH_STOCK } from "@/lib/demo-accounts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { BatchPhotoField, usePendingPhoto, type PendingPhoto } from "../common/photo-file-button";
+import { LaukToggles } from "../common/lauk-toggles";
+import { photoVisibilityText, useBatchPhotoMutations } from "../lib/batch-photo";
 import { STOCK_MAX, STOCK_MIN, checkPickupEnd, clampInt, defaultPickupEnd, priceForDiscount, roundPortions } from "../lib/logic";
 import { merchantKeys, useMerchantDashboard, useMerchantMe } from "../lib/queries";
 import { useDebouncedValue } from "../lib/use-debounced-value";
@@ -47,7 +51,59 @@ function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-function PublishSuccess({ result, seconds, onAnother }: { result: PublishResponse; seconds: number | null; onAnother: () => void }) {
+type PhotoUploadState =
+  | { status: "pending" }
+  | { status: "done"; res: BatchPhotoResponse }
+  | { status: "error"; message: string };
+
+/** The photo picked in the publisher, uploading (or uploaded) right after the batch went live. */
+function PublishedPhoto({ photo, upload, onRetry }: { photo: PendingPhoto; upload: PhotoUploadState; onRetry: () => void }) {
+  return (
+    <div className="mt-4 flex items-center gap-3 rounded-2xl bg-surface p-3">
+      {/* Local preview of the photo that was sent (blob: URL). */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo.previewUrl} alt="Foto etalase malam ini" className="size-16 shrink-0 rounded-xl object-cover ring-1 ring-border" />
+      <div className="min-w-0 flex-1 text-sm" aria-live="polite">
+        {upload.status === "pending" && (
+          <p className="flex items-center gap-1.5 font-semibold">
+            <Loader2Icon className="size-4 animate-spin" aria-hidden /> Mengunggah foto…
+          </p>
+        )}
+        {upload.status === "done" && upload.res.photo && (
+          <>
+            <p className="font-semibold">Foto terunggah pukul {formatClockId(upload.res.photo.uploaded_at)}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{photoVisibilityText(upload.res.photo)}</p>
+          </>
+        )}
+        {upload.status === "error" && (
+          <>
+            <p className="font-semibold text-urgent">Foto belum terunggah</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{upload.message} Surplusnya tetap tayang.</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold ring-1 ring-border outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <RotateCwIcon className="size-4" aria-hidden /> Unggah ulang foto
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PublishSuccess({
+  result,
+  seconds,
+  onAnother,
+  photo,
+}: {
+  result: PublishResponse;
+  seconds: number | null;
+  onAnother: () => void;
+  photo: { pending: PendingPhoto; upload: PhotoUploadState; onRetry: () => void } | null;
+}) {
   const b = result.batch;
   return (
     <MerchantPage className="mx-auto max-w-xl">
@@ -107,11 +163,18 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
             <dd className="text-lg font-extrabold tabular-nums">{formatClockId(b.pickup_end_time)} WIB</dd>
           </div>
         </dl>
+        {b.lauk_options.length > 0 && (
+          <p className="mt-3 text-sm">
+            <span className="font-semibold">Lauk malam ini:</span> {b.lauk_available.join(", ")}
+          </p>
+        )}
+        {!b.full_portion && <p className="mt-1 text-sm text-muted-foreground">Pembeli melihat: porsi lebih kecil dari biasa.</p>}
         {b.auto_discount_enabled && b.next_escalation && (
           <p className="mt-3 flex items-center gap-2 rounded-xl bg-deal-soft/70 px-3 py-2 text-xs font-semibold text-deal">
             <TrendingUpIcon className="size-4" aria-hidden /> Auto-diskon: naik ke {b.next_escalation.discount_pct}% pukul {formatClockId(b.next_escalation.at)}
           </p>
         )}
+        {photo && <PublishedPhoto photo={photo.pending} upload={photo.upload} onRetry={photo.onRetry} />}
       </div>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -130,6 +193,40 @@ function PublishSuccess({ result, seconds, onAnother }: { result: PublishRespons
         </button>
       </div>
     </MerchantPage>
+  );
+}
+
+/**
+ * Under the chosen menu: its fixed contents (read-only) and tonight's lauk toggles. A menu
+ * created before contents existed still publishes; the warung is nudged to list them.
+ */
+function MenuTonight({ menu, lauk, onLaukChange }: { menu: MenuView; lauk: string[]; onLaukChange: (lauk: string[]) => void }) {
+  const headingId = `lauk-${menu.id}`;
+  const listed = menu.contents.length > 0 || menu.lauk_options.length > 0;
+  return (
+    <div className="mt-4 space-y-4 border-t border-border pt-4">
+      {menu.contents.length > 0 ? (
+        <p className="text-sm">
+          <span className="font-semibold">Isi porsi:</span> <span className="text-muted-foreground">{menu.contents.join(", ")}</span>
+        </p>
+      ) : !listed ? (
+        <p className="rounded-xl bg-warning-soft px-3 py-2 text-sm text-foreground">
+          Lengkapi isi porsi menu ini dulu supaya pembeli tahu isinya.{" "}
+          <Link href="/merchant/menus" className="font-semibold text-primary underline-offset-2 hover:underline">
+            Buka halaman Menu
+          </Link>
+        </p>
+      ) : null}
+      {menu.lauk_options.length > 0 && (
+        <div>
+          <h3 id={headingId} className="text-sm font-semibold">
+            Lauk yang masih ada malam ini
+          </h3>
+          <p className="mt-0.5 mb-2.5 text-xs text-muted-foreground">Matikan lauk yang sudah habis. Minimal satu tetap menyala.</p>
+          <LaukToggles options={menu.lauk_options} value={lauk} onChange={onLaukChange} labelledBy={headingId} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -163,6 +260,13 @@ export function SurplusPublisherView() {
   const [autoEscalation, setAutoEscalation] = useState(true);
   const [override, setOverride] = useState<number | null>(null);
   const [published, setPublished] = useState<{ result: PublishResponse; seconds: number | null } | null>(null);
+  // Tonight's lauk per menu (all on until the warung switches one off) and the portion promise.
+  const [laukChoice, setLaukChoice] = useState<{ menuId: string; lauk: string[] } | null>(null);
+  const [fullPortion, setFullPortion] = useState(true);
+  // The optional photo is compressed when picked and uploaded only after publishing.
+  const [photo, setPhoto] = usePendingPhoto();
+  const [photoUpload, setPhotoUpload] = useState<PhotoUploadState | null>(null);
+  const { upload: uploadPhoto } = useBatchPhotoMutations();
   const startedAt = useRef<number | null>(null);
 
   useEffect(() => {
@@ -191,8 +295,11 @@ export function SurplusPublisherView() {
     null;
   const menu = menus.find((m) => m.id === menuId) ?? null;
   const predictedForMenu = menuId ? predicted.get(menuId) : undefined;
+  const laukAvailable = menu ? (laukChoice?.menuId === menu.id ? laukChoice.lauk : menu.lauk_options) : [];
+  const isDemo = useSession().user?.is_demo ?? false;
+  const isPilot = me.data?.merchant.is_pilot ?? false;
   // The shared demo warung publishes at most DEMO_MAX_BATCH_STOCK portions per batch (server rule).
-  const stockMax = useSession().user?.is_demo ? DEMO_MAX_BATCH_STOCK : STOCK_MAX;
+  const stockMax = isDemo ? DEMO_MAX_BATCH_STOCK : STOCK_MAX;
   const stock = Math.min(
     stockChoice ?? clampInt(predictedForMenu && predictedForMenu >= 1 ? roundPortions(predictedForMenu) : DEFAULT_STOCK, STOCK_MIN, stockMax),
     stockMax,
@@ -237,11 +344,28 @@ export function SurplusPublisherView() {
     onError: (err) => toast.error(errorMessage(err, "Gagal mempublikasikan surplus.")),
   });
 
+  const startPhotoUpload = (batchId: string, pending: PendingPhoto) => {
+    setPhotoUpload({ status: "pending" });
+    uploadPhoto.mutate(
+      { batchId, jpeg: pending.jpeg },
+      {
+        onSuccess: (res) => setPhotoUpload({ status: "done", res }),
+        onError: (err) => setPhotoUpload({ status: "error", message: errorMessage(err, "Koneksi terputus.") }),
+      },
+    );
+  };
+
   if (published) {
+    const batchId = published.result.batch.id;
     return (
       <PublishSuccess
         result={published.result}
         seconds={published.seconds}
+        photo={
+          photo && photoUpload
+            ? { pending: photo, upload: photoUpload, onRetry: () => startPhotoUpload(batchId, photo) }
+            : null
+        }
         onAnother={() => {
           setPublished(null);
           setMenuChoice(null);
@@ -249,8 +373,13 @@ export function SurplusPublisherView() {
           setEndChoice(null);
           setOverride(null);
           setAutoEscalation(true);
+          setLaukChoice(null);
+          setFullPortion(true);
+          setPhoto(null);
+          setPhotoUpload(null);
           startedAt.current = Date.now();
           publish.reset();
+          uploadPhoto.reset();
         }}
       />
     );
@@ -273,7 +402,7 @@ export function SurplusPublisherView() {
           <EmptyState
             icon={UtensilsCrossedIcon}
             title="Belum ada menu aktif"
-            description="Tambahkan menu (atau Paket Kejutan) dulu. Setelah itu publikasi surplus cukup 3 ketukan."
+            description="Tambahkan menu beserta isi porsinya dulu. Setelah itu publikasi surplus cukup 3 ketukan."
             action={
               <Link href="/merchant/menus?baru=1" className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground">
                 <PlusIcon className="size-4" /> Tambah menu
@@ -299,9 +428,16 @@ export function SurplusPublisherView() {
       initial_stock: stock,
       pickup_end_time: endIso,
       auto_discount_enabled: autoEscalation,
+      full_portion: fullPortion,
     };
+    if (menu && menu.lauk_options.length > 0) body.lauk_available = laukAvailable;
     if (override !== null) body.discount_pct_override = override;
-    publish.mutate(body);
+    const pending = photo;
+    publish.mutate(body, {
+      onSuccess: (res) => {
+        if (pending) startPhotoUpload(res.batch.id, pending);
+      },
+    });
   };
 
   const publishButton = (
@@ -347,6 +483,9 @@ export function SurplusPublisherView() {
               predicted={predicted}
               liveMenuIds={liveMenuIds}
             />
+            {menu && (
+              <MenuTonight menu={menu} lauk={laukAvailable} onLaukChange={(lauk) => setLaukChoice({ menuId: menu.id, lauk })} />
+            )}
           </SectionCard>
 
           <SectionCard
@@ -380,6 +519,25 @@ export function SurplusPublisherView() {
 
           <SectionCard title={<StepLabel n={3}>Sampai jam berapa bisa diambil?</StepLabel>}>
             <PickupWindowConfirm endMs={endMs} nowMs={now} closeTime={closeTime} onChange={setEndChoice} />
+          </SectionCard>
+
+          <SectionCard title="Info untuk pembeli" description="Sudah terisi. Ubah bila malam ini berbeda.">
+            <label className="flex cursor-pointer items-start gap-3">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">Porsi sama dengan porsi normal</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                  Matikan bila porsi malam ini lebih kecil. Pembeli akan melihatnya.
+                </span>
+              </span>
+              <Switch checked={fullPortion} onCheckedChange={setFullPortion} aria-label="Porsi sama dengan porsi normal" className="mt-1" />
+            </label>
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold">
+                Foto etalase malam ini <span className="font-normal text-muted-foreground">(opsional)</span>
+              </h3>
+              <p className="mt-0.5 mb-3 text-xs text-muted-foreground">Diunggah setelah surplus tayang, jadi publikasi tidak menunggu foto.</p>
+              <BatchPhotoField value={photo} onChange={setPhoto} isDemo={isDemo} isPilot={isPilot} />
+            </div>
           </SectionCard>
         </div>
 

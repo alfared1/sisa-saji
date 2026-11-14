@@ -1,6 +1,7 @@
 /**
  * Web Push (VAPID). Disabled gracefully when VAPID keys are not configured.
- * Subscriptions are stored per device in push_subscriptions.
+ * Subscriptions are stored per device in push_subscriptions. The "Jam Lapar" alerts
+ * (src/server/services/hunger-alert.ts) use the same rows and `sendToSubscriptions`.
  */
 import "server-only";
 import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
@@ -97,9 +98,27 @@ export async function savePushSubscription(
     });
 }
 
-type SubRow = typeof pushSubscriptions.$inferSelect;
+/** What sending needs from a push_subscriptions row. */
+export type PushTarget = Pick<typeof pushSubscriptions.$inferSelect, "id" | "endpoint" | "p256dh" | "auth">;
 
-async function sendTo(db: Db, subs: SubRow[], payload: PushPayload): Promise<number> {
+/** Options shared by the fan-out helpers. */
+export type FanOutOptions = {
+  /** push_subscriptions ids to skip (e.g. devices that just got a hunger alert for this event). */
+  excludeIds?: readonly string[];
+};
+
+const without = <T extends { id: string }>(subs: T[], excludeIds: readonly string[] | undefined): T[] => {
+  if (!excludeIds?.length) return subs;
+  const skip = new Set(excludeIds);
+  return subs.filter((s) => !skip.has(s.id));
+};
+
+/** Sends one payload to these devices. Returns how many accepted it. */
+export function sendToSubscriptions(db: Db, subs: PushTarget[], payload: PushPayload): Promise<number> {
+  return sendTo(db, subs, payload);
+}
+
+async function sendTo(db: Db, subs: PushTarget[], payload: PushPayload): Promise<number> {
   if (!ensureConfigured() || subs.length === 0) return 0;
   const body = JSON.stringify(payload);
   let delivered = 0;
@@ -125,10 +144,15 @@ async function sendTo(db: Db, subs: SubRow[], payload: PushPayload): Promise<num
   return delivered;
 }
 
-export async function sendPushToUsers(db: Db, userIds: string[], payload: PushPayload): Promise<number> {
+export async function sendPushToUsers(
+  db: Db,
+  userIds: string[],
+  payload: PushPayload,
+  opts: FanOutOptions = {},
+): Promise<number> {
   if (!userIds.length || !ensureConfigured()) return 0;
   const subs = await db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds));
-  return sendTo(db, subs, payload);
+  return sendTo(db, without(subs, opts.excludeIds), payload);
 }
 
 /** Devices recently seen within `radiusM` of a point (logged in or not). */
@@ -138,6 +162,7 @@ export async function sendPushNearby(
   radiusM: number,
   payload: PushPayload,
   now: Date = new Date(),
+  opts: FanOutOptions = {},
 ): Promise<number> {
   if (!ensureConfigured()) return 0;
   const since = new Date(now.getTime() - 6 * PRESENCE_ACTIVE_MINUTES * 60_000);
@@ -156,5 +181,5 @@ export async function sendPushNearby(
     .select()
     .from(pushSubscriptions)
     .where(and(isNotNull(pushSubscriptions.clientId), inArray(pushSubscriptions.clientId, clientIds)));
-  return sendTo(db, subs, payload);
+  return sendTo(db, without(subs, opts.excludeIds), payload);
 }

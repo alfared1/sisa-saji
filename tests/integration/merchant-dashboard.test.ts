@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { menus, merchants, orders, users, type Merchant } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { AnalyticsQuery, MerchantOrdersQuery, PublishBody } from "@/lib/contracts";
@@ -36,6 +36,13 @@ describe("GET /merchant/dashboard", () => {
     for (const b of d.active_batches) {
       expect(b.initial_stock).toBe(b.available_stock + b.reserved_stock + b.sold);
       expect(["ACTIVE", "SCHEDULED", "SOLD_OUT"]).toContain(b.status);
+      // Contents and tonight's lauk travel with the batch; lauk_available is a subset of the options.
+      expect(Array.isArray(b.contents)).toBe(true);
+      expect(b.lauk_available.every((l) => b.lauk_options.includes(l))).toBe(true);
+      expect(typeof b.full_portion).toBe("boolean");
+      expect(b.photo === null || typeof b.photo.url === "string").toBe(true);
+      expect(b.photo_uploads_left).toBeGreaterThanOrEqual(0);
+      expect(b).not.toHaveProperty("is_mystery_bag");
     }
     // The demo customer always has a READY_FOR_PICKUP ticket at the demo warung (Teh Euis).
     expect(d.pending_pickups.some((o) => o.status === "READY_FOR_PICKUP")).toBe(true);
@@ -113,7 +120,14 @@ describe("merchant SSE poller", () => {
     const [menu] = await db
       .select()
       .from(menus)
-      .where(and(eq(menus.merchantId, merchant.id), eq(menus.isActive, true)))
+      .where(
+        and(
+          eq(menus.merchantId, merchant.id),
+          eq(menus.isActive, true),
+          eq(menus.isMysteryBag, false),
+          ne(menus.category, "MYSTERY_BAG"),
+        ),
+      )
       .limit(1);
     const { batch } = await publishSurplus(
       db,
@@ -123,7 +137,7 @@ describe("merchant SSE poller", () => {
     const events = await pollMerchantEvents(db, merchant.id, since);
     const ev = events.find((e) => e.event.type === "batch.updated" && e.event.batch_id === batch.id);
     expect(ev).toBeDefined();
-    expect(ev!.event).toMatchObject({ type: "batch.updated", available_stock: 4, status: "ACTIVE" });
+    expect(ev!.event).toMatchObject({ type: "batch.updated", available_stock: 4, status: "ACTIVE", lauk_available: batch.lauk_available });
 
     // Another merchant's changes never leak into this stream.
     const [other] = await db.select().from(merchants).where(eq(merchants.slug, DEMO_MERCHANT_SLUG));

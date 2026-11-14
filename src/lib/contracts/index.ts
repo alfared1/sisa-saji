@@ -73,6 +73,15 @@ export const MENU_CATEGORY_LABELS: Record<MenuCategory, string> = {
   MYSTERY_BAG: "Paket Kejutan",
 };
 
+/**
+ * Categories buyers filter by and warung create menus in. MYSTERY_BAG stays in the enum for
+ * old rows only: closed surprise items are no longer created or shown.
+ */
+export const BUYER_MENU_CATEGORIES = MENU_CATEGORIES.filter(
+  (c): c is Exclude<MenuCategory, "MYSTERY_BAG"> => c !== "MYSTERY_BAG",
+);
+export const MERCHANT_MENU_CATEGORIES = BUYER_MENU_CATEGORIES;
+
 export const ORDER_STATUSES = [
   "PENDING_PAYMENT",
   "PAID",
@@ -95,9 +104,15 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export const BATCH_STATUSES = ["SCHEDULED", "ACTIVE", "SOLD_OUT", "EXPIRED", "CANCELLED"] as const;
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 
-/** BAYAR_DI_WARUNG: pilot warung only, set by the server (the customer pays the warung at pickup). */
+/**
+ * BAYAR_DI_WARUNG: the buyer pays the warung at pickup (cash, or the warung's own QRIS). Any
+ * warung offers it; pilot warung are forced to it by the server. OVO stays for old orders.
+ */
 export const PAYMENT_METHODS = ["QRIS", "GOPAY", "OVO", "DANA", "SURPLUS_PAY", "BAYAR_DI_WARUNG"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+/** What the checkout payment picker offers, in this order. */
+export const CHECKOUT_PAYMENT_CHOICES = ["QRIS", "BAYAR_DI_WARUNG", "GOPAY", "DANA"] as const satisfies readonly PaymentMethod[];
+export type CheckoutPaymentChoice = (typeof CHECKOUT_PAYMENT_CHOICES)[number];
 
 export type UserRole = "CUSTOMER" | "MERCHANT" | "ADMIN";
 export type MerchantTier = "REGULAR" | "PREMIUM";
@@ -107,6 +122,27 @@ const lng = z.coerce.number().min(-180).max(180);
 const uuid = z.string().uuid();
 const isoDateTime = z.string().datetime({ offset: true });
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Format jam HH:MM");
+
+/** One "isi porsi" or lauk entry: trimmed, inner spaces collapsed, at most 40 characters. */
+export const menuItem = z
+  .string()
+  .trim()
+  .min(1, "Tidak boleh kosong")
+  .max(40, "Maksimal 40 karakter")
+  .transform((s) => s.replace(/\s+/g, " "));
+
+/** True when a list repeats an entry, ignoring case. */
+function hasDuplicateItem(list: readonly string[] | undefined): boolean {
+  if (!list) return false;
+  const seen = new Set<string>();
+  for (const item of list) {
+    const key = item.toLocaleLowerCase("id-ID");
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+const MYSTERY_REMOVED_MESSAGE = "Paket kejutan tidak tersedia lagi. Tulis isi porsinya.";
 
 /** Accepts 08xx, 628xx, +628xx; the server normalises to +628xx. */
 export const phoneNumberSchema = z
@@ -243,6 +279,32 @@ export type LocationPushResponse = { ok: true; active_users_in_radius: number };
 
 /** GET /api/v1/push/public-key — public. */
 export type PushPublicKeyResponse = { public_key: string | null };
+
+/**
+ * PUT /api/v1/push/hunger-alert — public (the push subscription identifies the device).
+ * "Notifikasi Jam Lapar": once per WIB night, a push when a warung near this point opens its
+ * night discount. Enabling needs lat and lng; the server rounds them (about 110 m) and
+ * disabling clears them. → HungerAlertResponse
+ */
+export const HungerAlertBody = z
+  .object({
+    client_id: z.string().min(8).max(64),
+    webpush_subscription: WebPushSubscriptionSchema,
+    enabled: z.boolean(),
+    lat: lat.optional(),
+    lng: lng.optional(),
+    /** Where the point is, in the buyer's words ("Kos Melati", "IPB Dramaga, Bogor"). */
+    label: z.string().trim().max(80).optional(),
+  })
+  .refine((b) => !b.enabled || (b.lat !== undefined && b.lng !== undefined), {
+    message: "Lokasi dibutuhkan untuk menyalakan notifikasi",
+    path: ["lat"],
+  });
+export type HungerAlertBody = z.input<typeof HungerAlertBody>;
+/** POST /api/v1/push/hunger-alert/status and /hunger-alert/test — public, by this device's endpoint. */
+export const HungerAlertEndpointBody = z.object({ endpoint: z.string().url().max(2048) });
+export type HungerAlertEndpointBody = z.input<typeof HungerAlertEndpointBody>;
+export type HungerAlertResponse = { enabled: boolean; label: string | null; radius_m: number };
 
 export type MonthlyImpact = {
   month: string; // "2026-11"
@@ -421,14 +483,44 @@ export const DiscoverQuery = z.object({
 });
 export type DiscoverQuery = z.input<typeof DiscoverQuery>;
 
+/**
+ * Hygiene and portion signals from buyer reviews. Each is null until at least
+ * TRUST_SIGNAL_MIN_REVIEWS reviews answered that question (the server applies the threshold).
+ * `count` counts reviews (ulasan), not distinct buyers.
+ */
+export type TrustSignals = {
+  /** Average of "Seberapa bersih?" answers, 1-5, one decimal. */
+  hygiene: { avg: number; count: number } | null;
+  /** Share of "Ya, kenyang" answers in percent (0-100, whole number). */
+  portion_full: { pct: number; count: number } | null;
+};
+
+/**
+ * Tonight's photo of the batch, uploaded by the warung. `url` is served by
+ * GET /api/v1/batches/:batchId/photo?v=… (checked on every read; 404 once it may no longer
+ * be shown). kind "real": a pilot warung's photo, public ("Foto asli etalase"). kind "demo":
+ * uploaded by a shared demo account, only visible to demo sessions ("Foto contoh akun demo").
+ */
+export type BatchPhotoMeta = { url: string; uploaded_at: string; kind: "real" | "demo" };
+
 export type BatchCard = {
   batch_id: string;
   menu_id: string;
   menu_name: string;
   category: MenuCategory;
   description: string | null;
+  /** Menu-level photo URL; only sent for pilot warung (null otherwise). */
   image_url: string | null;
-  is_mystery_bag: boolean;
+  /** What is always in one portion; may be empty for menus created before contents existed. */
+  contents: string[];
+  /** All lauk the menu offers (the buyer picks one). Empty for fixed menus. */
+  lauk_options: string[];
+  /** Tonight's lauk still available, a subset of lauk_options. */
+  lauk_available: string[];
+  /** The warung's promise for tonight; false = smaller portion than usual. */
+  full_portion: boolean;
+  photo: BatchPhotoMeta | null;
+  merchant_trust: TrustSignals;
   portion_weight_grams: number;
   original_price_idr: number;
   selling_price_idr: number;
@@ -460,8 +552,10 @@ export type MerchantSummary = {
   /** Real warung in the field pilot (see BatchCard.merchant_is_pilot). */
   is_pilot: boolean;
   tier: MerchantTier;
+  /** Only meaningful when total_reviews > 0 (show "Belum ada ulasan" otherwise). */
   rating_avg: number;
   total_reviews: number;
+  trust: TrustSignals;
   logo_url: string | null;
   is_open: boolean;
   max_discount_pct: number;
@@ -541,6 +635,10 @@ export type ReviewItem = {
   rating: number;
   tags: string[];
   comment: string | null;
+  /** 1-5, null when the reviewer skipped the question. */
+  hygiene_rating: number | null;
+  /** true = "Ya, kenyang", false = "Lebih sedikit dari biasa", null = skipped. */
+  portion_full: boolean | null;
   /** First name + initial, e.g. "Raka P." */
   customer_name: string;
   created_at: string;
@@ -592,6 +690,7 @@ export type BatchStreamEvent = {
   discount_pct: number;
   selling_price_idr: number;
   status: BatchStatus;
+  lauk_available: string[];
   updated_at: string;
 };
 
@@ -612,7 +711,18 @@ export type VouchersResponse = { vouchers: Voucher[] };
 export const CheckoutBody = z.object({
   merchant_id: uuid,
   items: z
-    .array(z.object({ batch_id: uuid, quantity: z.number().int().min(1).max(10) }))
+    .array(
+      z.object({
+        batch_id: uuid,
+        quantity: z.number().int().min(1).max(10),
+        /**
+         * Chosen lauk; must be in the batch's lauk_available at checkout (compared ignoring
+         * case). Omitted = the buyer chooses at the counter. One batch may appear on several
+         * lines with different lauk.
+         */
+        lauk: menuItem.optional(),
+      }),
+    )
     .min(1)
     .max(10),
   scheduled_pickup_time: isoDateTime.optional(),
@@ -631,6 +741,8 @@ export type OrderItemView = {
   unit_selling_price_idr: number;
   discount_pct: number;
   portion_weight_grams: number;
+  /** Chosen lauk (stored casing); null when none was chosen. */
+  lauk: string | null;
 };
 
 export type OrderDetail = {
@@ -645,6 +757,16 @@ export type OrderDetail = {
     lat: number;
     lng: number;
     whatsapp_number: string;
+    /**
+     * Real warung in the field pilot. Always sent; optional only because tickets cached
+     * offline before this field existed lack it (show neutral copy then).
+     */
+    is_pilot?: boolean;
+    /**
+     * isDemoData() when the order was read: the app runs on demo data. With is_pilot false
+     * this warung is fictional. Optional for the same reason as is_pilot.
+     */
+    is_demo_data?: boolean;
   };
   customer: { id: string; full_name: string; phone_number: string | null };
   items: OrderItemView[];
@@ -672,7 +794,13 @@ export type OrderDetail = {
   food_saved_grams: number;
   co2_avoided_grams: number;
   cancel_reason: string | null;
-  review: { rating: number; tags: string[]; comment: string | null } | null;
+  review: {
+    rating: number;
+    tags: string[];
+    comment: string | null;
+    hygiene_rating: number | null;
+    portion_full: boolean | null;
+  } | null;
   created_at: string;
 };
 export type CheckoutResponse = { order: OrderDetail };
@@ -710,6 +838,10 @@ export const ReviewBody = z.object({
   rating: z.number().int().min(1).max(5),
   tags: z.array(z.string().trim().min(1).max(30)).max(6).default([]),
   comment: z.string().trim().max(500).optional(),
+  /** "Seberapa bersih tempat dan makanannya?" (optional). */
+  hygiene_rating: z.number().int().min(1).max(5).optional(),
+  /** "Porsinya sesuai porsi normal?" (optional). */
+  portion_full: z.boolean().optional(),
 });
 export type ReviewBody = z.input<typeof ReviewBody>;
 
@@ -734,6 +866,16 @@ export type VerifyPickupBody = z.input<typeof VerifyPickupBody>;
  */
 export const MerchantTicketCancelBody = z.object({ reason: z.enum(["NO_SHOW", "OUT_OF_STOCK"]) });
 export type MerchantTicketCancelBody = z.input<typeof MerchantTicketCancelBody>;
+
+/**
+ * "Titip Antar Kolektif" waiting list. Collective delivery does not exist (self-pickup is the
+ * rule); this only records interest. GET /api/v1/delivery-interest is public; POST (upsert,
+ * 403 DEMO_LOCKED for demo accounts) and DELETE need a login. All return
+ * DeliveryInterestResponse. Kos names are never returned to anyone but their author.
+ */
+export const DeliveryInterestBody = z.object({ kos_name: z.string().trim().min(2).max(60) });
+export type DeliveryInterestBody = z.input<typeof DeliveryInterestBody>;
+export type DeliveryInterestResponse = { count: number; mine: { kos_name: string } | null };
 
 /* ================================================================== */
 /* Merchant                                                            */
@@ -807,9 +949,16 @@ export type MenuView = {
   original_price_idr: number;
   min_recovery_price_idr: number;
   portion_weight_grams: number;
-  is_mystery_bag: boolean;
+  /** "Isi porsi"; empty only for menus created before contents existed. */
+  contents: string[];
+  /** Lauk the buyer picks one of; empty for fixed menus. */
+  lauk_options: string[];
   is_active: boolean;
 };
+
+const menuContents = z.array(menuItem).max(12, "Paling banyak 12 isi porsi");
+const menuLaukOptions = z.array(menuItem).max(8, "Paling banyak 8 pilihan lauk");
+const DUPLICATE_ITEM_MESSAGE = "Ada isi yang sama dua kali";
 
 /** POST /api/v1/merchant/menus → { menu: MenuView } (403 DEMO_LOCKED for the shared demo warung) */
 export const MenuCreateBody = z
@@ -821,25 +970,45 @@ export const MenuCreateBody = z
     original_price_idr: z.number().int().min(1000).max(1_000_000),
     min_recovery_price_idr: z.number().int().min(500),
     portion_weight_grams: z.number().int().min(10).max(5000).default(200),
-    is_mystery_bag: z.boolean().default(false),
+    /** Required for new menus: at least one contents item or lauk option in total. */
+    contents: menuContents.default([]),
+    lauk_options: menuLaukOptions.default([]),
+    /** Closed surprise items are no longer accepted; only `false` (or omitted) is valid. */
+    is_mystery_bag: z.literal(false, { message: MYSTERY_REMOVED_MESSAGE }).optional(),
   })
   .refine((m) => m.min_recovery_price_idr <= m.original_price_idr, {
     message: "Harga minimum tidak boleh melebihi harga normal",
     path: ["min_recovery_price_idr"],
-  });
+  })
+  .refine((m) => m.category !== "MYSTERY_BAG", { message: MYSTERY_REMOVED_MESSAGE, path: ["category"] })
+  .refine((m) => m.contents.length + m.lauk_options.length >= 1, {
+    message: "Tulis minimal satu isi porsi",
+    path: ["contents"],
+  })
+  .refine((m) => !hasDuplicateItem(m.contents), { message: DUPLICATE_ITEM_MESSAGE, path: ["contents"] })
+  .refine((m) => !hasDuplicateItem(m.lauk_options), { message: DUPLICATE_ITEM_MESSAGE, path: ["lauk_options"] });
 export type MenuCreateBody = z.input<typeof MenuCreateBody>;
-/** PATCH /api/v1/merchant/menus/:id → { menu: MenuView } (403 DEMO_LOCKED for the shared demo warung) */
-export const MenuUpdateBody = z.object({
-  menu_name: z.string().trim().min(2).max(150).optional(),
-  category: z.enum(MENU_CATEGORIES).optional(),
-  description: z.string().trim().max(500).nullable().optional(),
-  image_url: z.string().url().nullable().optional(),
-  original_price_idr: z.number().int().min(1000).max(1_000_000).optional(),
-  min_recovery_price_idr: z.number().int().min(500).optional(),
-  portion_weight_grams: z.number().int().min(10).max(5000).optional(),
-  is_mystery_bag: z.boolean().optional(),
-  is_active: z.boolean().optional(),
-});
+/**
+ * PATCH /api/v1/merchant/menus/:id → { menu: MenuView } (403 DEMO_LOCKED for the shared demo
+ * warung). The service checks the merged menu still lists at least one contents item or lauk.
+ */
+export const MenuUpdateBody = z
+  .object({
+    menu_name: z.string().trim().min(2).max(150).optional(),
+    category: z.enum(MENU_CATEGORIES).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    image_url: z.string().url().nullable().optional(),
+    original_price_idr: z.number().int().min(1000).max(1_000_000).optional(),
+    min_recovery_price_idr: z.number().int().min(500).optional(),
+    portion_weight_grams: z.number().int().min(10).max(5000).optional(),
+    contents: menuContents.optional(),
+    lauk_options: menuLaukOptions.optional(),
+    is_mystery_bag: z.literal(false, { message: MYSTERY_REMOVED_MESSAGE }).optional(),
+    is_active: z.boolean().optional(),
+  })
+  .refine((m) => m.category !== "MYSTERY_BAG", { message: MYSTERY_REMOVED_MESSAGE, path: ["category"] })
+  .refine((m) => !hasDuplicateItem(m.contents), { message: DUPLICATE_ITEM_MESSAGE, path: ["contents"] })
+  .refine((m) => !hasDuplicateItem(m.lauk_options), { message: DUPLICATE_ITEM_MESSAGE, path: ["lauk_options"] });
 export type MenuUpdateBody = z.input<typeof MenuUpdateBody>;
 
 /** POST /api/v1/merchant/surplus/quote-ai — synchronous AI quote before publishing. */
@@ -882,14 +1051,42 @@ export const PublishBody = z.object({
   auto_discount_enabled: z.boolean().default(true),
   /** Manual price override; when omitted the optimizer's recommendation is used. */
   discount_pct_override: z.number().int().min(0).max(90).optional(),
+  /**
+   * Tonight's lauk still available, a subset of the menu's lauk_options (at least one when
+   * the menu has options). Omitted = all of them.
+   */
+  lauk_available: z.array(menuItem).max(8).optional(),
+  /** false = tonight's portion is smaller than usual (buyers see "Porsi lebih kecil"). */
+  full_portion: z.boolean().default(true),
 });
 export type PublishBody = z.input<typeof PublishBody>;
+
+/**
+ * Who can see a batch photo: PUBLIC (pilot warung, everyone), DEMO (uploaded by a demo
+ * account: demo sessions and the owner, for DEMO_BATCH_PHOTO_TTL_MINUTES), OWNER (any other
+ * warung: only the owner, as a preview).
+ */
+export type BatchPhotoVisibility = "PUBLIC" | "DEMO" | "OWNER";
+export type MerchantBatchPhoto = {
+  url: string;
+  uploaded_at: string;
+  visibility: BatchPhotoVisibility;
+  demo_only: boolean;
+  /** When a DEMO photo stops being shown; null otherwise (it goes when the batch ends). */
+  expires_at: string | null;
+};
 
 export type MerchantBatchView = {
   id: string;
   menu_id: string;
   menu_name: string;
-  is_mystery_bag: boolean;
+  contents: string[];
+  lauk_options: string[];
+  lauk_available: string[];
+  full_portion: boolean;
+  photo: MerchantBatchPhoto | null;
+  /** Photo uploads left for this batch (BATCH_PHOTO_MAX_UPLOADS minus every upload so far). */
+  photo_uploads_left: number;
   initial_stock: number;
   available_stock: number;
   reserved_stock: number;
@@ -918,13 +1115,27 @@ export const StockPatchBody = z
     message: "Isi salah satu: delta atau available_stock",
   });
 export type StockPatchBody = z.input<typeof StockPatchBody>;
-/** PATCH /api/v1/merchant/surplus/:batchId — cancel a batch or toggle auto discount. */
-export const BatchPatchBody = z.object({
-  status: z.literal("CANCELLED").optional(),
-  auto_discount_enabled: z.boolean().optional(),
-});
+/**
+ * PATCH /api/v1/merchant/surplus/:batchId — cancel a batch, toggle auto discount, or update
+ * tonight's lauk (subset of the menu's options, at least one when it has options) and the
+ * portion promise while the batch is live. At least one field.
+ */
+export const BatchPatchBody = z
+  .object({
+    status: z.literal("CANCELLED").optional(),
+    auto_discount_enabled: z.boolean().optional(),
+    lauk_available: z.array(menuItem).max(8).optional(),
+    full_portion: z.boolean().optional(),
+  })
+  .refine((b) => Object.values(b).some((v) => v !== undefined), { message: "Tidak ada yang diubah" });
 export type BatchPatchBody = z.input<typeof BatchPatchBody>;
 export type BatchResponse = { batch: MerchantBatchView };
+
+/**
+ * POST /api/v1/merchant/surplus/:batchId/photo — raw JPEG body (Content-Type: image/jpeg,
+ * at most BATCH_PHOTO_MAX_BYTES), 201. DELETE removes it. Both → BatchPhotoResponse.
+ */
+export type BatchPhotoResponse = { photo: MerchantBatchPhoto | null; photo_uploads_left: number };
 
 export type TonightPrediction = {
   target_date: string; // YYYY-MM-DD (WIB)
@@ -1014,4 +1225,12 @@ export type UpgradeResponse = { merchant: MerchantProfile };
 export type MerchantStreamEvent =
   | { type: "order.paid"; order_id: string; order_number: string; at: string }
   | { type: "order.completed"; order_id: string; order_number: string; at: string }
-  | { type: "batch.updated"; batch_id: string; available_stock: number; discount_pct: number; status: BatchStatus; at: string };
+  | {
+      type: "batch.updated";
+      batch_id: string;
+      available_stock: number;
+      discount_pct: number;
+      status: BatchStatus;
+      lauk_available: string[];
+      at: string;
+    };

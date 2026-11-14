@@ -106,12 +106,16 @@ export function OrderVerificationPanel({
           <span className="tabular-nums">{portions} porsi</span>
         </p>
         <ul className="space-y-2">
-          {order.items.map((i) => (
-            <li key={i.batch_id} className="flex items-center gap-3">
+          {order.items.map((i, idx) => (
+            // One batch can appear on several lines (one per lauk), so the index is part of the key.
+            <li key={`${idx}-${i.batch_id}`} className="flex items-center gap-3">
               <span className="inline-flex h-10 min-w-12 items-center justify-center rounded-xl bg-primary px-2 text-lg font-extrabold text-primary-foreground tabular-nums">
                 {i.quantity}×
               </span>
-              <span className="min-w-0 flex-1 text-base leading-snug font-semibold">{i.menu_name}</span>
+              <span className="min-w-0 flex-1 text-base leading-snug font-semibold">
+                {i.menu_name}
+                {i.lauk && <span className="block text-sm font-medium text-muted-foreground">Lauk: {i.lauk}</span>}
+              </span>
             </li>
           ))}
         </ul>

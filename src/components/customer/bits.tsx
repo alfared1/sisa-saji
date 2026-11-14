@@ -6,8 +6,82 @@ import { MinusIcon, PlusIcon, StarIcon } from "lucide-react";
 import { LogoMark } from "@/components/common/logo";
 import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/contracts";
+import { ratingText } from "@/lib/trust-signals";
 import { cn } from "@/lib/utils";
+import { useCartStore, type CartItem } from "@/stores/cart";
+import { useStoresHydrated } from "@/stores/hydration";
+import { useLocationStore } from "@/stores/location";
+import type { DistanceOrigin } from "./lib/format";
 import { STATUS_META, type StatusTone } from "./lib/order-status";
+
+/* ----------------------------- Distance origin ----------------------------- */
+
+/**
+ * What distances are measured from, for distanceLine(): the buyer's GPS fix, a picked
+ * point or a campus. Before the stores hydrate it reads as the default campus, which only
+ * affects the long wording ("dari IPB Dramaga, Bogor"), never the metres.
+ */
+export function useDistanceOrigin(): DistanceOrigin {
+  const source = useLocationStore((s) => s.source);
+  const label = useLocationStore((s) => s.label);
+  return { source, label };
+}
+
+/* --------------------------- Cart stepper (batch) --------------------------- */
+
+/**
+ * Quantity of one batch in the cart (all its lauk lines together) and a stepper handler for
+ * cards. A batch may sit on several lines, one per lauk: "+" grows the newest line and "−"
+ * shrinks it (removing it at zero), so the stepper never changes a lauk the buyer chose.
+ * `lines` lists the lines for a "Di keranjang" summary.
+ */
+export function useBatchCartStepper(batchId: string): {
+  qty: number;
+  lines: CartItem[];
+  onChange: (next: number) => void;
+} {
+  const hydrated = useStoresHydrated();
+  const items = useCartStore((s) => s.items);
+  const setQuantity = useCartStore((s) => s.setQuantity);
+  const removeItem = useCartStore((s) => s.removeItem);
+  const lines = hydrated ? items.filter((i) => i.batch_id === batchId) : [];
+  const qty = lines.reduce((n, i) => n + i.quantity, 0);
+  const onChange = (next: number) => {
+    const last = lines[lines.length - 1];
+    if (!last) return;
+    const lastNext = last.quantity + (next - qty);
+    if (lastNext <= 0) removeItem(last.key);
+    else setQuantity(last.key, lastNext);
+  };
+  return { qty, lines, onChange };
+}
+
+/* ------------------------------- Rating line ------------------------------- */
+
+/**
+ * Star rating from reviews: "★ 4,6 (65)" (short) or "★ 4,6 (65 ulasan)" (long). Without
+ * reviews it says "Belum ada ulasan" and draws no star, never a default "5,0 (0)".
+ */
+export function RatingLine({
+  avg,
+  count,
+  variant = "short",
+  className,
+}: {
+  avg: number;
+  count: number;
+  variant?: "short" | "long";
+  className?: string;
+}) {
+  if (count <= 0) return <span className={cn("text-muted-foreground", className)}>Belum ada ulasan</span>;
+  return (
+    <span className={cn("inline-flex items-center gap-1 font-semibold text-foreground", className)}>
+      <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+      <span className="sr-only">Rating </span>
+      {ratingText(avg, count, variant)}
+    </span>
+  );
+}
 
 /* ------------------------------ Section header ------------------------------ */
 

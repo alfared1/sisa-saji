@@ -2,7 +2,8 @@
 
 /**
  * Live surplus updates: subscribes to GET /stream/batches for an area and
- * patches every cached discovery / warung query + the cart in place.
+ * patches every cached discovery / warung query + the cart in place (stock,
+ * price and tonight's lauk).
  * A rising discount shows a "Harga turun!" toast and flashes the card.
  */
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
@@ -99,15 +100,18 @@ export function useBatchStream({
       // Pins aggregate stock/discount per warung: cheap to refetch in the background.
       void qc.invalidateQueries({ queryKey: customerKeys.pinsAll, refetchType: "active" });
 
-      // Keep the cart's price / stock cap in sync.
+      // Keep the cart's price / stock cap / lauk list in sync, on every line of the batch.
+      // A chosen lauk that just ran out stays on its line; checkout refuses it and offers
+      // the lauk still available.
       const cart = useCartStore.getState();
       if (cart.items.some((i) => i.batch_id === ev.batch_id) && ev.status === "ACTIVE") {
-        cart.updateItem(
+        cart.patchBatch(
           ev.batch_id,
           cartPatchFromBatch({
             selling_price_idr: ev.selling_price_idr,
             discount_pct: ev.discount_pct,
             available_stock: ev.available_stock,
+            ...(Array.isArray(ev.lauk_available) ? { lauk_available: ev.lauk_available } : {}),
           }),
         );
       }

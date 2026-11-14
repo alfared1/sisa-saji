@@ -9,7 +9,9 @@ type Ctx = { params: Promise<{ batchId: string }> };
 
 /**
  * PATCH /api/v1/merchant/surplus/:batchId — { status: "CANCELLED" } (only when
- * reserved_stock = 0; paid orders stay valid) and/or { auto_discount_enabled }.
+ * reserved_stock = 0; paid orders stay valid; the batch photo is deleted), { auto_discount_enabled },
+ * and, while the batch is live, { lauk_available } (subset of the menu's lauk, at least one when
+ * it has any) and { full_portion }. The demo warung may change these too (part of the publish flow).
  */
 export const PATCH = handle<Ctx>(async (req, { params }) => {
   await connection();

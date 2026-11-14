@@ -64,6 +64,10 @@ test("pilot warung: joining needs real OTP, pay at the warung, verified pickup s
   const payBox = phone.getByRole("region", { name: "Pembayaran di warung" });
   await expect(payBox).toBeVisible();
   await expect(payBox.getByText(/Bayar langsung di warung/)).toBeVisible();
+  // Pilot copy (is_pilot), with the no-show rule that only pilot warung apply.
+  await expect(payBox.getByText(/Warung ini ikut uji coba Sisa-Saji/)).toBeVisible();
+  await expect(payBox.getByText(/tidak bisa memesan di warung uji coba/)).toBeVisible();
+  await expect(phone.getByText("Porsi dikunci untukmu")).toBeVisible();
   await phone.goto(`/warung/${batch.merchant_slug}`);
   await expect(phone.getByText("Warung uji coba").first()).toBeVisible();
 

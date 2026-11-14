@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
+import { EVENING_CARD_QUOTE, EVENING_EXAMPLE, EVENING_TIMELINE } from "@/lib/pricing/evening-example";
 
 const base = {
   originalPriceIdr: 20000,
@@ -27,5 +28,15 @@ describe("calculateOptimalRecoveryPrice", () => {
     const q = calculateOptimalRecoveryPrice({ ...base, minRecoveryPriceIdr: 9000, minutesToClose: 10 });
     expect(q.recommendedSellingPriceIdr).toBe(9000);
     expect(q.floorApplied).toBe(true);
+  });
+});
+
+describe("EVENING_EXAMPLE (welcome and login illustration)", () => {
+  it("is a Rp 22.000 menu with a Rp 10.000 floor, priced 11.000 / 10.000 / 10.000 through the evening", () => {
+    expect(EVENING_EXAMPLE).toEqual({ name: "Nasi Timbel + Lauk Pilihan", priceIdr: 22000, floorIdr: 10000 });
+    expect(EVENING_TIMELINE.map((s) => s.quote.recommendedSellingPriceIdr)).toEqual([11000, 10000, 10000]);
+    expect(EVENING_TIMELINE[2].text).toBe("Diskon menjelang tutup, tidak pernah di bawah harga lantai warung.");
+    for (const s of EVENING_TIMELINE) expect(s.quote.recommendedSellingPriceIdr).toBeGreaterThanOrEqual(10000);
+    expect(EVENING_CARD_QUOTE.recommendedSellingPriceIdr).toBeGreaterThanOrEqual(10000);
   });
 });

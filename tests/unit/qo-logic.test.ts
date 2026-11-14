@@ -4,6 +4,7 @@ import {
   clampQuickOrderQty,
   quickOrderBody,
   quickOrderError,
+  quickOrderIsCash,
   quickOrderLoginUrl,
   quickOrderMaxQty,
   quickOrderReturnPath,
@@ -28,36 +29,53 @@ describe("quick order stepper bounds", () => {
     expect(clampQuickOrderQty(15, 30)).toBe(10);
   });
 
-  it("caps a pilot warung's bayar-di-warung ticket at PAY_AT_WARUNG_MAX_PORTIONS", () => {
+  it("caps a cash (bayar-di-warung) ticket at PAY_AT_WARUNG_MAX_PORTIONS", () => {
     expect(quickOrderMaxQty(25, true)).toBe(PAY_AT_WARUNG_MAX_PORTIONS);
     expect(quickOrderMaxQty(2, true)).toBe(2);
     expect(clampQuickOrderQty(8, 25, true)).toBe(PAY_AT_WARUNG_MAX_PORTIONS);
   });
+
+  it("is cash whenever the buyer picks cash or the warung is a pilot warung", () => {
+    expect(quickOrderIsCash({ merchant_is_pilot: false }, "QRIS")).toBe(false);
+    expect(quickOrderIsCash({ merchant_is_pilot: false }, "BAYAR_DI_WARUNG")).toBe(true);
+    expect(quickOrderIsCash({ merchant_is_pilot: true }, "QRIS")).toBe(true);
+    expect(quickOrderIsCash({}, "QRIS")).toBe(false);
+  });
+
+  it("caps at 3 whenever cash, at any warung", () => {
+    const cash = quickOrderIsCash({ merchant_is_pilot: false }, "BAYAR_DI_WARUNG");
+    expect(quickOrderMaxQty(25, cash)).toBe(PAY_AT_WARUNG_MAX_PORTIONS);
+    expect(clampQuickOrderQty(5, 25, quickOrderIsCash({ merchant_is_pilot: false }, "QRIS"))).toBe(5);
+  });
 });
 
-describe("bayar-di-warung ticket cap in the cart", () => {
+describe("bayar-di-warung ticket cap in the cart (by line key)", () => {
+  // The same batch on two lines (two lauk) counts as two lines towards the ticket.
   const cart = [
-    { batch_id: "a", quantity: 2 },
-    { batch_id: "b", quantity: 2 },
+    { key: "a|Ayam goreng", quantity: 2 },
+    { key: "a|Pepes ikan", quantity: 1 },
+    { key: "b|", quantity: 1 },
   ];
-  it("counts the other lines towards the per-ticket cap", () => {
-    expect(ticketLineMax(cart, "a", 10, 3)).toBe(1);
-    expect(ticketLineMax([{ batch_id: "a", quantity: 1 }], "a", 10, 3)).toBe(3);
-    expect(ticketLineMax(cart, "a", 10, 1)).toBe(0);
+  it("counts every other line towards the per-ticket cap", () => {
+    expect(ticketLineMax(cart, "a|Ayam goreng", 10, 3)).toBe(1);
+    expect(ticketLineMax(cart, "b|", 10, 3)).toBe(0);
+    expect(ticketLineMax([{ key: "a|", quantity: 1 }], "a|", 10, 3)).toBe(3);
+    expect(ticketLineMax([{ key: "a|", quantity: 1 }], "a|", 2, 3)).toBe(2);
   });
 
   it("trims the last lines first down to the cap", () => {
-    expect(trimToTicketCap(cart, 3)).toEqual([{ batch_id: "b", quantity: 1 }]);
+    expect(trimToTicketCap(cart, 3)).toEqual([{ key: "b|", quantity: 0 }]);
     expect(trimToTicketCap(cart, 1)).toEqual([
-      { batch_id: "b", quantity: 0 },
-      { batch_id: "a", quantity: 1 },
+      { key: "b|", quantity: 0 },
+      { key: "a|Pepes ikan", quantity: 0 },
+      { key: "a|Ayam goreng", quantity: 1 },
     ]);
     expect(trimToTicketCap(cart, 4)).toEqual([]);
   });
 });
 
 describe("quick order checkout body", () => {
-  it("checks out exactly one batch with QRIS (no cart, no slot)", () => {
+  it("checks out exactly one batch with QRIS by default (no cart, no slot, no lauk)", () => {
     expect(quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID }, 2)).toEqual({
       merchant_id: "m-1",
       items: [{ batch_id: BATCH_ID, quantity: 2 }],
@@ -65,10 +83,24 @@ describe("quick order checkout body", () => {
     });
   });
 
-  it("pays at the warung for a pilot warung", () => {
+  it("sends the chosen lauk and payment method", () => {
+    expect(quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID }, 1, { method: "BAYAR_DI_WARUNG", lauk: "Ayam goreng" })).toEqual({
+      merchant_id: "m-1",
+      items: [{ batch_id: BATCH_ID, quantity: 1, lauk: "Ayam goreng" }],
+      payment_method: "BAYAR_DI_WARUNG",
+    });
+    expect(quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID }, 1, { method: "QRIS", lauk: null }).items).toEqual([
+      { batch_id: BATCH_ID, quantity: 1 },
+    ]);
+  });
+
+  it("pays at the warung for a pilot warung, whatever was picked", () => {
     expect(quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID, merchant_is_pilot: true }, 1).payment_method).toBe(
       "BAYAR_DI_WARUNG",
     );
+    expect(
+      quickOrderBody({ merchant_id: "m-1", batch_id: BATCH_ID, merchant_is_pilot: true }, 1, { method: "QRIS" }).payment_method,
+    ).toBe("BAYAR_DI_WARUNG");
   });
 });
 
@@ -103,6 +135,25 @@ describe("quick order error mapping", () => {
     const e = quickOrderError("OUT_OF_STOCK", "x", { available_stock: 0 }, "Nasi Gudeg");
     expect(e).toMatchObject({ kind: "stock", available: 0 });
     expect(e.kind === "stock" && e.title).toContain("sudah habis");
+  });
+
+  it("VALIDATION_ERROR for a lauk that ran out keeps the sheet open with the lauk left", () => {
+    const e = quickOrderError(
+      "VALIDATION_ERROR",
+      "Lauk Ayam goreng sudah habis. Pilih lauk lain, ya.",
+      [{ path: "items", batch_id: BATCH_ID, lauk: "Ayam goreng", lauk_available: ["Pepes ikan"] }],
+      "Nasi Timbel",
+    );
+    expect(e).toEqual({
+      kind: "lauk",
+      lauk_available: ["Pepes ikan"],
+      title: "Lauk Ayam goreng sudah habis. Pilih lauk lain, ya.",
+      description: "Pilihan lauk sudah diperbarui.",
+    });
+    // Other validation errors (e.g. the per-buyer cap) stay generic.
+    expect(
+      quickOrderError("VALIDATION_ERROR", "Maksimal 3 porsi", [{ path: "items", batch_id: BATCH_ID, max_quantity: 3 }], "Roti"),
+    ).toMatchObject({ kind: "generic", title: "Maksimal 3 porsi" });
   });
 
   it("BATCH_CLOSED and network errors get Indonesian copy", () => {

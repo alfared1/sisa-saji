@@ -73,6 +73,7 @@ export async function pollMerchantEvents(db: Db, merchantId: string, since: Date
         available_stock: b.availableStock,
         discount_pct: b.currentDiscountPct,
         status: b.status,
+        lauk_available: b.laukAvailable,
         at: b.updatedAt.toISOString(),
       },
     });

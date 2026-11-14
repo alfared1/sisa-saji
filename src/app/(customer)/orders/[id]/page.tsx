@@ -5,7 +5,7 @@ import { OrderDetailScreen } from "@/components/customer/orders/order-detail-scr
 
 export const metadata: Metadata = {
   title: "Detail Pesanan",
-  description: "Pembayaran QRIS, tiket pengambilan, dan dampak pesananmu.",
+  description: "Pembayaran, tiket pengambilan, dan dampak pesananmu.",
 };
 
 async function OrderLoader({ params }: { params: Promise<{ id: string }> }) {

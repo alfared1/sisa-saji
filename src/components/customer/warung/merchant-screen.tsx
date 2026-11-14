@@ -2,8 +2,9 @@
 
 /**
  * /warung/[slug] — MerchantScreen + MenuScreen: banner (verified, rating,
- * distance, pickup window, closing countdown), favourite/notify toggle,
- * live DynamicPriceMenuCards, directions/WhatsApp, reviews.
+ * hygiene and portion signals from reviews, walking distance, pickup window,
+ * closing countdown), favourite/notify toggle, live DynamicPriceMenuCards,
+ * directions/WhatsApp, reviews (with their hygiene and portion answers).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -34,18 +35,25 @@ import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PilotBadge } from "@/components/common/pilot-badge";
+import { TrustBadges } from "@/components/common/trust-badges";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import { MENU_CATEGORY_LABELS, type MerchantDetail, type SubscribeBody, type SubscribeResponse } from "@/lib/contracts";
+import {
+  MENU_CATEGORY_LABELS,
+  type MerchantDetail,
+  type ReviewItem,
+  type SubscribeBody,
+  type SubscribeResponse,
+} from "@/lib/contracts";
 import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useLocationStore } from "@/stores/location";
-import { RatingStars, SectionHeader } from "../bits";
+import { RatingLine, RatingStars, SectionHeader, useDistanceOrigin } from "../bits";
 import { FoodThumb } from "../food-thumb";
 import { useBatchStream } from "../hooks/use-batch-stream";
-import { formatDateId, formatDistance, formatRating, mapsDirectionsUrl, travelMinutes, whatsappUrl } from "../lib/format";
+import { distanceLine, formatDateId, formatRating, mapsDirectionsUrl, whatsappUrl } from "../lib/format";
 import { cartMerchantOf, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
@@ -75,6 +83,30 @@ function MerchantSkeleton() {
         <Skeleton className="h-16 rounded-2xl" />
       </div>
       <ListSkeleton count={3} />
+    </div>
+  );
+}
+
+/** The reviewer's optional hygiene and portion answers, as chips ("Kebersihan 5/5", "Porsi normal"). */
+function ReviewAnswers({ review }: { review: Pick<ReviewItem, "hygiene_rating" | "portion_full"> }) {
+  if (review.hygiene_rating === null && review.portion_full === null) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {review.hygiene_rating !== null && (
+        <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong tabular-nums">
+          Kebersihan {review.hygiene_rating}/5
+        </span>
+      )}
+      {review.portion_full !== null && (
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+            review.portion_full ? "bg-brand-soft text-brand-strong" : "bg-muted text-foreground/80",
+          )}
+        >
+          {review.portion_full ? "Porsi normal" : "Porsi kurang"}
+        </span>
+      )}
     </div>
   );
 }
@@ -143,6 +175,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
   const { addToCart, dialog } = useAddToCart();
   const { openQuickOrder, sheet } = useQuickOrder(m?.batches);
   const closedLabel = m && !m.is_open ? "Warung sedang tutup" : undefined;
+  const origin = useDistanceOrigin();
 
   // ?order=<batchId> (back from login after a quick order): reopen that menu's
   // sheet once the warung is loaded, then strip the param from the URL.
@@ -218,7 +251,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
   }
 
   const live = sortedBatches.filter((b) => b.available_stock > 0).length;
-  const walk = travelMinutes(m?.distance_m);
+  const distance = distanceLine(m?.distance_m, origin, "long");
 
   return (
     <>
@@ -283,20 +316,16 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
 
               {/* No "·" between the groups (the footprints icon separates them), so none is left dangling on a wrap. */}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="inline-flex items-center gap-1 font-semibold">
-                  <StarIcon className="size-4 fill-amber-400 text-amber-400" aria-hidden />
-                  {formatRating(m.rating_avg)}
-                  <span className="font-normal text-muted-foreground">({m.total_reviews} ulasan)</span>
-                </span>
-                {m.distance_m !== null && (
+                <RatingLine avg={m.rating_avg} count={m.total_reviews} variant="long" className="[&>svg]:size-4" />
+                {distance && (
+                  // Walking time only where walking is realistic (distanceLine stops at 1,5 km).
                   <span className="inline-flex items-center gap-1 text-muted-foreground">
-                    <FootprintsIcon className="size-3.5" aria-hidden />
-                    {formatDistance(m.distance_m)}
-                    {/* Walking time only where walking is realistic (e.g. not 674 km away). */}
-                    {walk !== null && walk <= 60 && ` · ${walk} mnt jalan kaki`}
+                    <FootprintsIcon className="size-3.5 shrink-0" aria-hidden />
+                    {distance}
                   </span>
                 )}
               </div>
+              <TrustBadges trust={m.trust} variant="long" className="mt-2" />
               <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
                 <MapPinIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                 {m.address}
@@ -398,11 +427,14 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                 icon={StarIcon}
                 iconClassName="text-amber-500"
                 action={
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {formatRating(m.rating_avg)} / 5 · {m.total_reviews} ulasan
-                  </span>
+                  m.total_reviews > 0 && (
+                    <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                      {formatRating(m.rating_avg)} / 5 · {m.total_reviews} ulasan
+                    </span>
+                  )
                 }
               />
+              <TrustBadges trust={m.trust} variant="long" />
               {m.reviews.length === 0 ? (
                 <p className="rounded-2xl bg-card p-4 text-sm text-muted-foreground ring-1 ring-border">
                   Belum ada ulasan. Jadilah yang pertama setelah mengambil pesananmu!
@@ -423,6 +455,7 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                         </div>
                         <span className="shrink-0 text-[11px] text-muted-foreground">{formatDateId(r.created_at)}</span>
                       </div>
+                      <ReviewAnswers review={r} />
                       {r.comment && <p className="mt-2 text-sm leading-relaxed text-foreground/85">{r.comment}</p>}
                       {r.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">

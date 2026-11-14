@@ -1,6 +1,7 @@
 /**
  * Customer orders: list (status / ACTIVE filter), viewer-dependent detail, cancel,
- * expiry job, and review-once.
+ * expiry job, and review-once (with the optional hygiene and portion answers that feed the
+ * warung's trust signals).
  */
 import { randomInt } from "node:crypto";
 import { asc, eq } from "drizzle-orm";
@@ -224,7 +225,14 @@ describe("POST /orders/:id/review", () => {
 
     const [before] = await db.select().from(merchants).where(eq(merchants.id, merchant.id));
     const reviewed = await reviewOrder(db, { orderId: o.id, userId: customer.id, input });
-    expect(reviewed.review).toEqual({ rating: 4, tags: ["Porsi pas", "Ramah"], comment: "Enak, masih hangat." });
+    // Without the optional answers the review still works and records nothing for them.
+    expect(reviewed.review).toEqual({
+      rating: 4,
+      tags: ["Porsi pas", "Ramah"],
+      comment: "Enak, masih hangat.",
+      hygiene_rating: null,
+      portion_full: null,
+    });
 
     const [after] = await db.select().from(merchants).where(eq(merchants.id, merchant.id));
     const all = await db.select({ r: reviews.rating }).from(reviews).where(eq(reviews.merchantId, merchant.id));
@@ -236,5 +244,50 @@ describe("POST /orders/:id/review", () => {
     await expectCode(reviewOrder(db, { orderId: o.id, userId: customer.id, input }), "CONFLICT");
     const [final] = await db.select().from(merchants).where(eq(merchants.id, merchant.id));
     expect(final.totalReviews).toBe(after.totalReviews);
+  });
+
+  it("stores the hygiene and portion answers and recomputes the warung's trust aggregates", async () => {
+    async function completed() {
+      const customer = await newCustomer();
+      const o = await order(customer.id, (await newBatch()).id);
+      await simulatePayment(db, { orderId: o.id, userId: customer.id, webhookSecret: TEST_PAYMENT_WEBHOOK_SECRET });
+      const [row] = await db.select().from(orders).where(eq(orders.id, o.id));
+      await verifyPickup(db, { merchantId: merchant.id, orderId: o.id, input: row.pickupCode, pickupQrSecret: TEST_PICKUP_QR_SECRET });
+      return { customer, o };
+    }
+
+    const a = await completed();
+    const reviewed = await reviewOrder(db, {
+      orderId: a.o.id,
+      userId: a.customer.id,
+      input: ReviewBody.parse({ rating: 5, hygiene_rating: 4, portion_full: true }),
+    });
+    expect(reviewed.review).toMatchObject({ rating: 5, hygiene_rating: 4, portion_full: true });
+
+    const b = await completed();
+    await reviewOrder(db, {
+      orderId: b.o.id,
+      userId: b.customer.id,
+      input: ReviewBody.parse({ rating: 3, portion_full: false }),
+    });
+    expect(ReviewBody.safeParse({ rating: 4, hygiene_rating: 6 }).success).toBe(false);
+
+    const all = await db
+      .select({ r: reviews.rating, h: reviews.hygieneRating, p: reviews.portionFull })
+      .from(reviews)
+      .where(eq(reviews.merchantId, merchant.id));
+    const hygiene = all.flatMap((x) => (x.h === null ? [] : [x.h]));
+    const portion = all.flatMap((x) => (x.p === null ? [] : [x.p]));
+    const [m] = await db.select().from(merchants).where(eq(merchants.id, merchant.id));
+    expect(m.totalReviews).toBe(all.length);
+    expect(m.hygieneCount).toBe(hygiene.length);
+    expect(m.hygieneCount).toBeGreaterThanOrEqual(1);
+    expect(Number(m.hygieneAvg)).toBeCloseTo(Math.round((hygiene.reduce((s, h) => s + h, 0) / hygiene.length) * 100) / 100, 2);
+    expect(m.portionAnswerCount).toBe(portion.length);
+    expect(m.portionAnswerCount).toBeGreaterThanOrEqual(2);
+    expect(m.portionFullCount).toBe(portion.filter(Boolean).length);
+
+    const seen = await getOrderForViewer(db, b.o.id, { userId: b.customer.id, merchantId: null });
+    expect(seen.review).toMatchObject({ rating: 3, hygiene_rating: null, portion_full: false });
   });
 });

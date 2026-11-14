@@ -1,20 +1,25 @@
 /**
  * Checkout: one transaction:
  *   reserve stock (stock.reserveItems, row-level conditional UPDATE)
+ *   → check each line's lauk against the batch's lauk_available (snapshot in order_items)
  *   → price lines from each batch's current price (snapshotted in order_items)
  *   → computeOrderTotals → order number / pickup code / QR token
  *   → simulated dynamic QRIS → PENDING_PAYMENT order.
  *
- * Pilot warung (merchants.is_pilot): the customer pays the warung directly at pickup.
- * The order is a ticket right away (READY_FOR_PICKUP, payment_method BAYAR_DI_WARUNG,
- * no QRIS, no service fee, no voucher) and its portions stay reserved until the warung
- * verifies the pickup (see pickup.ts), the buyer or the warung cancels it, or its short
- * hold ends (PAY_AT_WARUNG_HOLD_MINUTES, see hold.ts). Because the hold is free, a ticket
- * is capped at PAY_AT_WARUNG_MAX_PORTIONS and repeated no-shows block new tickets.
+ * "Bayar di warung" (payment_method BAYAR_DI_WARUNG, any warung; pilot warung are forced to
+ * it): the customer pays the warung directly at pickup. The order is a ticket right away
+ * (READY_FOR_PICKUP, no QRIS, no service fee, no voucher) and its portions stay reserved until
+ * the warung verifies the pickup (see pickup.ts), the buyer or the warung cancels it, or its
+ * short hold ends (PAY_AT_WARUNG_HOLD_MINUTES, see hold.ts). Because the hold is free, every
+ * ticket is capped at PAY_AT_WARUNG_MAX_PORTIONS; repeated no-shows block new tickets at pilot
+ * warung (the only warung where a no-show costs a real cook).
+ *
+ * Lauk: one batch may appear on several lines with a different lauk each. Lauk have no stock
+ * of their own; the batch portion is the reserved unit, so per-batch limits sum the lines.
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull, like, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, like, ne, not, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
@@ -29,8 +34,9 @@ import {
 } from "@/lib/constants";
 import type { CheckoutBody, OrderDetail } from "@/lib/contracts";
 import { isDemoAccount } from "@/lib/demo-accounts";
+import { findItem, lineKey } from "@/lib/lauk";
 import { createPickupToken, generatePickupCode } from "@/lib/pickup-token";
-import { computeOrderTotals, type OrderLineInput } from "@/lib/pricing/order-totals";
+import { computeOrderTotals, serviceFeeFor, type OrderLineInput } from "@/lib/pricing/order-totals";
 import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
@@ -98,19 +104,45 @@ export function maxPortionsPerCustomer(initialStock: number): number {
   return Math.max(3, Math.ceil(initialStock / 2));
 }
 
+/**
+ * Identity of an order line for the double-tap check: the batch plus the lauk ignoring case
+ * (the request may differ in casing from the stored snapshot).
+ */
+const matchKey = (batchId: string, lauk: string | null): string =>
+  lineKey(batchId, lauk === null ? null : lauk.toLocaleLowerCase("id-ID"));
+
 const sameItems = (a: Map<string, number>, b: Map<string, number>) =>
   a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+
+/** A lapsed cash ticket: expired at its hold end or marked "Tidak datang" by the warung. */
+const LAPSED_CASH_TICKET = sql`(${orders.paymentMethod} = 'BAYAR_DI_WARUNG' AND (${orders.status} = 'EXPIRED' OR ${orders.cancelReason} IS NOT DISTINCT FROM ${MERCHANT_TICKET_CANCEL_REASONS.NO_SHOW.reason}))`;
+
+type FairUseArgs = {
+  userId: string;
+  merchantId: string;
+  isPilot: boolean;
+  /** Requested portions per batch (summed over lauk lines). */
+  perBatch: Map<string, number>;
+  /** Requested portions per matchKey line. */
+  perLine: Map<string, number>;
+  now: Date;
+  cash: boolean;
+  /**
+   * The shared demo buyer account. Many visitors use it at once, so its open cash tickets and
+   * lapsed cash tickets must not lock other visitors out: they are left out of the pending
+   * and churn limits (the demo account can never order at a pilot warung). The per-batch cap
+   * still counts its open tickets, so one session cannot hold a whole batch.
+   */
+  demoBuyer: boolean;
+};
 
 /**
  * Enforces the fair-use limits inside the checkout transaction (the users row lock
  * serialises concurrent checkouts of one customer). Returns the id of an existing
  * identical unpaid order at the same warung (idempotent retry / double tap), or null.
  */
-async function enforceFairUse(
-  tx: Tx,
-  args: { userId: string; merchantId: string; items: Map<string, number>; now: Date; payAtWarung: boolean },
-): Promise<string | null> {
-  const { userId, merchantId, items, now, payAtWarung } = args;
+async function enforceFairUse(tx: Tx, args: FairUseArgs): Promise<string | null> {
+  const { userId, merchantId, perBatch, perLine, now, cash, demoBuyer } = args;
   await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("update");
 
   const pendingRows = await tx
@@ -123,26 +155,44 @@ async function enforceFairUse(
       status: orders.status,
     })
     .from(orders)
-    .where(and(eq(orders.customerId, userId), or(eq(orders.status, "PENDING_PAYMENT"), OPEN_PAY_AT_WARUNG)));
+    .where(and(eq(orders.customerId, userId), or(eq(orders.status, "PENDING_PAYMENT"), OPEN_PAY_AT_WARUNG)))
+    .orderBy(orders.createdAt);
   const pending: typeof pendingRows = [];
+  /** The demo buyer's open cash tickets: never counted, only matched for a double tap. */
+  const uncounted: typeof pendingRows = [];
   for (const o of pendingRows) {
     // Lazily expire stale unpaid checkouts and lapsed tickets the worker has not reached yet.
     if (o.status === "PENDING_PAYMENT" && o.paymentExpiresAt && o.paymentExpiresAt <= now) {
       await abandonPendingOrder(tx, o.id, "EXPIRED", "Pembayaran tidak diselesaikan dalam 10 menit", now);
     } else if (o.status === "READY_FOR_PICKUP" && isHoldOver(o.pickupDeadlineAt, now)) {
       await abandonPayAtWarungOrder(tx, o.id, "EXPIRED", PAY_AT_WARUNG_EXPIRED_REASON, now);
-    } else pending.push(o);
+    } else if (demoBuyer && o.status === "READY_FOR_PICKUP") uncounted.push(o);
+    else pending.push(o);
   }
 
+  const sameWarung = [...pending, ...uncounted].filter((o) => o.merchantId === merchantId);
+  if (sameWarung.length > 0) {
+    const lines = await tx
+      .select({
+        orderId: orderItems.orderId,
+        batchId: orderItems.surplusBatchId,
+        lauk: orderItems.laukChoice,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, sameWarung.map((o) => o.id)));
+    for (const o of sameWarung) {
+      const existing = new Map<string, number>();
+      for (const l of lines) {
+        if (l.orderId !== o.id) continue;
+        const k = matchKey(l.batchId, l.lauk);
+        existing.set(k, (existing.get(k) ?? 0) + l.quantity);
+      }
+      if (sameItems(existing, perLine)) return o.id;
+    }
+  }
   const atSameWarung = pending.find((o) => o.merchantId === merchantId);
   if (atSameWarung) {
-    const lines = await tx
-      .select({ batchId: orderItems.surplusBatchId, quantity: orderItems.quantity })
-      .from(orderItems)
-      .where(eq(orderItems.orderId, atSameWarung.id));
-    const existing = new Map<string, number>();
-    for (const l of lines) existing.set(l.batchId, (existing.get(l.batchId) ?? 0) + l.quantity);
-    if (sameItems(existing, items)) return atSameWarung.id;
     throw new ApiError(
       "CONFLICT",
       atSameWarung.status === "PENDING_PAYMENT"
@@ -159,7 +209,7 @@ async function enforceFairUse(
     );
   }
 
-  if (payAtWarung) await enforcePayAtWarungLimits(tx, { userId, items, now });
+  if (cash) await enforcePayAtWarungLimits(tx, { userId, perBatch, now, isPilot: args.isPilot });
 
   const windowStart = new Date(now.getTime() - ABANDONED_ORDERS_WINDOW_MINUTES * 60_000);
   const [abandoned] = await tx
@@ -172,6 +222,7 @@ async function enforceFairUse(
         gt(orders.updatedAt, windowStart),
         // A ticket the warung cancelled because the food ran out is not the buyer's doing.
         or(isNull(orders.cancelReason), ne(orders.cancelReason, MERCHANT_TICKET_CANCEL_REASONS.OUT_OF_STOCK.reason)),
+        demoBuyer ? not(LAPSED_CASH_TICKET) : undefined,
       ),
     );
   if ((abandoned?.n ?? 0) >= MAX_ABANDONED_ORDERS_IN_WINDOW) {
@@ -180,7 +231,7 @@ async function enforceFairUse(
     });
   }
 
-  const batchIds = [...items.keys()];
+  const batchIds = [...perBatch.keys()];
   const held = await tx
     .select({ batchId: orderItems.surplusBatchId, qty: sql<number>`sum(${orderItems.quantity})::int` })
     .from(orderItems)
@@ -201,7 +252,7 @@ async function enforceFairUse(
   for (const b of batches) {
     const cap = maxPortionsPerCustomer(b.initialStock);
     const already = heldBy.get(b.id) ?? 0;
-    if (already + (items.get(b.id) ?? 0) > cap) {
+    if (already + (perBatch.get(b.id) ?? 0) > cap) {
       const left = Math.max(0, cap - already);
       throw new ApiError(
         "VALIDATION_ERROR",
@@ -217,12 +268,16 @@ async function enforceFairUse(
 
 /**
  * "Bayar di warung" holds cost the buyer nothing, so on top of the general limits: at most
- * PAY_AT_WARUNG_MAX_PORTIONS portions per ticket (one open ticket per warung, see above, so
- * this is also the cap per buyer per warung), and no new ticket after
- * PAY_AT_WARUNG_NO_SHOW_LIMIT no-shows within PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS.
+ * PAY_AT_WARUNG_MAX_PORTIONS portions per ticket at any warung (one open ticket per warung,
+ * see above, so this is also the cap per buyer per warung). At pilot warung only, no new
+ * ticket after PAY_AT_WARUNG_NO_SHOW_LIMIT no-shows at pilot warung within
+ * PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS: lapses at demo warung cost nobody food.
  */
-async function enforcePayAtWarungLimits(tx: Tx, args: { userId: string; items: Map<string, number>; now: Date }) {
-  const portions = [...args.items.values()].reduce((s, q) => s + q, 0);
+async function enforcePayAtWarungLimits(
+  tx: Tx,
+  args: { userId: string; perBatch: Map<string, number>; now: Date; isPilot: boolean },
+) {
+  const portions = [...args.perBatch.values()].reduce((s, q) => s + q, 0);
   if (portions > PAY_AT_WARUNG_MAX_PORTIONS) {
     throw new ApiError(
       "VALIDATION_ERROR",
@@ -232,19 +287,22 @@ async function enforcePayAtWarungLimits(tx: Tx, args: { userId: string; items: M
         {
           path: "items",
           message: `Maksimal ${PAY_AT_WARUNG_MAX_PORTIONS} porsi per tiket`,
-          ...(args.items.size === 1 ? { batch_id: [...args.items.keys()][0] } : {}),
+          ...(args.perBatch.size === 1 ? { batch_id: [...args.perBatch.keys()][0] } : {}),
           max_quantity: PAY_AT_WARUNG_MAX_PORTIONS,
         },
       ],
     );
   }
+  if (!args.isPilot) return;
   const since = new Date(args.now.getTime() - PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS * 24 * 60 * 60_000);
   const [noShows] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(orders)
+    .innerJoin(merchants, eq(merchants.id, orders.merchantId))
     .where(
       and(
         eq(orders.customerId, args.userId),
+        eq(merchants.isPilot, true),
         eq(orders.paymentMethod, "BAYAR_DI_WARUNG"),
         gt(orders.updatedAt, since),
         or(
@@ -291,67 +349,114 @@ export async function checkout(
     if (merchant.ownerUserId === args.userId) {
       throw new ApiError("FORBIDDEN", "Tidak bisa memesan dari warung sendiri");
     }
-    const payAtWarung = merchant.isPilot;
-    if (!payAtWarung && input.payment_method === "BAYAR_DI_WARUNG") {
-      throw new ApiError("VALIDATION_ERROR", "Bayar di warung hanya untuk warung uji coba", [
-        { path: "payment_method", message: "Pilih QRIS atau dompet digital" },
-      ]);
+    // Pilot warung are paid at the counter only; elsewhere the buyer may choose cash.
+    const cash = merchant.isPilot || input.payment_method === "BAYAR_DI_WARUNG";
+    if (cash && voucher) {
+      throw new ApiError(
+        "VOUCHER_INVALID",
+        merchant.isPilot
+          ? "Voucher belum berlaku di warung uji coba. Pembayaran langsung ke warung."
+          : "Voucher hanya untuk bayar lewat QRIS atau dompet digital.",
+      );
     }
-    if (payAtWarung && voucher) {
-      throw new ApiError("VOUCHER_INVALID", "Voucher belum berlaku di warung uji coba. Pembayaran langsung ke warung.");
-    }
-    if (payAtWarung) {
-      const [buyer] = await tx.select({ email: users.email, phoneNumber: users.phoneNumber }).from(users).where(eq(users.id, args.userId));
-      if (buyer && isDemoAccount(buyer)) {
-        throw new ApiError(
-          "FORBIDDEN",
-          "Ini warung sungguhan yang ikut uji coba. Untuk memesan di sini, masuk dengan nomor HP atau emailmu sendiri.",
-        );
-      }
+    const [buyer] = await tx
+      .select({ email: users.email, phoneNumber: users.phoneNumber })
+      .from(users)
+      .where(eq(users.id, args.userId));
+    const demoBuyer = buyer ? isDemoAccount(buyer) : false;
+    if (merchant.isPilot && demoBuyer) {
+      throw new ApiError(
+        "FORBIDDEN",
+        "Ini warung sungguhan yang ikut uji coba. Untuk memesan di sini, masuk dengan nomor HP atau emailmu sendiri.",
+      );
     }
 
-    const requested = new Map<string, number>();
-    for (const it of input.items) requested.set(it.batch_id, (requested.get(it.batch_id) ?? 0) + it.quantity);
+    const perBatch = new Map<string, number>();
+    const perLine = new Map<string, number>();
+    for (const it of input.items) {
+      perBatch.set(it.batch_id, (perBatch.get(it.batch_id) ?? 0) + it.quantity);
+      const k = matchKey(it.batch_id, it.lauk ?? null);
+      perLine.set(k, (perLine.get(k) ?? 0) + it.quantity);
+    }
     const existingId = await enforceFairUse(tx, {
       userId: args.userId,
       merchantId: merchant.id,
-      items: requested,
+      isPilot: merchant.isPilot,
+      perBatch,
+      perLine,
       now,
-      payAtWarung,
+      cash,
+      demoBuyer,
     });
     if (existingId) {
       const [existing] = await loadOrderDetails(tx, [existingId], "customer");
       if (existing) return existing;
     }
-    // Portions on other buyers' lapsed tickets go back on the shelf before reserving.
-    if (payAtWarung) await expireLapsedHolds(tx, { batchIds: [...requested.keys()] }, now);
+    // Portions on other buyers' lapsed tickets go back on the shelf before reserving, so a
+    // QRIS buyer is not refused for portions nobody will collect any more.
+    await expireLapsedHolds(tx, { batchIds: [...perBatch.keys()] }, now);
 
     const reserved = await reserveItems(
       tx,
       merchant.id,
-      input.items.map((i) => ({ batchId: i.batch_id, quantity: i.quantity })),
+      [...perBatch].map(([batchId, quantity]) => ({ batchId, quantity })),
       now,
     );
+    const batchById = new Map(reserved.map((b) => [b.id, b]));
     const menuRows = await tx
       .select()
       .from(menus)
       .where(inArray(menus.id, [...new Set(reserved.map((b) => b.menuId))]));
     const menuById = new Map(menuRows.map((m) => [m.id, m]));
+    // Surprise menus are gone (migration 0009 left only already-ordered batches live), so a
+    // cached cart or a direct call cannot buy them; throwing rolls the reservation back.
+    if (menuRows.some((m) => m.isMysteryBag || m.category === "MYSTERY_BAG")) {
+      throw new ApiError("BATCH_CLOSED", "Menu ini sudah tidak tersedia");
+    }
 
-    // reserveItems merges duplicate batch ids; mirror that for the order lines.
-    const qtyByBatch = new Map<string, number>();
-    for (const it of input.items) qtyByBatch.set(it.batch_id, (qtyByBatch.get(it.batch_id) ?? 0) + it.quantity);
+    // One order line per (batch, lauk), the lauk in the batch's stored casing. Lauk are
+    // checked after the reservation, so a refusal rolls the reservation back with the rest.
+    const merged = new Map<string, { batchId: string; lauk: string | null; quantity: number }>();
+    for (const it of input.items) {
+      const batch = batchById.get(it.batch_id);
+      if (!batch) throw new ApiError("NOT_FOUND", "Menu surplus tidak ditemukan");
+      let lauk: string | null = null;
+      if (it.lauk !== undefined) {
+        lauk = findItem(batch.laukAvailable, it.lauk);
+        if (lauk === null) {
+          const offered = findItem(menuById.get(batch.menuId)?.laukOptions ?? [], it.lauk) !== null;
+          throw new ApiError(
+            "VALIDATION_ERROR",
+            offered ? `Lauk ${it.lauk} sudah habis. Pilih lauk lain, ya.` : `Lauk ${it.lauk} tidak ada di menu ini.`,
+            [
+              {
+                path: "items",
+                message: offered ? "Lauk sudah habis" : "Lauk tidak ada di menu ini",
+                batch_id: batch.id,
+                lauk: it.lauk,
+                lauk_available: batch.laukAvailable,
+              },
+            ],
+          );
+        }
+      }
+      const key = lineKey(batch.id, lauk);
+      const line = merged.get(key);
+      if (line) line.quantity += it.quantity;
+      else merged.set(key, { batchId: batch.id, lauk, quantity: it.quantity });
+    }
 
-    const lines = reserved.map((b) => {
-      const menu = menuById.get(b.menuId);
-      if (!menu) throw new ApiError("NOT_FOUND", "Menu tidak ditemukan");
+    const lines = [...merged.values()].map(({ batchId, lauk, quantity }) => {
+      const batch = batchById.get(batchId);
+      const menu = batch ? menuById.get(batch.menuId) : undefined;
+      if (!batch || !menu) throw new ApiError("NOT_FOUND", "Menu tidak ditemukan");
       const line: OrderLineInput = {
-        quantity: qtyByBatch.get(b.id) ?? 0,
-        unitOriginalPriceIdr: b.originalPriceIdr,
-        unitSellingPriceIdr: b.currentSellingPriceIdr,
+        quantity,
+        unitOriginalPriceIdr: batch.originalPriceIdr,
+        unitSellingPriceIdr: batch.currentSellingPriceIdr,
         portionWeightGrams: menu.portionWeightGrams,
       };
-      return { batch: b, menu, line };
+      return { batch, menu, lauk, line };
     });
 
     const subtotalRecovery = lines.reduce((s, l) => s + l.line.quantity * l.line.unitSellingPriceIdr, 0);
@@ -362,17 +467,18 @@ export async function checkout(
         { min_subtotal_idr: voucher.min_subtotal_idr },
       );
     }
+    const paymentMethod = cash ? "BAYAR_DI_WARUNG" : input.payment_method;
     const totals = computeOrderTotals(
       lines.map((l) => l.line),
-      // Pilot: the warung collects the recovery price itself; the platform charges nothing.
-      { voucherDiscountIdr: voucher?.discount_idr ?? 0, platformCommissionIdr: payAtWarung ? 0 : undefined },
+      // Cash: the warung collects the recovery price itself; the platform charges nothing.
+      { voucherDiscountIdr: voucher?.discount_idr ?? 0, platformCommissionIdr: serviceFeeFor(paymentMethod) },
     );
 
     const pickupEnd = new Date(Math.min(...reserved.map((b) => b.pickupEndTime.getTime())));
-    // Pay-at-warung tickets have no online payment: their free hold is short and is also the
-    // ticket's pickup deadline (hold.ts). Paid orders keep the batch's pickup end.
-    const deadline = payAtWarung ? payAtWarungHoldEnd(now, pickupEnd) : pickupEnd;
-    const paymentExpiresAt = payAtWarung
+    // Cash tickets have no online payment: their free hold is short and is also the ticket's
+    // pickup deadline (hold.ts). Paid orders keep the batch's pickup end.
+    const deadline = cash ? payAtWarungHoldEnd(now, pickupEnd) : pickupEnd;
+    const paymentExpiresAt = cash
       ? deadline
       : new Date(Math.min(now.getTime() + PAYMENT_TTL_SECONDS * 1000, deadline.getTime()));
 
@@ -397,7 +503,7 @@ export async function checkout(
             orderNumber,
             customerId: args.userId,
             merchantId: merchant.id,
-            status: payAtWarung ? "READY_FOR_PICKUP" : "PENDING_PAYMENT",
+            status: cash ? "READY_FOR_PICKUP" : "PENDING_PAYMENT",
             pickupCode,
             pickupQrToken: createPickupToken(orderId, pickupCode, args.pickupQrSecret),
             scheduledPickupTime: scheduled,
@@ -409,9 +515,9 @@ export async function checkout(
             platformCommissionIdr: totals.platformCommissionIdr,
             totalCustomerPaidIdr: totals.totalCustomerPaidIdr,
             netMerchantPayoutIdr: totals.netMerchantPayoutIdr,
-            paymentMethod: payAtWarung ? "BAYAR_DI_WARUNG" : input.payment_method,
-            paymentGatewayRef: payAtWarung ? null : newGatewayRef(),
-            qrisDynamicString: payAtWarung
+            paymentMethod,
+            paymentGatewayRef: cash ? null : newGatewayRef(),
+            qrisDynamicString: cash
               ? null
               : buildDynamicQris({
                   merchantName: merchant.merchantName,
@@ -443,6 +549,7 @@ export async function checkout(
         unitSellingPriceIdr: l.line.unitSellingPriceIdr,
         discountPctApplied: l.batch.currentDiscountPct,
         portionWeightGrams: l.line.portionWeightGrams,
+        laukChoice: l.lauk,
       })),
     );
 

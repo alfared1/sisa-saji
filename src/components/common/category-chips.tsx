@@ -1,13 +1,16 @@
 "use client";
 
-import { MENU_CATEGORIES, MENU_CATEGORY_LABELS, type MenuCategory } from "@/lib/contracts";
+import { BUYER_MENU_CATEGORIES, MENU_CATEGORY_LABELS, type MenuCategory } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 
-/** Horizontally scrollable category filter ("Semua" + MENU_CATEGORY_LABELS). */
+/**
+ * Horizontally scrollable category filter ("Semua" + BUYER_MENU_CATEGORIES; the legacy
+ * closed surprise-bag category is not offered any more).
+ */
 export function CategoryChips({
   value,
   onChange,
-  categories = MENU_CATEGORIES,
+  categories = BUYER_MENU_CATEGORIES,
   showAll = true,
   className,
 }: {

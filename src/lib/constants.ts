@@ -36,11 +36,13 @@ export const PICKUP_CODE_LENGTH = 4;
 export const PICKUP_CODE_PREFIX = "SJ-";
 
 /**
- * Pilot "bayar di warung" tickets reserve portions without any payment, so the hold is
- * short: the ticket expires (portions back on the shelf) this long after checkout, and
- * never later than the batch's pickup end time.
+ * Every "bayar di warung" ticket (any warung) reserves portions without any payment, so the
+ * hold is short: the ticket expires (portions back on the shelf) this long after checkout,
+ * and never later than the batch's pickup end time.
  */
-export const PAY_AT_WARUNG_HOLD_MINUTES = 60;
+export const PAY_AT_WARUNG_HOLD_MINUTES = 30;
+/** Under this many minutes left, the buyer's cash-ticket banner turns red. */
+export const CASH_HOLD_URGENT_MINUTES = 10;
 /** Most portions one buyer may hold on an open "bayar di warung" ticket (one ticket per warung). */
 export const PAY_AT_WARUNG_MAX_PORTIONS = 3;
 /** Tickets a buyer let lapse (or the warung marked "tidak datang") within the window before new tickets are refused. */
@@ -92,6 +94,60 @@ export function buyerCancelText(cancelReason: string | null | undefined): string
   }
   return Object.values(MERCHANT_TICKET_CANCEL_REASONS).find((r) => r.reason === cancelReason)?.buyer ?? cancelReason;
 }
+
+/** Distance copy: "bisa jalan kaki" up to WALKABLE_DISTANCE_M, "N mnt jalan kaki" up to WALK_MINUTES_COPY_MAX_M. */
+export const WALKABLE_DISTANCE_M = 500;
+export const WALK_MINUTES_COPY_MAX_M = 1500;
+
+/** /discover quick filters (client-side over the fetched radius): "< 500 m", "< 1 km", "Harga ≤ Rp 12.000", "Diskon ≥ 30%". */
+export const QUICK_FILTER_NEAR_M = 500;
+export const QUICK_FILTER_MID_M = 1000;
+export const CEBAN_MIN_PRICE_IDR = 10_000;
+export const CEBAN_MAX_PRICE_IDR = 12_000;
+export const QUICK_FILTER_MIN_DISCOUNT_PCT = 30;
+
+/**
+ * Hygiene and portion signals come from reviews only, and are shown (server returns
+ * non-null) once at least this many reviews answered the question.
+ */
+export const TRUST_SIGNAL_MIN_REVIEWS = 10;
+/** From this share of "Ya, kenyang" answers the portion reads "Porsi normal {pct}%". */
+export const PORTION_KENYANG_MIN_PCT = 90;
+
+/** "Titip Antar Kolektif" fee shown on the "Segera hadir" option: display only, never charged; self-pickup rule. */
+export const COLLECTIVE_DELIVERY_FEE_DISPLAY_IDR = 2_500;
+
+/** Batch photos ("Foto etalase malam ini"). The client re-encodes to JPEG under the target size. */
+export const BATCH_PHOTO_MAX_BYTES = 400 * 1024;
+export const BATCH_PHOTO_TARGET_BYTES = 250 * 1024;
+export const BATCH_PHOTO_MAX_EDGE_PX = 1280;
+/** Server limits on the decoded size (a small JPEG can declare a huge canvas). */
+export const BATCH_PHOTO_MAX_DIMENSION_PX = 2560;
+export const BATCH_PHOTO_MAX_PIXELS = 4_000_000;
+/** Uploads per batch, replaced and deleted photos included. */
+export const BATCH_PHOTO_MAX_UPLOADS = 5;
+/** Uploads per warung per rolling hour. */
+export const BATCH_PHOTO_MAX_UPLOADS_PER_HOUR = 20;
+/** Demo-account photos are visible to demo sessions and the owner only, and only this long. */
+export const DEMO_BATCH_PHOTO_TTL_MINUTES = 60;
+/** Live demo-account photos across all demo uploads. */
+export const DEMO_BATCH_PHOTO_MAX_LIVE = 15;
+
+/** Menu contents ("Isi porsi") and lauk options. */
+export const MENU_CONTENTS_MAX = 12;
+export const LAUK_OPTIONS_MAX = 8;
+export const MENU_ITEM_MAX_LEN = 40;
+
+/**
+ * "Notifikasi Jam Lapar": one push per device per WIB night when a pilot warung within
+ * HUNGER_ALERT_RADIUS_M opens its night discount, between HUNGER_ALERT_WINDOW_START and
+ * SURPLUS_WINDOW_END; the digest job runs from HUNGER_ALERT_HOUR until HUNGER_DIGEST_UNTIL.
+ */
+export const HUNGER_ALERT_RADIUS_M = 500;
+export const HUNGER_ALERT_HOUR = "20:00";
+export const HUNGER_ALERT_WINDOW_START = "20:00";
+export const HUNGER_DIGEST_UNTIL = "21:30";
+export const HUNGER_TEST_COOLDOWN_SECONDS = 60;
 
 /** Dynamic Discount Optimizer bounds. */
 export const DISCOUNT_BASELINE_PCT = 50;

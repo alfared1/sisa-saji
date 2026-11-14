@@ -6,7 +6,15 @@ import {
   previewTotals,
   voucherEligibility,
 } from "@/components/customer/lib/checkout-logic";
-import { deriveDiscoverSections, minutesLeft, nextRadius } from "@/components/customer/lib/discover-sections";
+import {
+  NO_QUICK_FILTERS,
+  applyQuickFilters,
+  deriveDiscoverSections,
+  hasQuickFilters,
+  minutesLeft,
+  nextRadius,
+  quickFilterCriteria,
+} from "@/components/customer/lib/discover-sections";
 import {
   badgeLabel,
   formatDistance,
@@ -44,7 +52,12 @@ function batch(p: Partial<BatchCard> = {}): BatchCard {
     category: "MAKANAN_BERAT",
     description: null,
     image_url: null,
-    is_mystery_bag: false,
+    contents: ["Nasi putih", "Gudeg nangka", "Sambal krecek"],
+    lauk_options: ["Ayam opor", "Telur pindang"],
+    lauk_available: ["Ayam opor", "Telur pindang"],
+    full_portion: true,
+    photo: null,
+    merchant_trust: { hygiene: null, portion_full: null },
     portion_weight_grams: 200,
     original_price_idr: 20000,
     selling_price_idr: 10000,
@@ -79,6 +92,7 @@ function merchant(batches: BatchCard[], p: Partial<MerchantSummary> = {}): Merch
     tier: "PREMIUM",
     rating_avg: 4.5,
     total_reviews: 10,
+    trust: { hygiene: null, portion_full: null },
     logo_url: null,
     is_open: true,
     max_discount_pct: Math.max(...batches.map((b) => b.discount_pct)),
@@ -98,6 +112,7 @@ function ev(p: Partial<BatchStreamEvent> = {}): BatchStreamEvent {
     discount_pct: 50,
     selling_price_idr: 10000,
     status: "ACTIVE",
+    lauk_available: ["Ayam opor", "Telur pindang"],
     updated_at: "2026-11-08T13:05:00Z",
     ...p,
   };
@@ -114,14 +129,23 @@ describe("discover sections", () => {
     merchants: [merchant([closing, hot, pricey, soldOut])],
   };
 
-  it("puts closing-soon and ≥60 % deals in the urgent row, soonest first", () => {
+  it("puts closing-soon and ≥50 % deals in the urgent row, soonest first", () => {
     const s = deriveDiscoverSections(data, NOW);
+    // "pricey" (40 %) stays out; the default batch at exactly 50 % would be in.
     expect(s.urgent.map((b) => b.batch_id)).toEqual(["closing", "hot"]);
+    const fifty = batch({ batch_id: "fifty", discount_pct: 50, selling_price_idr: 14000 });
+    const s50 = deriveDiscoverSections({ ...data, merchants: [merchant([fifty, pricey])] }, NOW);
+    expect(s50.urgent.map((b) => b.batch_id)).toEqual(["fifty"]);
   });
 
-  it("lists batches under Rp 10.000 cheapest first and skips sold-out ones", () => {
+  it("lists the ceban row (at most Rp 12.000) cheapest first and skips sold-out ones", () => {
     const s = deriveDiscoverSections(data, NOW);
-    expect(s.under10k.map((b) => b.batch_id)).toEqual(["hot"]);
+    // hot 6.000, closing 10.000; pricey (15.000) and the sold-out one are left out.
+    expect(s.ceban.map((b) => b.batch_id)).toEqual(["hot", "closing"]);
+    const edge = batch({ batch_id: "edge", selling_price_idr: 12000 });
+    const over = batch({ batch_id: "over", selling_price_idr: 12001 });
+    const s2 = deriveDiscoverSections({ ...data, merchants: [merchant([over, edge])] }, NOW);
+    expect(s2.ceban.map((b) => b.batch_id)).toEqual(["edge"]);
     expect(s.totalBatches).toBe(3);
     expect(s.totalPortions).toBe(15);
   });
@@ -142,6 +166,60 @@ describe("discover sections", () => {
     expect(minutesLeft(closing, null)).toBe(40);
     expect(nextRadius(2000, [2000, 5000, 10000])).toBe(5000);
     expect(nextRadius(10000, [2000, 5000, 10000])).toBeNull();
+  });
+});
+
+describe("quick filters", () => {
+  const near = batch({ batch_id: "near", merchant_id: "w1", distance_m: 300, selling_price_idr: 11000, discount_pct: 45 });
+  const mid = batch({ batch_id: "mid", merchant_id: "w1", distance_m: 300, selling_price_idr: 15000, discount_pct: 25 });
+  const far = batch({ batch_id: "far", merchant_id: "w2", merchant_slug: "warung-b", distance_m: 800, selling_price_idr: 9000, discount_pct: 55 });
+  const data: NearbyResponse = {
+    radius_m: 2000,
+    total_batches: 3,
+    merchants: [
+      merchant([near, mid], { distance_m: 300 }),
+      merchant([far], { id: "w2", slug: "warung-b", distance_m: 800 }),
+    ],
+  };
+
+  it("does nothing (same reference) without an active chip", () => {
+    expect(hasQuickFilters(NO_QUICK_FILTERS)).toBe(false);
+    expect(applyQuickFilters(data, quickFilterCriteria(NO_QUICK_FILTERS))).toBe(data);
+    expect(applyQuickFilters(undefined, { maxDistanceM: 500 })).toBeUndefined();
+  });
+
+  it("< 500 m keeps closer batches and drops warung left without any", () => {
+    const r = applyQuickFilters(data, quickFilterCriteria({ ...NO_QUICK_FILTERS, distance: "near" }));
+    expect(r.merchants.map((m) => m.id)).toEqual(["w1"]);
+    expect(r.total_batches).toBe(2);
+    // < 1 km keeps both warung.
+    expect(applyQuickFilters(data, quickFilterCriteria({ ...NO_QUICK_FILTERS, distance: "mid" })).merchants).toHaveLength(2);
+    // Strictly below: a batch at exactly 500 m is out, an unknown distance too.
+    const at500 = { ...data, merchants: [merchant([batch({ distance_m: 500 }), batch({ batch_id: "x", distance_m: null })])] };
+    expect(applyQuickFilters(at500, { maxDistanceM: 500 }).merchants).toEqual([]);
+  });
+
+  it("price and discount chips re-aggregate the merchant", () => {
+    const r = applyQuickFilters(data, quickFilterCriteria({ ...NO_QUICK_FILTERS, cheap: true }));
+    const w1 = r.merchants.find((m) => m.id === "w1")!;
+    expect(w1.batches.map((b) => b.batch_id)).toEqual(["near"]);
+    expect(w1.min_price_idr).toBe(11000);
+    expect(w1.max_discount_pct).toBe(45);
+    expect(w1.total_available_stock).toBe(near.available_stock);
+
+    const d = applyQuickFilters(data, quickFilterCriteria({ ...NO_QUICK_FILTERS, discount: true }));
+    expect(d.merchants.flatMap((m) => m.batches.map((b) => b.batch_id))).toEqual(["near", "far"]);
+
+    // All chips together: walking distance, ceban price and at least 30 % off.
+    const all = applyQuickFilters(data, quickFilterCriteria({ distance: "near", cheap: true, discount: true }));
+    expect(all.merchants.flatMap((m) => m.batches.map((b) => b.batch_id))).toEqual(["near"]);
+  });
+
+  it("feeds the sections, so the live line counts only what is shown", () => {
+    const r = applyQuickFilters(data, quickFilterCriteria({ ...NO_QUICK_FILTERS, distance: "near" }));
+    const s = deriveDiscoverSections(r, NOW);
+    expect(s.totalBatches).toBe(2);
+    expect(s.merchants.map((m) => m.id)).toEqual(["w1"]);
   });
 });
 
@@ -167,6 +245,16 @@ describe("SSE patching", () => {
 
   it("does not report a drop when only stock changes", () => {
     expect(patchNearby(data, ev({ available_stock: 1 })).priceDrop).toBeNull();
+  });
+
+  it("patches tonight's lauk and keeps it when an older event has none", () => {
+    const r = patchNearby(data, ev({ lauk_available: ["Telur pindang"] }));
+    expect(r.data).not.toBe(data);
+    expect(r.data.merchants[0].batches[0].lauk_available).toEqual(["Telur pindang"]);
+    expect(r.priceDrop).toBeNull();
+    const legacy = { ...ev() } as Partial<BatchStreamEvent>;
+    delete legacy.lauk_available;
+    expect(patchNearby(data, legacy as BatchStreamEvent).data).toBe(data);
   });
 
   it("removes closed batches from discovery but keeps them as sold out on the warung page", () => {

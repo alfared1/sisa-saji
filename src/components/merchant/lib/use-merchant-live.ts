@@ -4,7 +4,7 @@
  * Merchant live updates over SSE (/api/v1/stream/merchant):
  *  - order.paid       → toast "Pesanan baru dibayar: SS-…" + refresh dashboard/orders
  *  - order.completed  → refresh
- *  - batch.updated    → patch the batch in the dashboard cache, then refresh
+ *  - batch.updated    → patch the batch (stock, price, status, lauk) in the dashboard cache, then refresh
  */
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -57,7 +57,13 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
                   ...old,
                   active_batches: old.active_batches.map((b) =>
                     b.id === ev.batch_id
-                      ? { ...b, available_stock: ev.available_stock, current_discount_pct: ev.discount_pct, status: ev.status }
+                      ? {
+                          ...b,
+                          available_stock: ev.available_stock,
+                          current_discount_pct: ev.discount_pct,
+                          status: ev.status,
+                          lauk_available: ev.lauk_available,
+                        }
                       : b,
                   ),
                 }

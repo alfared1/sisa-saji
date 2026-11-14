@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheckIcon, ChevronRightIcon, MapPinIcon, StarIcon } from "lucide-react";
+import { BadgeCheckIcon, ChevronRightIcon, MapPinIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { StockBadge } from "@/components/common/stock-badge";
 import { PilotBadge } from "@/components/common/pilot-badge";
+import { TrustBadges } from "@/components/common/trust-badges";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { MerchantSummary } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { RatingLine, useDistanceOrigin } from "./bits";
 import { FoodThumb } from "./food-thumb";
-import { formatDistance, formatRating, travelMinutes } from "./lib/format";
+import { distanceLine, formatDistance } from "./lib/format";
 
 type MerchantCardData = Pick<
   MerchantSummary,
@@ -28,9 +30,13 @@ type MerchantCardData = Pick<
   | "min_price_idr"
   | "total_available_stock"
   | "closes_at"
-> & { batches?: MerchantSummary["batches"]; is_pilot?: boolean };
+> & { batches?: MerchantSummary["batches"]; is_pilot?: boolean; trust?: MerchantSummary["trust"] };
 
-/** MerchantCard — a warung in "Mitra Terdekat" and the map preview sheet. */
+/**
+ * MerchantCard: a warung in "Mitra Terdekat" and the map preview sheet. Rating from reviews
+ * ("Belum ada ulasan" without any), the hygiene and portion chips once enough reviews
+ * answered them, walking distance, stock and the closing countdown.
+ */
 export function MerchantCard({
   merchant,
   variant = "list",
@@ -41,7 +47,8 @@ export function MerchantCard({
   className?: string;
 }) {
   const soldOut = merchant.total_available_stock <= 0;
-  const walk = travelMinutes(merchant.distance_m);
+  const origin = useDistanceOrigin();
+  const distance = distanceLine(merchant.distance_m, origin, "short");
   const menuPreview = merchant.batches
     ?.filter((b) => b.available_stock > 0)
     .slice(0, 3)
@@ -84,22 +91,18 @@ export function MerchantCard({
         </div>
         {merchant.is_pilot && <PilotBadge className="mt-1" />}
         <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-            <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
-            {formatRating(merchant.rating_avg)}
-          </span>
-          <span>({merchant.total_reviews})</span>
-          {merchant.distance_m !== null && (
+          <RatingLine avg={merchant.rating_avg} count={merchant.total_reviews} />
+          {distance && (
             <>
               <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-1">
                 <MapPinIcon className="size-3.5" aria-hidden />
-                {formatDistance(merchant.distance_m)}
-                {walk !== null && <span className="hidden min-[380px]:inline"> · {walk} mnt jalan</span>}
+                {distance}
               </span>
             </>
           )}
         </p>
+        {merchant.trust && <TrustBadges trust={merchant.trust} variant="short" className="mt-1.5 gap-1" />}
         {menuPreview && variant === "sheet" && (
           <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{menuPreview}</p>
         )}

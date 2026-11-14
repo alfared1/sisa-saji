@@ -1,7 +1,8 @@
 /** DB rows → contract views for the merchant API. */
 import "server-only";
 import type { Menu, Merchant, SurplusBatch } from "@/db/schema";
-import type { MenuView, MerchantBatchView, MerchantProfile } from "@/lib/contracts";
+import type { MenuView, MerchantBatchPhoto, MerchantBatchView, MerchantProfile } from "@/lib/contracts";
+import { photoUploadsLeft } from "@/server/services/batch-photos";
 import { buildEscalationSchedule, nextEscalation } from "@/server/services/escalation/schedule";
 
 const hhmm = (t: string) => t.slice(0, 5);
@@ -56,7 +57,8 @@ export function toMenuView(m: Menu): MenuView {
     original_price_idr: m.originalPriceIdr,
     min_recovery_price_idr: m.minRecoveryPriceIdr,
     portion_weight_grams: m.portionWeightGrams,
-    is_mystery_bag: m.isMysteryBag,
+    contents: m.contents,
+    lauk_options: m.laukOptions,
     is_active: m.isActive,
   };
 }
@@ -65,11 +67,13 @@ export interface BatchViewContext {
   now: Date;
   activeUsersInRadius: number;
   historicalConversionRate: number;
+  /** The owner's view of the batch photo (photoMetaForBatches), when it has one. */
+  photo?: MerchantBatchPhoto | null;
 }
 
 export function toMerchantBatchView(
   b: SurplusBatch,
-  menu: Pick<Menu, "menuName" | "isMysteryBag" | "minRecoveryPriceIdr">,
+  menu: Pick<Menu, "menuName" | "contents" | "laukOptions" | "minRecoveryPriceIdr">,
   ctx: BatchViewContext,
 ): MerchantBatchView {
   let next: MerchantBatchView["next_escalation"] = null;
@@ -91,7 +95,12 @@ export function toMerchantBatchView(
     id: b.id,
     menu_id: b.menuId,
     menu_name: menu.menuName,
-    is_mystery_bag: menu.isMysteryBag,
+    contents: menu.contents,
+    lauk_options: menu.laukOptions,
+    lauk_available: b.laukAvailable,
+    full_portion: b.fullPortion,
+    photo: ctx.photo ?? null,
+    photo_uploads_left: photoUploadsLeft(b.photoUploadCount),
     initial_stock: b.initialStock,
     available_stock: b.availableStock,
     reserved_stock: b.reservedStock,

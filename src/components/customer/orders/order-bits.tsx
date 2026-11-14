@@ -21,10 +21,16 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
         <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">{order.order_number}</span>
       </div>
       <ul className="space-y-2">
-        {order.items.map((i) => (
-          <li key={i.batch_id} className="flex items-start justify-between gap-3 text-sm">
+        {/* One batch may appear on several lines (one per lauk), so the key includes the index. */}
+        {order.items.map((i, idx) => (
+          <li key={`${idx}-${i.batch_id}`} className="flex items-start justify-between gap-3 text-sm">
             <span className="min-w-0">
               <span className="font-extrabold tabular-nums">{i.quantity}×</span> {i.menu_name}
+              {i.lauk && (
+                <span className="block text-xs text-muted-foreground">
+                  <span className="font-semibold">Lauk:</span> {i.lauk}
+                </span>
+              )}
             </span>
             <span className="shrink-0 text-right">
               <Money value={i.unit_selling_price_idr * i.quantity} className="font-semibold" />
@@ -44,9 +50,7 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Biaya layanan</dt>
-          <dd>
-            <Money value={order.platform_commission_idr} />
-          </dd>
+          <dd>{order.platform_commission_idr > 0 ? <Money value={order.platform_commission_idr} /> : "Gratis"}</dd>
         </div>
         {order.voucher_discount_idr > 0 && (
           <div className="flex justify-between text-primary">

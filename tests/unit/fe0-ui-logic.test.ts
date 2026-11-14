@@ -47,8 +47,10 @@ describe("map pins", () => {
 
   it("derives urgency colour state", () => {
     expect(pinState(base, NOW)).toBe("hot");
-    expect(pinState({ ...base, discount_pct: 45 }, NOW)).toBe("deal");
-    expect(pinState({ ...base, discount_pct: 20 }, NOW)).toBe("normal");
+    expect(pinState({ ...base, discount_pct: 50 }, NOW)).toBe("hot");
+    expect(pinState({ ...base, discount_pct: 49 }, NOW)).toBe("deal");
+    expect(pinState({ ...base, discount_pct: 30 }, NOW)).toBe("deal");
+    expect(pinState({ ...base, discount_pct: 29 }, NOW)).toBe("normal");
     expect(pinState({ ...base, closes_at: inMin(30) }, NOW)).toBe("urgent");
     expect(pinState({ ...base, closes_at: inMin(-1) }, NOW)).toBe("closed");
     expect(pinState({ ...base, stock: 0 }, NOW)).toBe("closed");

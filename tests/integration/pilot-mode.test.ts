@@ -1,14 +1,16 @@
 /**
  * Field pilot: joining with the invite code (only with real OTP delivery, never for the
  * demo warung), "bayar di warung" tickets (no QRIS, no fee, no voucher, stock reserved for
- * a short hold), cancel by buyer or warung / pickup / no-show and fair use, the public
- * pilot results (real pickups only, never demo data) and the reseed guard.
+ * a short hold; forced at pilot warung, a choice at every other warung), cancel by buyer or
+ * warung / pickup / no-show (pilot warung only) and fair use (the shared demo buyer never
+ * locks other visitors out), the public pilot results (real pickups only, never demo data)
+ * and the reseed guard.
  */
 import { randomInt } from "node:crypto";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
-import { menus, merchants, surplusBatches, users } from "@/db/schema";
+import { menus, merchants, orders, surplusBatches, users } from "@/db/schema";
 import { PilotDataPresentError, seedDatabase } from "@/db/seed";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import {
@@ -20,7 +22,7 @@ import {
   PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES,
 } from "@/lib/constants";
 import { CheckoutBody } from "@/lib/contracts";
-import { DEMO_LOCKED_REASON } from "@/lib/demo-accounts";
+import { DEMO_ACCOUNTS, DEMO_LOCKED_REASON } from "@/lib/demo-accounts";
 import { wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
 import { getPilotAvailability, getPilotStats, joinPilot, PILOT_REAL_OTP_REQUIRED } from "@/server/services/merchant/pilot";
@@ -185,7 +187,7 @@ describe("bayar di warung tickets", () => {
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
   });
 
-  it("refuses vouchers at a pilot warung and pay-at-warung at a regular one", async () => {
+  it("refuses vouchers at a pilot warung; a regular warung takes bayar di warung too (no voucher, no fee)", async () => {
     const buyer = await newCustomer();
     const { batch } = await newBatch(pilot.id);
     await expectCode(
@@ -194,9 +196,38 @@ describe("bayar di warung tickets", () => {
     );
     const { batch: regular } = await newBatch(demo.id);
     await expectCode(
-      order(buyer.id, { merchant_id: demo.id, items: [{ batch_id: regular.id, quantity: 1 }], payment_method: "BAYAR_DI_WARUNG" }),
-      "VALIDATION_ERROR",
+      order(buyer.id, {
+        merchant_id: demo.id,
+        items: [{ batch_id: regular.id, quantity: 1 }],
+        payment_method: "BAYAR_DI_WARUNG",
+        voucher_code: "BAWABEKAL",
+      }),
+      "VOUCHER_INVALID",
     );
+    const ticket = await order(buyer.id, {
+      merchant_id: demo.id,
+      items: [{ batch_id: regular.id, quantity: 1 }],
+      payment_method: "BAYAR_DI_WARUNG",
+    });
+    expect(ticket).toMatchObject({
+      status: "READY_FOR_PICKUP",
+      payment_method: "BAYAR_DI_WARUNG",
+      platform_commission_idr: 0,
+      qris_string: null,
+      merchant: { is_pilot: false },
+    });
+    expect(await batchRow(regular.id)).toMatchObject({ availableStock: 5, reservedStock: 1 });
+  });
+
+  it("a pilot ticket says so on the order (is_pilot), and pilot warung ignore a QRIS choice", async () => {
+    const { batch } = await newBatch(pilot.id);
+    const o = await order((await newCustomer()).id, {
+      merchant_id: pilot.id,
+      items: [{ batch_id: batch.id, quantity: 1 }],
+      payment_method: "QRIS",
+    });
+    expect(o).toMatchObject({ status: "READY_FOR_PICKUP", payment_method: "BAYAR_DI_WARUNG", merchant: { is_pilot: true } });
+    expect(typeof o.merchant.is_demo_data).toBe("boolean");
   });
 
   it("counts an open ticket as an unpaid hold: a double tap returns it, other items conflict", async () => {
@@ -241,10 +272,12 @@ describe("bayar di warung tickets", () => {
   it("a ticket nobody collects expires and its portions go back, without a payout", async () => {
     const buyer = await newCustomer();
     const { batch } = await newBatch(pilot.id);
-    await order(buyer.id, { merchant_id: pilot.id, items: [{ batch_id: batch.id, quantity: 3 }] });
+    const o = await order(buyer.id, { merchant_id: pilot.id, items: [{ batch_id: batch.id, quantity: 3 }] });
     const before = await wallet(pilot.id);
 
-    const later = new Date(Date.now() + 4 * 60 * 60_000);
+    // Just past the ticket's hold end: well before any seeded paid order's grace ends, whose
+    // no-show payout would otherwise land in the same wallet.
+    const later = new Date(Date.parse(o.pickup_deadline_at) + 60_000);
     expect(await closeUnclaimedOrders(db, later)).toBeGreaterThanOrEqual(1);
     expect(await batchRow(batch.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
     expect(await wallet(pilot.id)).toBe(before);
@@ -382,6 +415,66 @@ describe("short hold, fair use and the warung's cancel", () => {
     const err = await rejection(order(buyer.id, { merchant_id: pilot.id, items: [{ batch_id: b3.id, quantity: 1 }] }, new Date(late.getTime() + 60_000)));
     expect(err.code).toBe("RATE_LIMITED");
     expect(await batchRow(b3.id)).toMatchObject({ availableStock: 6, reservedStock: 0 });
+  });
+
+  it("lapsed cash tickets at a regular warung never count toward the pilot no-show limit", async () => {
+    const t0 = new Date();
+    const buyer = await newCustomer();
+    const { batch: regular } = await newBatch(demo.id, 6, 240);
+    const cash = { merchant_id: demo.id, items: [{ batch_id: regular.id, quantity: 1 }], payment_method: "BAYAR_DI_WARUNG" as const };
+    const first = await order(buyer.id, cash, t0);
+    const t1 = minutes(PAY_AT_WARUNG_HOLD_MINUTES + 1, t0.getTime());
+    await closeUnclaimedOrders(db, t1);
+    const second = await order(buyer.id, cash, t1);
+    const t2 = minutes(PAY_AT_WARUNG_HOLD_MINUTES + 1, t1.getTime());
+    await closeUnclaimedOrders(db, t2);
+    for (const o of [first, second]) {
+      expect((await getOrderForViewer(db, o.id, { userId: buyer.id, merchantId: null }, t2)).status).toBe("EXPIRED");
+    }
+
+    // Two no-shows, but at a demo warung: the pilot warung still takes the buyer's ticket.
+    const { batch } = await newBatch(pilot.id, 6, 240);
+    const ticket = await order(buyer.id, { merchant_id: pilot.id, items: [{ batch_id: batch.id, quantity: 1 }] }, t2);
+    expect(ticket.status).toBe("READY_FOR_PICKUP");
+  });
+
+  it("the shared demo buyer's open and lapsed cash tickets never lock other visitors out", async () => {
+    const [demoBuyer] = await db.select().from(users).where(eq(users.email, DEMO_ACCOUNTS.CUSTOMER.email));
+    const t0 = new Date();
+    const batches = [];
+    for (let i = 0; i < 4; i++) batches.push((await newBatch(demo.id, 6, 240)).batch);
+    const cash = (batchId: string, quantity: number) => ({
+      merchant_id: demo.id,
+      items: [{ batch_id: batchId, quantity }],
+      payment_method: "BAYAR_DI_WARUNG" as const,
+    });
+
+    // Four visitors on the one demo account each hold a ticket at the same warung.
+    const tickets = [];
+    for (const [i, b] of batches.entries()) tickets.push(await order(demoBuyer.id, cash(b.id, 1 + (i % 2)), t0));
+    expect(new Set(tickets.map((t) => t.id)).size).toBe(4);
+    for (const t of tickets) expect(t.status).toBe("READY_FOR_PICKUP");
+    // A double tap still returns the same ticket instead of a second one.
+    expect((await order(demoBuyer.id, cash(batches[0].id, 1), t0)).id).toBe(tickets[0].id);
+    // The per-buyer cap (3 of 6 portions) still counts the account's open tickets, so one
+    // session can never hold a whole batch.
+    await expectCode(order(demoBuyer.id, cash(batches[1].id, 3), t0), "VALIDATION_ERROR");
+    const more = await order(demoBuyer.id, cash(batches[1].id, 1), t0);
+    expect(more.status).toBe("READY_FOR_PICKUP");
+    expect(await batchRow(batches[1].id)).toMatchObject({ availableStock: 3, reservedStock: 3 });
+
+    // Five lapsed tickets inside the churn window do not rate-limit the next visitor.
+    const later = minutes(PAY_AT_WARUNG_HOLD_MINUTES + 1, t0.getTime());
+    await closeUnclaimedOrders(db, later);
+    const lapsed = await db
+      .select()
+      .from(orders)
+      .where(and(eq(orders.customerId, demoBuyer.id), eq(orders.status, "EXPIRED"), eq(orders.paymentMethod, "BAYAR_DI_WARUNG")));
+    expect(lapsed.length).toBeGreaterThanOrEqual(5);
+    const next = await order(demoBuyer.id, cash(batches[2].id, 1), later);
+    expect(next.status).toBe("READY_FOR_PICKUP");
+    const qris = await order(demoBuyer.id, { merchant_id: demo.id, items: [{ batch_id: batches[3].id, quantity: 1 }] }, later);
+    expect(qris.status).toBe("PENDING_PAYMENT");
   });
 
   it('"Tidak datang": the warung cancels, the portions go back and the buyer sees who cancelled', async () => {

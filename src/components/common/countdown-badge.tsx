@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 import { formatCountdownText } from "./countdown-format";
 
 /**
- * Live countdown to a closing / pickup deadline. Turns red & pulses under
- * 45 minutes; shows "Sudah tutup" once over. Renders the static clock time
- * ("s/d 22.30") until the client clock is ready, so SSR output is stable.
+ * Live countdown to a closing / pickup deadline: "Tutup dalam 01:15:20" (formatCountdownText).
+ * A custom prefix must also read as a duration ("Ambil dalam", "Bayar dalam"), never a bare
+ * verb. Turns red & pulses under 45 minutes; shows "Sudah tutup" once over. Renders the
+ * static clock time ("s/d 22.30") until the client clock is ready, so SSR output is stable.
  */
 export function CountdownBadge({
   endIso,

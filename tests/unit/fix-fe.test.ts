@@ -7,17 +7,16 @@ import type { OrderDetail } from "@/lib/contracts";
 import { isPrivateCacheName, serviceWorkerUrl } from "@/lib/pwa/sw";
 import { useTicketsStore } from "@/stores/tickets";
 
-describe("formatCountdownText (countdown-ambiguous-mmss)", () => {
-  it("never renders a clock-like mm:ss under one hour", () => {
-    const text = formatCountdownText({ hours: 0, minutes: 15, seconds: 28 }, "Tutup dalam");
-    expect(text).toBe("Tutup dalam 15m 28d");
-    expect(text).not.toMatch(/\d{1,2}:\d{2}/);
+describe("formatCountdownText (countdown reads as a duration)", () => {
+  it("shows hours, minutes and seconds after a duration prefix", () => {
+    expect(formatCountdownText({ hours: 0, minutes: 15, seconds: 28 }, "Tutup dalam")).toBe("Tutup dalam 00:15:28");
+    expect(formatCountdownText({ hours: 1, minutes: 4, seconds: 22 }, "Tutup dalam")).toBe("Tutup dalam 01:04:22");
   });
-  it("keeps hours + minutes above one hour", () => {
-    expect(formatCountdownText({ hours: 1, minutes: 4, seconds: 22 }, "Tutup dalam")).toBe("Tutup dalam 1j 04m");
+  it("works with the other duration prefixes", () => {
+    expect(formatCountdownText({ hours: 0, minutes: 28, seconds: 12 }, "Ambil dalam")).toBe("Ambil dalam 00:28:12");
   });
-  it("pads seconds and works without a prefix", () => {
-    expect(formatCountdownText({ hours: 0, minutes: 0, seconds: 7 }, "")).toBe("0m 07d");
+  it("pads every part and adds no leading space without a prefix", () => {
+    expect(formatCountdownText({ hours: 0, minutes: 0, seconds: 7 }, "")).toBe("00:00:07");
   });
 });
 

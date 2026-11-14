@@ -1,6 +1,7 @@
 /**
  * Merchant pickup: lookup by code / "SJ-" code / QR token, verify-pickup crediting
- * impact, customer totals, badge and wallet exactly once.
+ * impact, customer totals, badge and wallet exactly once, and "bayar di warung" tickets at
+ * a regular warung (paid at the counter, so no wallet credit).
  */
 import { randomInt } from "node:crypto";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -189,6 +190,36 @@ describe("POST /orders/:id/verify-pickup", () => {
     expect(u2.loyaltyPoints).toBe(u.loyaltyPoints);
     const [walletFinal] = await db.select({ w: merchants.walletBalanceIdr }).from(merchants).where(eq(merchants.id, merchant.id));
     expect(walletFinal.w).toBe(walletAfter.w);
+  });
+
+  it("a bayar di warung ticket at a regular warung: found while unpaid, paid at the counter, no wallet credit", async () => {
+    expect(merchant.isPilot).toBe(false);
+    const customer = await newCustomer();
+    const { batch, menu } = await newBatch();
+    const ticket = await checkout(db, {
+      userId: customer.id,
+      input: CheckoutBody.parse({
+        merchant_id: merchant.id,
+        items: [{ batch_id: batch.id, quantity: 2 }],
+        payment_method: "BAYAR_DI_WARUNG",
+      }),
+      pickupQrSecret: SECRET,
+    });
+    expect(ticket).toMatchObject({ status: "READY_FOR_PICKUP", paid_at: null, platform_commission_idr: 0 });
+    const [row] = await db.select().from(orders).where(eq(orders.id, ticket.id));
+    expect((await lookup(row.pickupCode)).id).toBe(ticket.id);
+    const [walletBefore] = await db.select({ w: merchants.walletBalanceIdr }).from(merchants).where(eq(merchants.id, merchant.id));
+
+    const done = await verifyPickup(db, { merchantId: merchant.id, orderId: ticket.id, input: row.pickupCode, pickupQrSecret: SECRET });
+    expect(done.status).toBe("COMPLETED");
+    expect(done.paid_at).not.toBeNull();
+    expect(done.food_saved_grams).toBe(2 * menu.portionWeightGrams);
+    const [after] = await db.select().from(surplusBatches).where(eq(surplusBatches.id, batch.id));
+    expect(after).toMatchObject({ availableStock: 8, reservedStock: 0 });
+    const [walletAfter] = await db.select({ w: merchants.walletBalanceIdr }).from(merchants).where(eq(merchants.id, merchant.id));
+    expect(walletAfter.w).toBe(walletBefore.w);
+    const [u] = await db.select().from(users).where(eq(users.id, customer.id));
+    expect(u.totalFoodSavedGrams).toBe(2 * menu.portionWeightGrams);
   });
 
   it("accepts the QR token as proof", async () => {

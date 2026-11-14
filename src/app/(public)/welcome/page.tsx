@@ -4,7 +4,7 @@ import { WelcomeView } from "./welcome-view";
 export const metadata: Metadata = {
   title: "Selamat Datang",
   description:
-    "Sisa-Saji menghubungkan warung di sekitar kampus dengan mahasiswa untuk menyelamatkan makanan surplus menjelang jam tutup, dengan harga hemat hingga 70%.",
+    "Makan malam kenyang mulai Rp 10.000 dari warung terdekat sebelum tutup. Isi menunya jelas, porsinya normal, dan kebersihannya dinilai pembeli lain. Ambil sendiri di warung dekat kos.",
 };
 
 export default function WelcomePage() {

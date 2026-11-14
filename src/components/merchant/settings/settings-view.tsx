@@ -162,7 +162,10 @@ export function MerchantSettingsView() {
                 {m.merchant_verified ? <VerifiedBadge /> : <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">Reguler</span>}
               </div>
               <p className="text-xs text-muted-foreground">
-                Saldo warung <b className="text-foreground tabular-nums">{formatIdr(m.wallet_balance_idr)}</b> · Rating {m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} ({m.total_reviews} ulasan)
+                Saldo warung <b className="text-foreground tabular-nums">{formatIdr(m.wallet_balance_idr)}</b> ·{" "}
+                {m.total_reviews > 0
+                  ? `Rating ${m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} (${m.total_reviews} ulasan)`
+                  : "Belum ada ulasan"}
               </p>
               <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-deal-soft text-sm font-semibold text-deal">
                 {m.subscription_tier === "PREMIUM" ? "Kelola Premium" : "Upgrade ke Premium"}

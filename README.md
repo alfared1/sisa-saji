@@ -2,11 +2,12 @@
 
 Aplikasi web (PWA) untuk menyelamatkan porsi makanan surplus dari warung di sekitar kampus.
 
-Sisa-Saji menghubungkan warung makan / UMKM kuliner dengan pembeli (terutama mahasiswa) dalam radius **2 km** untuk menyelamatkan porsi makanan surplus menjelang jam tutup (**20.00–23.00 WIB**). Warung memasang sisa porsi dengan harga pemulihan yang turun otomatis menjelang tutup, pembeli memesan dan membayar lewat QRIS, lalu **mengambil sendiri** makanannya di warung dengan tiket QR / kode `SJ-XXXX`. Setiap porsi yang diambil dihitung dampaknya: gram pangan yang terselamatkan, kg CO₂e yang dihindari, dan rupiah yang dihemat.
+Sisa-Saji menghubungkan warung makan / UMKM kuliner dengan pembeli (terutama mahasiswa) dalam radius **2 km** untuk menyelamatkan porsi makanan surplus menjelang jam tutup (**20.00–23.00 WIB**). Warung memasang sisa porsi dengan isi menu yang jelas dan harga pemulihan yang turun otomatis menjelang tutup, pembeli mengunci porsinya lalu membayar lewat QRIS atau tunai di warung, kemudian **mengambil sendiri** makanannya di warung dengan tiket QR / kode `SJ-XXXX`. Setiap porsi yang diambil dihitung dampaknya: gram pangan yang terselamatkan, kg CO₂e yang dihindari, dan rupiah yang dihemat.
 
 - **100% ambil sendiri.** Tidak ada kurir, jadi margin warung tetap utuh dan tidak ada emisi logistik.
 - **Dua modul inti:** *Dynamic Discount Optimizer*, aturan harga yang menaikkan diskon bertahap dari 50% ke 70% menjelang tutup tanpa pernah turun di bawah harga lantai, dan *Surplus Prediction Engine*, model LightGBM yang memperkirakan porsi sisa per warung dan menu dari histori penjualan.
-- **Bisnis:** pembeli membayar biaya layanan Rp 1.500 per transaksi; warung menerima harga pemulihan penuh.
+- **Bisnis:** pembeli membayar biaya layanan Rp 1.500 per transaksi QRIS/e-wallet (bayar tunai di warung tanpa biaya layanan); warung menerima harga pemulihan penuh.
+- **Dibentuk dari riset pengguna:** survei tim terhadap 50 mahasiswa di Kabupaten dan Kota Bogor (ringkasannya di `/tentang`). Karena itu aplikasi menonjolkan harga mulai Rp 10.000, isi menu dan lauk yang ditulis jelas, kebersihan dan porsi yang dinilai pembeli lain, jarak jalan kaki, dan porsi yang bisa dikunci sebelum berangkat. Mengurangi sampah pangan tetap dihitung, sebagai nilai tambahan.
 
 Spesifikasi lengkap ada di [blueprint_sisa_saji.md](blueprint_sisa_saji.md). Aturan bisnis, struktur folder, dan konvensi kode ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -54,7 +55,7 @@ Contoh: `DEMO_PORT=3001 npm run demo` (bash), `set DEMO_PORT=3001 && npm run dem
 
 ### Akun demo
 
-Login memakai OTP. Di mode demo (`OTP_DEV_MODE=true`) kodenya **ditampilkan di layar**. Kedua akun demo dipakai bersama oleh semua pengunjung, jadi nama, profil warung, rekening, jam, buka/tutup, menu, dan uji coba di akun ini dikunci; publikasi surplus, pesanan, scan, dan ulasan tetap bisa dicoba.
+Login memakai OTP. Di mode demo (`OTP_DEV_MODE=true`) kodenya **ditampilkan di layar**. Kedua akun demo dipakai bersama oleh semua pengunjung, jadi nama, profil warung, rekening, jam, buka/tutup, menu, uji coba, dan daftar tunggu titip antar di akun ini dikunci; publikasi surplus (termasuk lauk malam ini dan foto etalase), pesanan, scan, dan ulasan tetap bisa dicoba. Foto dari akun demo hanya terlihat oleh sesi akun demo dan hilang 60 menit setelah diunggah, dan tiket tunai akun demo pembeli tidak mengunci pengunjung lain.
 
 | Peran | Email | Nomor HP | Catatan |
 | :--- | :--- | :--- | :--- |
@@ -81,7 +82,7 @@ Bogor adalah pusat platform. Titik pencarian default aplikasi adalah **IPB Drama
 | Papua | UNCEN Abepura, Jayapura | 2 |
 | **Total** | **21 kampus / kota** | **95** |
 
-Semua warung dan pemiliknya fiktif, tetapi koordinatnya berada di lingkungan nyata (Babakan Raya, Bateng, Balebak, Suryakencana, Pogung, Kukusan Teknik, Tembalang, …). Seed juga membuat 120 pembeli (±45% di Bogor), histori 28 hari, dan batch "malam ini" di setiap warung. Di Vercel (`DEMO_MODE=true`) job top-up menjaga setiap kampus/kota tetap punya makanan live: minimal 4 batch per titik dan 10 batch untuk tiap titik di Bogor.
+Semua warung dan pemiliknya fiktif, tetapi koordinatnya berada di lingkungan nyata (Babakan Raya, Bateng, Balebak, Suryakencana, Pogung, Kukusan Teknik, Tembalang, …). Seed juga membuat 120 pembeli (±45% di Bogor), histori 28 hari, dan batch "malam ini" di setiap warung. Sekitar IPB Dramaga ada 6 warung dalam 500 m dan 10 dalam 1 km. Semua menu mencantumkan isi porsinya (sebagian dengan pilihan lauk), harga normal di Bogor Rp 18.000–25.000, dan harga lantai Rp 10.000, jadi harga malam ini mulai Rp 10.000. Seed tidak membuat foto batch: badge "Foto asli" hanya muncul untuk unggahan warung uji coba. Di Vercel (`DEMO_MODE=true`) job top-up menjaga setiap kampus/kota tetap punya makanan live: minimal 4 batch per titik dan 10 batch untuk tiap titik di Bogor.
 
 ---
 
@@ -92,21 +93,22 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 **Pembeli (±2 menit)**
 
 1. Buka `/welcome` → login sebagai `demo.pembeli@sisasaji.test`, masukkan kode OTP yang tampil di layar.
-2. `/discover`: daftar porsi surplus dalam 2 km, diurutkan Mitra Terverifikasi → jarak → diskon. Perhatikan badge **"Hemat 50%"** (hijau) dan **"Diskon Kilat 70%"** (oranye, berdenyut menjelang tutup), sisa porsi, hitung mundur, dan estimasi dampak.
-3. Ketuk satu kartu menu → **"Pesan & Ambil Sendiri"** → QRIS dinamis tampil dengan hitung mundur 10 menit (stok sudah dikunci).
+2. `/discover`: daftar porsi surplus dalam 2 km, diurutkan Mitra Terverifikasi → jarak → diskon. Coba filter cepat **"< 500 m"** dan **"Harga ≤ Rp 12.000"**. Tiap kartu menampilkan badge **"Hemat N%"** (hijau) atau **"Diskon Kilat N%"** (oranye), isi porsi dan lauk yang tersisa, jarak jalan kaki, hitung mundur "Tutup dalam 01:15:20", dan chip kebersihan/porsi bila sudah ada 10 ulasan yang menjawab.
+3. Ketuk satu kartu menu → pilih lauk → **"Kunci Porsi Sekarang"** → QRIS dinamis tampil dengan hitung mundur 10 menit (stok sudah dikunci). Pilih **"Tunai di warung"** untuk langsung mendapat tiket yang menahan porsi 30 menit, tanpa biaya layanan.
 4. Ketuk **"Simulasi Bayar (Demo)"** → webhook bertanda tangan HMAC diproses → tiket pengambilan dengan QR dan kode **`SJ-XXXX`**. Tiket ini tetap bisa dibuka tanpa sinyal (PWA offline).
 
 **Mitra (±2 menit)**
 
 5. Di jendela incognito buka `/auth/login?role=MERCHANT` → login sebagai `demo.mitra@sisasaji.test` / `+6281300000001` (OTP tampil di layar).
 6. **Dasbor**: batch aktif, pesanan masuk secara langsung (SSE), dan **perkiraan porsi sisa** malam ini dari model LightGBM.
-7. `/merchant/surplus/new`: pilih menu, atur jumlah porsi, lihat **saran harga** dari Dynamic Discount Optimizer, lalu **"Publikasikan Sekarang"** (< 60 detik).
+7. `/merchant/surplus/new`: pilih menu (isi porsinya tampil), matikan lauk yang sudah habis, atur jumlah porsi, lihat **saran harga** dari Dynamic Discount Optimizer, lalu **"Publikasikan Sekarang"** (< 60 detik). Foto etalase opsional dan diunggah setelah publikasi; foto dari akun demo hanya terlihat oleh sesi akun demo dan hilang setelah 60 menit.
 8. `/merchant/orders/scan`: pindai QR tiket pembeli, atau ketik PIN 4 digit dari `SJ-XXXX` → **Verifikasi**.
 
 **Penutup (±1 menit)**
 
 9. Di jendela pembeli, tiket langsung berubah menjadi **perayaan "Pesanan selesai!"** beserta jumlah makanan yang diselamatkan.
 10. `/impact`: total pangan terselamatkan, CO₂e yang dihindari (setara pohon), uang yang dihemat, dan level (Pemula → Penyelamat → Juara Pangan).
+11. Opsional: di `/discover`, ketuk **"Aktifkan"** pada banner Notifikasi Jam Lapar, lalu **"Aktifkan notifikasi"** dan **"Kirim contoh notifikasi"** untuk melihat push contoh di perangkat itu (butuh kunci VAPID, yang diisi `npm run setup:secrets`).
 
 > Batch "malam ini" kedaluwarsa ±2,5 jam setelah seed. Sebelum presentasi jalankan `npm run demo:reseed` (demo boleh tetap berjalan), lalu login ulang.
 
@@ -116,7 +118,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 
 **Fase 1: fondasi data**
 - Skema PostgreSQL + PostGIS (Drizzle), migrasi SQL, dan constraint integritas (stok, harga lantai, kode pickup unik).
-- Seeder 95 warung fiktif di 21 kampus/kota di seluruh Indonesia dengan Bogor sebagai pusat, histori 28 hari (±14.800 pesanan), prediksi 7 hari; `db:verify` dengan 19 pemeriksaan.
+- Seeder 95 warung fiktif di 21 kampus/kota di seluruh Indonesia dengan Bogor sebagai pusat, histori 28 hari (±14.800 pesanan), prediksi 7 hari; `db:verify` dengan 31 pemeriksaan.
 
 **Fase 2: mesin harga, prediksi, dan API**
 - *Dynamic Discount Optimizer*: baseline 50%, mid-window 55–60%, critical window 70% + push "Diskon Kilat" sekali per batch; pembulatan ke atas kelipatan Rp 500 dengan aritmetika integer; harga lantai dijaga; setiap perubahan tercatat di `discount_adjustment_logs`.
@@ -132,6 +134,16 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
 **Fase 4: PWA mitra**
 - Onboarding warung (termasuk rekening pencairan), dasbor dengan perkiraan porsi sisa, publikasi surplus dengan saran harga, pemindai QR/PIN, daftar pesanan, kelola menu, analitik, pengaturan.
 
+**Fase 5: pembaruan dari riset pengguna** (migrasi `0009_research_update`)
+- Isi menu transparan: paket kejutan dihapus, menu mencantumkan isi porsi dan pilihan lauk, warung menandai lauk yang masih ada malam ini, dan pembeli memilih satu lauk yang tercatat di tiket. Lauk tidak punya stok sendiri.
+- Bayar tunai di warung di semua warung: tiket langsung jadi, porsi ditahan 30 menit, tanpa biaya layanan dan voucher. Tombol penguncian bernama "Kunci Porsi Sekarang".
+- Foto etalase malam ini per batch (JPEG, dikompres di ponsel, disimpan di Postgres, hak lihat dicek tiap kali dibaca) dengan badge jam unggah.
+- Kebersihan dan porsi dinilai lewat ulasan, tampil setelah 10 ulasan menjawab. Tanpa ulasan tertulis "Belum ada ulasan".
+- Filter cepat "< 500 m", "< 1 km", "Harga ≤ Rp 12.000", "Diskon ≥ 30%", jarak dalam menit jalan kaki, dan hitung mundur "Tutup dalam 01:15:20".
+- Notifikasi Jam Lapar: paling banyak sekali semalam per perangkat untuk warung dalam 500 m, plus tombol contoh notifikasi.
+- "Titip Antar Kolektif Kos/Asrama" hanya sebagai opsi "Segera hadir" dengan daftar tunggu; ambil sendiri tetap satu-satunya cara.
+- Endpoint baru: `GET /api/v1/batches/:batchId/photo`, `POST`/`DELETE /api/v1/merchant/surplus/:batchId/photo`, `GET`/`POST`/`DELETE /api/v1/delivery-interest`, `PUT /api/v1/push/hunger-alert`, `POST /api/v1/push/hunger-alert/status`, dan `POST /api/v1/push/hunger-alert/test`. Aturan lengkapnya di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ---
 
 ## Arsitektur
@@ -146,6 +158,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
  │ src/app/api/v1     REST API, kontrak zod di src/lib/contracts               │
  │ src/server/services stock · presence · discovery · orders · payment ·       │
  │                     escalation (AI 1) · prediction (AI 2) · push · auth     │
+ │                     batch-photos · hunger-alert · delivery-interest         │
  └────────────────────────────────────┬───────────────────────────────────────┘
                                       │ Drizzle ORM + pg
  ┌────────────────────────────────────▼───────────────────────────────────────┐
@@ -158,6 +171,7 @@ Paling enak memakai dua jendela browser: jendela biasa untuk **pembeli** dan jen
  │ Worker (npm run worker, tick 30s) │ ───────▶ │ ml/train_predict.py (LightGBM,  │
  │ eskalasi 5 menit, kedaluwarsa,    │  mingguan│ batch Python, bukan per request)│
  │ notifikasi 17:30, refresh prediksi│          └─────────────────────────────────┘
+ │ Jam Lapar 20:00, purge foto batch │
  └──────────────────────────────────┘
  Pembayaran: QRIS tersimulasi → webhook HMAC-SHA512 → /api/v1/webhooks/payment
 ```
@@ -189,12 +203,12 @@ Struktur folder lengkap ada di [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#struk
 | `npm run lint` | ESLint |
 | `npm run test` | Vitest sekali jalan (unit + integration) |
 | `npm run test:watch` | Vitest mode watch |
-| `npm run test:e2e` | Playwright end-to-end: 35 test di build produksi (DB dan server sendiri) |
+| `npm run test:e2e` | Playwright end-to-end: 42 test di build produksi (DB dan server sendiri) |
 | `npm run db:local` | PostgreSQL + PostGIS lokal (PGlite) di port 5433 |
 | `npm run db:generate` | Membuat migrasi SQL dari `src/db/schema.ts` |
 | `npm run db:migrate` | Menerapkan migrasi di `./drizzle` |
 | `npm run db:seed` | Menghapus semua data lalu mengisi ulang data demo |
-| `npm run db:verify` | 19 pemeriksaan integritas data |
+| `npm run db:verify` | 31 pemeriksaan integritas data (termasuk aturan harga, isi menu, dan jarak jalan kaki data demo) |
 | `npm run db:reset` | `db:migrate` + `db:seed` + `db:verify` |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run ml:train` | Training + prediksi LightGBM (butuh Python di `.venv`) |
@@ -221,6 +235,10 @@ Build Vercel (`vercel-build`) hanya menjalankan migrasi, tidak seed. Setelah per
 2. Cek `/api/v1/discover/nearby?lat=-6.5568&lng=106.7313&radius_m=2000` (harus ada warung) dan login mitra demo.
 3. Jalankan `npm run ml:train` dengan `DATABASE_URL` diarahkan ke database produksi, supaya dasbor mitra kembali menampilkan prediksi LightGBM (seed menulis prediksi heuristik).
 
+Migrasi `0009_research_update` menonaktifkan semua menu paket kejutan dan mengakhiri batch live-nya yang belum dipesan (batch yang sudah dipesan tetap bisa diambil). Warung uji coba yang punya menu seperti itu perlu membuat menu baru dengan isi porsi.
+
+**Cron.** `vercel.json` memanggil `/api/cron/tick` pukul 10.00 UTC (17.00 WIB) dan 13.00 UTC (20.00 WIB, untuk digest Notifikasi Jam Lapar). Di paket Hobby, cron harian jalan kapan saja dalam jam itu, jadi digest bisa datang antara 20.00 dan 20.59 WIB. Untuk tepat 20.00 dibutuhkan paket Pro atau scheduler luar yang memanggil `GET /api/cron/tick` dengan header `Authorization: Bearer $CRON_SECRET`. Notifikasi per acara (warung uji coba mempublikasikan surplus) tidak bergantung pada cron.
+
 ---
 
 ## Uji coba lapangan (warung sungguhan)
@@ -231,12 +249,12 @@ Mode ini untuk menguji Sisa-Saji di warung nyata di tengah data demo, dengan has
 
 1. Isi `PILOT_INVITE_CODE` (min. 8 karakter) di `.env` atau environment Vercel, lalu bagikan kodenya ke warung yang ikut.
 2. Pemilik warung mendaftar seperti biasa, lalu membuka **Pengaturan → Uji coba lapangan**, memasukkan kodenya, dan mengisi perkiraan berapa porsi biasanya **dibuang** per malam sebelum memakai Sisa-Saji (angka pembanding, tidak bisa diubah setelah disimpan). Warung mendapat label "Warung uji coba".
-3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Tiket menahan porsi paling lama 60 menit (`PAY_AT_WARUNG_HOLD_MINUTES`) dan tidak pernah melewati batas waktu ambil; lewat dari itu tiket kedaluwarsa dan porsinya kembali ke stok. Pembeli bisa membatalkan sebelum mengambil, dan warung bisa membatalkan tiket yang belum dibayar dari layar Pesanan: "Stok habis" kapan saja, "Tidak datang" baru di 15 menit terakhir masa tahan (`PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES`), karena pembatalan itu dihitung sebagai tiket tidak diambil pembeli. Satu tiket paling banyak 3 porsi.
+3. Pembeli memesan seperti biasa, tetapi **membayar langsung di warung** (tunai atau QRIS warung) saat mengambil: tanpa layar QRIS simulasi, tanpa biaya layanan, tanpa voucher. Di warung lain cara bayar ini bisa dipilih ("Bayar Tunai di Warung"); di warung uji coba hanya cara ini yang ada, dan akun demo tidak bisa memesan di sana. Tiket menahan porsi paling lama 30 menit (`PAY_AT_WARUNG_HOLD_MINUTES`) dan tidak pernah melewati batas waktu ambil; lewat dari itu tiket kedaluwarsa dan porsinya kembali ke stok. Pembeli bisa membatalkan sebelum mengambil, dan warung bisa membatalkan tiket yang belum dibayar dari layar Pesanan: "Stok habis" kapan saja, "Tidak datang" baru di 15 menit terakhir masa tahan (`PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES`), karena pembatalan itu dihitung sebagai tiket tidak diambil pembeli. Pembeli yang 2 kali tidak mengambil tiket di warung uji coba dalam 7 hari tidak bisa membuat tiket baru di sana dulu. Satu tiket paling banyak 3 porsi. Hanya warung uji coba yang foto etalasenya tampil ke semua orang (badge "Foto asli etalase pukul 19.45 WIB") dan yang memicu Notifikasi Jam Lapar per acara.
 4. Warung memindai QR atau kode `SJ-XXXX` seperti biasa. Layar verifikasi menampilkan jumlah yang harus ditagih.
 5. Setiap malam setelah tutup, warung mengisi kartu **Sisa setelah tutup** di dasbor: porsi yang tetap tidak laku dibagikan, jadi pakan ternak atau maggot, dikompos, atau dibuang. Laporan bisa diisi untuk tadi malam atau malam ini (`PUT /api/v1/merchant/leftovers`).
 6. Hasilnya tampil di **`/uji-coba`** (dan `GET /api/v1/stats/pilot`): porsi, kg pangan, kg CO₂e, pemasukan warung, jumlah pembeli, per warung, per hari, dan **porsi yang dibuang turun berapa persen** dibanding sebelum uji coba: 1 − dibuang ÷ (perkiraan porsi dibuang per malam × jumlah malam laporan). Kedua angka dilaporkan sendiri oleh warung.
 
-Halaman **`/tentang`** merangkum produk untuk juri atau calon mitra dalam satu halaman (masalah, cara kerja, dampak, teknologi, model bisnis, SDGs, sumber), dengan tombol "Coba sebagai pembeli" dan "Coba sebagai warung" yang langsung masuk ke akun demo (`POST /api/v1/auth/demo`, hanya aktif selama aplikasi memakai data demo).
+Halaman **`/tentang`** merangkum produk untuk juri atau calon mitra dalam satu halaman (masalah, riset pengguna, cara kerja, dampak, teknologi, model bisnis, SDGs, sumber), dengan tombol "Coba sebagai pembeli" dan "Coba sebagai warung" yang langsung masuk ke akun demo (`POST /api/v1/auth/demo`, hanya aktif selama aplikasi memakai data demo).
 
 Yang dihitung hanya pesanan di warung uji coba yang dibuat setelah warung bergabung, benar-benar diambil dan diverifikasi warung, dan bukan pesanan pemilik di warungnya sendiri. Data demo tidak pernah ikut. Job demo tidak memasang surplus contoh di warung uji coba, dan seed ulang menolak menghapus data uji coba tanpa izin eksplisit (`SEED_WIPE_PILOT=1` untuk `npm run db:seed`).
 
@@ -252,10 +270,10 @@ npm run typecheck && npm run lint
 Pengujian integrasi memakai database PostGIS in-memory, termasuk uji rebutan stok paralel (tanpa overselling), eskalasi diskon, alur pembayaran + webhook, dan verifikasi pickup.
 
 ```bash
-npm run test:e2e            # Playwright: 38 test dalam 16 file, di build produksi
+npm run test:e2e            # Playwright: 42 test dalam 16 file, di build produksi
 ```
 
-`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta, pesan cepat 3 langkah, keranjang + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga, onboarding mitra, tur produk, tema terang/gelap, halaman tentang + akun demo sekali ketuk, uji coba lapangan (bayar di warung + laporan sisa), rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API. Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada, dan `E2E_SERVER_LOG=<file>` untuk menyimpan log database + server (berguna saat test gagal karena error di server).
+`test:e2e` menyiapkan semuanya sendiri: database PGlite terpisah (port 5463), migrasi, seed, build ke `.next-e2e`, lalu `next start` di port 3123. Skenario yang diuji: welcome + PWA, login OTP, pencarian dan peta (termasuk filter cepat jarak dan harga), pesan cepat 3 langkah, pilih lauk + bayar tunai di warung, keranjang + opsi ambil + voucher, verifikasi PIN oleh warung + selebrasi + ulasan, publish surplus dengan saran harga dan lauk malam ini, onboarding mitra (isi porsi), tur produk, tema terang/gelap, halaman tentang + akun demo sekali ketuk, uji coba lapangan (bayar di warung + laporan sisa), rebutan stok (5 checkout paralel untuk 2 porsi), tiket offline, dan keamanan dasar API (termasuk unggah foto batch: hanya JPEG asli, maks. 400 KB, hanya mitra). Set `E2E_SKIP_BUILD=1` untuk memakai build yang sudah ada, dan `E2E_SERVER_LOG=<file>` untuk menyimpan log database + server (berguna saat test gagal karena error di server).
 
 ---
 
@@ -309,8 +327,11 @@ Salin dari [.env.example](.env.example) atau jalankan `npm run setup:secrets`.
 | `RESEND_API_KEY`, `OTP_EMAIL_FROM` | – | Kirim kode OTP lewat email (Resend, butuh domain terverifikasi). Keduanya harus diisi. Tidak dipakai bila `SMTP_USER`/`SMTP_PASS` terisi |
 | `FONNTE_TOKEN` | – | Kirim kode OTP lewat WhatsApp (Fonnte) |
 | `PAYMENT_PROVIDER` | – | `simulator` (satu-satunya provider saat ini) |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push; push nonaktif bila kosong |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | – | Web Push dan Notifikasi Jam Lapar; push nonaktif bila kosong (jatah sekali semalam per perangkat tidak terpakai) |
 | `PILOT_INVITE_CODE` | – | Kode undangan uji coba lapangan (min. 8 karakter). Kosong = uji coba tertutup |
+| `INLINE_JOBS` | – | `true` di host serverless (Vercel): endpoint yang ramai menjalankan job yang jatuh tempo setelah responsnya, dijaga lease di database. Biarkan `false` bila `npm run worker` jalan |
+| `CRON_SECRET` | Vercel | Rahasia `GET /api/cron/tick` dan `POST /api/cron/bootstrap` (header `Authorization: Bearer …`), min. 16 karakter. Kosong = endpoint menolak semua panggilan |
+| `DEMO_MODE` | – | `true` untuk deployment demo publik: top-up menjaga batch "malam ini" tetap ada, dan data diberi label "Data demo" (juga otomatis selama `PAYMENT_PROVIDER=simulator`) |
 | `DB_POOL_MAX` | – | Ukuran pool koneksi per proses (default 10 web, 4 worker). Isi `1` untuk PGlite, yang hanya punya satu sesi Postgres |
 | `REDIS_URL` | – | Tidak dipakai saat ini (cadangan untuk scaling) |
 | `DEMO_*`, `NEXT_DIST_DIR` | – | Pengaturan `npm run demo` (lihat di atas) |
@@ -331,19 +352,22 @@ Mengganti secret membuat semua sesi logout dan QR tiket lama tidak berlaku; seed
    - jam selesai pickup harus setelah jam mulai;
    - `UNIQUE NULLS NOT DISTINCT` di tabel prediksi;
    - kode pickup unik per warung, khusus untuk pesanan yang masih aktif.
-6. **Alur uang:** pembeli membayar subtotal harga pemulihan + biaya layanan − voucher. Warung menerima subtotal harga pemulihan. Voucher ditanggung platform. Lihat `src/lib/pricing/order-totals.ts`.
+6. **Alur uang:** pembeli membayar subtotal harga pemulihan + biaya layanan − voucher. Warung menerima subtotal harga pemulihan. Voucher ditanggung platform. Tiket "bayar di warung" tidak membayar biaya layanan dan tidak menerima voucher. Lihat `src/lib/pricing/order-totals.ts`.
 7. **Dampak (kg pangan, CO2e) baru dihitung saat pesanan `COMPLETED`**, yaitu setelah makanan benar-benar diambil.
 8. **`pickup_code` disimpan sebagai 4 digit**, sedangkan awalan `SJ-` hanya ditambahkan di tampilan.
 9. **Pembulatan harga di Dynamic Discount Optimizer memakai aritmetika integer.** Kode referensi di blueprint memakai `1 - 0.7`, yang menghasilkan 0.30000000000000004, sehingga Rp 20.000 @70% menjadi Rp 6.500 (68%), bukan Rp 6.000.
 10. **Setiap perubahan harga tercatat di `discount_adjustment_logs`** bersama input yang menghasilkannya. Baris log terbaru selalu sama dengan harga batch saat ini. Alasan perubahan dicatat sebagai `INITIAL_PUBLISH`, `TIME_DECAY_RULE`, `TIME_DECAY_30M_RULE`, atau `STOCK_DEMAND_ADJUST`.
 11. **Tanpa Redis (keputusan tim).** Kunci stok, presensi pengguna aktif, dan job terjadwal berjalan di PostgreSQL + proses worker (`npm run worker`), bukan Redis/BullMQ. `REDIS_URL` disiapkan untuk scaling nanti.
-12. **Komisi platform dibayar pembeli** sebagai biaya layanan Rp 1.500, bukan dipotong dari warung (`net_merchant_payout_idr = subtotal_recovery_idr`).
+12. **Komisi platform dibayar pembeli** sebagai biaya layanan Rp 1.500, bukan dipotong dari warung (`net_merchant_payout_idr = subtotal_recovery_idr`). Bayar tunai di warung tidak dikenai biaya layanan (lihat poin 6).
 13. **Peta memakai Leaflet + OpenStreetMap**, bukan MapLibre: lebih ringan, tanpa API key, cukup untuk peta radius 2 km.
 14. **Service worker ditulis tangan** (`public/sw.js`) alih-alih plugin PWA, supaya caching tiket offline dan Web Push bisa dikontrol penuh dengan Next.js 16.
 15. **OTP mode development**: di versi demo kode OTP ditampilkan di layar (`OTP_DEV_MODE=true`). Pengiriman asli lewat SMTP/Gmail atau Resend (email) dan Fonnte (WhatsApp) sudah tersedia dan aktif setelah variabelnya diisi dan `OTP_DEV_MODE=false`. Selama mode demo, akun warung uji coba dan pembelinya tidak bisa dibuka lewat OTP.
 16. **Pembayaran tersimulasi**: QRIS dinamis berformat EMVCo + CRC16 dan webhook bertanda tangan HMAC-SHA512 asli, tetapi pembayarannya dipicu tombol "Simulasi Bayar (Demo)" (`PAYMENT_PROVIDER=simulator`).
-17. **Fair-use checkout**: maksimal 1 pesanan belum dibayar per warung dan 2 secara total, serta batas porsi per pembeli per batch `max(3, ceil(stok awal / 2))`. Tujuannya mencegah satu akun mengunci seluruh stok surplus.
+17. **Fair-use checkout**: maksimal 1 pesanan belum dibayar per warung dan 2 secara total, serta batas porsi per pembeli per batch `max(3, ceil(stok awal / 2))`; tiket bayar di warung paling banyak 3 porsi. Tujuannya mencegah satu akun mengunci seluruh stok surplus.
 18. **Pesanan tidak diambil** sampai 30 menit setelah batas waktu menjadi `EXPIRED`. Warung tetap dibayar sekali, dan pembeli tidak mendapat kredit dampak.
+19. **Tanpa paket kejutan.** Blueprint menyebut *Mystery/Surprise Bag*, tetapi 48% responden survei lebih suka memilih menu sendiri daripada paket acak. Setiap menu kini mencantumkan isi porsi dan pilihan lauk. Enum `MYSTERY_BAG` dan kolom `menus.is_mystery_bag` tetap ada untuk histori, tetapi menu kejutan tidak bisa dibuat atau dipublikasikan lagi.
+20. **"Di bawah Rp 10.000" menjadi "Harga ceban, maksimal Rp 12.000"**, dan harga lantai data demo Rp 10.000, sehingga harga malam ini mulai Rp 10.000.
+21. **Bayar tunai di warung tersedia di semua warung**, bukan hanya QRIS. Porsi ditahan 30 menit tanpa biaya layanan, dan warung uji coba hanya menerima cara ini.
 
 ---
 

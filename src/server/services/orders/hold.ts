@@ -1,6 +1,6 @@
 /**
- * Pilot "bayar di warung" tickets: the portions are reserved without any payment, so the
- * hold is short and the warung can end it.
+ * "Bayar di warung" tickets (every warung; pilot warung only take these): the portions are
+ * reserved without any payment, so the hold is short and the warung can end it.
  *
  *   hold end   = min(checkout + PAY_AT_WARUNG_HOLD_MINUTES, batch pickup end)
  *                stored as the ticket's pickup_deadline_at (and payment_expires_at), so the
@@ -27,7 +27,7 @@ import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { abandonPayAtWarungOrder } from "@/server/services/stock";
 
-/** Open, unpaid "bayar di warung" ticket (portions still reserved, nothing paid). */
+/** Open, unpaid "bayar di warung" ticket at any warung (portions still reserved, nothing paid). */
 export const OPEN_PAY_AT_WARUNG = and(
   eq(orders.status, "READY_FOR_PICKUP"),
   eq(orders.paymentMethod, "BAYAR_DI_WARUNG"),

@@ -12,8 +12,8 @@ test("5 parallel checkouts for a 2-portion batch → exactly 2 succeed, no overs
   // warung's menus are locked against edits (DEMO_LOCKED), so the menu row goes in directly;
   // publishing surplus as the demo warung is still allowed.
   const { rows: menuRows } = await db().query<{ id: string }>(
-    `insert into menus (merchant_id, menu_name, category, original_price_idr, min_recovery_price_idr)
-     values ((select id from merchants where slug = $1), $2, 'MAKANAN_BERAT', 16000, 6000)
+    `insert into menus (merchant_id, menu_name, category, original_price_idr, min_recovery_price_idr, contents)
+     values ((select id from merchants where slug = $1), $2, 'MAKANAN_BERAT', 16000, 6000, array['Nasi putih', 'Telur dadar', 'Sayur'])
      returning id`,
     [DEMO_MERCHANT_SLUG, `Nasi Rebutan ${Date.now()}`],
   );

@@ -9,7 +9,9 @@
  */
 import "server-only";
 import { ZodError, type ZodType } from "zod";
+import { BATCH_PHOTO_MAX_DIMENSION_PX } from "@/lib/constants";
 import type { ApiFailure, ApiSuccess, ErrorCode } from "@/lib/contracts";
+import { inspectImage, type SniffedImageType } from "@/lib/image-sniff";
 
 const STATUS_BY_CODE: Partial<Record<ErrorCode, number>> = {
   VALIDATION_ERROR: 400,
@@ -78,6 +80,53 @@ export function parseQuery<T>(req: Request, schema: ZodType<T>): T {
   const parsed = schema.safeParse(params);
   if (!parsed.success) throw new ApiError("VALIDATION_ERROR", "Parameter tidak valid", zodDetails(parsed.error));
   return parsed.data;
+}
+
+/**
+ * Reads a raw image upload (the request body is the file itself, not multipart) with a byte
+ * cap, then checks it is an acceptable JPEG (src/lib/image-sniff.ts).
+ *  - a declared Content-Length above `maxBytes`, or a body that grows past it: 413;
+ *  - empty body: 400;
+ *  - not a JPEG: 415; frame larger than the pixel limits: 400.
+ * Content-Length is not required (proxies may forward chunked bodies).
+ */
+export async function readImageBody(
+  req: Request,
+  maxBytes: number,
+): Promise<{ bytes: Buffer; contentType: SniffedImageType; width: number; height: number }> {
+  const tooLarge = () =>
+    new ApiError("VALIDATION_ERROR", `Foto terlalu besar. Maksimal ${Math.round(maxBytes / 1024)} KB setelah dikompres.`, undefined, 413);
+  const declared = req.headers.get("content-length");
+  if (declared !== null && Number(declared) > maxBytes) throw tooLarge();
+  if (!req.body) throw new ApiError("VALIDATION_ERROR", "Foto belum dikirim");
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  if (total === 0) throw new ApiError("VALIDATION_ERROR", "Foto belum dikirim");
+
+  const bytes = Buffer.concat(chunks, total);
+  const inspected = inspectImage(bytes);
+  if (!inspected.ok) {
+    if (inspected.reason === "dimensions") {
+      throw new ApiError(
+        "VALIDATION_ERROR",
+        `Ukuran foto terlalu besar. Maksimal ${BATCH_PHOTO_MAX_DIMENSION_PX} piksel per sisi.`,
+      );
+    }
+    throw new ApiError("VALIDATION_ERROR", "Format foto harus JPEG", undefined, 415);
+  }
+  return { bytes, contentType: inspected.contentType, width: inspected.width, height: inspected.height };
 }
 
 export function parseUuid(value: string, what = "id"): string {

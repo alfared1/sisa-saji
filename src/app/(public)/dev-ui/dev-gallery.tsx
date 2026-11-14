@@ -30,6 +30,7 @@ import { useNow } from "@/hooks/use-now";
 import { ApiClientError } from "@/lib/api/client";
 import { CAMPUSES } from "@/lib/constants";
 import type { MenuCategory } from "@/lib/contracts";
+import { lineKey } from "@/lib/lauk";
 import { type CartItem, useCartStore } from "@/stores/cart";
 import { useLocationStore } from "@/stores/location";
 
@@ -49,9 +50,13 @@ function demoMarkers(nowMs: number): SurplusMapMarker[] {
 
 function demoItem(nowMs: number, batch: string, name: string, price: number, original: number): CartItem {
   return {
+    key: lineKey(batch, null),
     batch_id: batch,
     menu_id: `menu-${batch}`,
     menu_name: name,
+    category: "MAKANAN_BERAT",
+    lauk: null,
+    lauk_available: [],
     quantity: 1,
     unit_price_idr: price,
     original_price_idr: original,
@@ -166,7 +171,7 @@ export function DevGallery() {
             {soon && <CountdownBadge endIso={soon} />}
             {later && <CountdownBadge endIso={later} variant="solid" />}
             {past && <CountdownBadge endIso={past} />}
-            {soon && <CountdownBadge endIso={soon} variant="plain" prefix="Ambil" />}
+            {soon && <CountdownBadge endIso={soon} variant="plain" prefix="Ambil dalam" />}
           </div>
           {soon && <CountdownHookDemo target={soon} />}
           <div className="flex flex-wrap items-center gap-2">

@@ -2,24 +2,28 @@
 
 /**
  * QuickOrderSheet: step 2 of the ≤ 3-step quick order (docs/ARCHITECTURE.md, Konvensi UI):
- * /discover → tap a menu card → "Pesan & Ambil Sendiri" → QRIS on /orders/<id>.
+ * /discover → tap a menu card → "Kunci Porsi Sekarang" → QRIS on /orders/<id>, or straight
+ * to the pickup ticket when the buyer pays cash at the warung.
  *
  *   const { openQuickOrder, sheet } = useQuickOrder(batches);
  *   <DealTile batch={b} onOpenDetail={() => openQuickOrder(b)} … /> {sheet}
  *
- * Quick order checks out one batch directly (QRIS, pickup "Secepatnya") and
- * never touches the cart; "Tambah ke Keranjang" goes through useAddToCart so
+ * Quick order checks out one batch directly (pickup "Secepatnya", the chosen lauk and
+ * payment) and never touches the cart; "Tambah ke Keranjang" goes through useAddToCart so
  * the single-merchant DiffMerchantDialog guard still applies.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FootprintsIcon, GiftIcon, HandPlatterIcon, Loader2Icon, QrCodeIcon, StoreIcon } from "lucide-react";
+import { HandPlatterIcon, Loader2Icon, LockIcon, StarIcon, StoreIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { useAddToCart } from "@/components/common/diff-merchant-dialog";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { ImpactLine } from "@/components/common/impact-line";
+import { LaukPicker } from "@/components/common/lauk-picker";
+import { LaukSummary } from "@/components/common/lauk-summary";
+import { PhotoBadge } from "@/components/common/photo-badge";
 import { PriceTag } from "@/components/common/price-tag";
 import {
   ResponsiveSheet,
@@ -30,19 +34,31 @@ import {
   useResponsiveSheetVariant,
 } from "@/components/common/responsive-sheet";
 import { StockBadge } from "@/components/common/stock-badge";
+import { TrustBadges } from "@/components/common/trust-badges";
 import { Button } from "@/components/ui/button";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import type { BatchCard, CheckoutResponse } from "@/lib/contracts";
+import type { BatchCard, CheckoutResponse, MerchantDetail, NearbyResponse } from "@/lib/contracts";
+import { defaultLauk, findItem } from "@/lib/lauk";
 import { formatClockId, formatIdr } from "@/lib/time";
+import { ratingText } from "@/lib/trust-signals";
 import { cn } from "@/lib/utils";
+import { useLocationStore } from "@/stores/location";
 import { QtyStepper } from "../bits";
 import { FoodThumb } from "../food-thumb";
-import { formatDistance } from "../lib/format";
+import { distanceLine } from "../lib/format";
 import { cartItemFromBatch, cartMerchantFromBatch, customerKeys } from "../lib/queries";
-import { previewTotals, unpaidOrderHref } from "../lib/checkout-logic";
-import { clampQuickOrderQty, quickOrderBody, quickOrderError, quickOrderLoginUrl, quickOrderMaxQty } from "./quick-order-logic";
+import { holdNoteText, lockedToastText, previewTotals, unpaidOrderHref } from "../lib/checkout-logic";
+import {
+  clampQuickOrderQty,
+  quickOrderBody,
+  quickOrderError,
+  quickOrderIsCash,
+  quickOrderLoginUrl,
+  quickOrderMaxQty,
+  type QuickPayMethod,
+} from "./quick-order-logic";
 
 export type QuickOrderOptions = {
   /** When set, ordering is disabled with this label (e.g. warung tutup). */
@@ -70,7 +86,7 @@ export function useQuickOrder(batches?: readonly BatchCard[]): {
   // Next 16 (Cache Components) keeps a visited route alive as a hidden
   // <Activity>; its effects are torn down while hidden. Closing here means a
   // route the user comes Back to never re-appears with an open order sheet
-  // (and an enabled "Pesan & Ambil Sendiri" that would create a 2nd order).
+  // (and an enabled "Kunci Porsi Sekarang" that would create a 2nd order).
   useEffect(
     () => () => {
       setOpen(false);
@@ -122,10 +138,10 @@ export function QuickOrderSheet({
               disabledLabel={disabledLabel}
               ctaRef={ctaRef}
               onClose={() => onOpenChange(false)}
-              onAddToCart={(qty) => {
+              onAddToCart={(qty, lauk) => {
                 // Close first so the DiffMerchantDialog (if any) is not under the drawer.
                 onOpenChange(false);
-                addToCart(cartMerchantFromBatch(batch), cartItemFromBatch(batch, qty));
+                addToCart(cartMerchantFromBatch(batch), cartItemFromBatch(batch, qty, lauk));
               }}
             />
           )}
@@ -133,6 +149,68 @@ export function QuickOrderSheet({
       </ResponsiveSheet>
       {dialog}
     </>
+  );
+}
+
+/**
+ * The warung's star rating, read from data this screen already loaded (the warung page or
+ * the nearby list). A BatchCard carries no rating, and the sheet does not fetch one: when
+ * neither cache has the warung, no rating is shown.
+ */
+function cachedRating(qc: QueryClient, batch: BatchCard): { avg: number; count: number } | null {
+  const detail = qc.getQueryData<MerchantDetail>(customerKeys.warung(batch.merchant_slug));
+  if (detail && detail.id === batch.merchant_id) return { avg: detail.rating_avg, count: detail.total_reviews };
+  for (const [, data] of qc.getQueriesData<NearbyResponse>({ queryKey: customerKeys.nearbyAll })) {
+    const m = data?.merchants?.find((x) => x.id === batch.merchant_id);
+    if (m) return { avg: m.rating_avg, count: m.total_reviews };
+  }
+  return null;
+}
+
+const PAY_CHOICES: { key: QuickPayMethod; label: string }[] = [
+  { key: "QRIS", label: "QRIS Instan" },
+  { key: "BAYAR_DI_WARUNG", label: "Tunai di warung" },
+];
+
+/** Two-way payment switch: a radiogroup "Cara bayar" (arrow keys move the choice). */
+function PayChoice({ value, onChange }: { value: QuickPayMethod; onChange: (m: QuickPayMethod) => void }) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const move = (from: number) => {
+    const next = (from + 1) % PAY_CHOICES.length;
+    onChange(PAY_CHOICES[next].key);
+    refs.current[next]?.focus();
+  };
+  return (
+    <div role="radiogroup" aria-label="Cara bayar" className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+      {PAY_CHOICES.map((c, i) => {
+        const checked = value === c.key;
+        return (
+          <button
+            key={c.key}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            tabIndex={checked ? 0 : -1}
+            onClick={() => onChange(c.key)}
+            onKeyDown={(e) => {
+              if (["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp"].includes(e.key)) {
+                e.preventDefault();
+                move(i);
+              }
+            }}
+            className={cn(
+              "h-10 rounded-lg text-sm font-semibold transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              checked ? "bg-card text-foreground shadow-soft ring-1 ring-border" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {c.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -147,17 +225,26 @@ function QuickOrderBody({
   disabledLabel?: string;
   ctaRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
-  onAddToCart: (qty: number) => void;
+  onAddToCart: (qty: number, lauk: string | null) => void;
 }) {
   const router = useRouter();
   const qc = useQueryClient();
   const session = useSession();
   const desktop = useResponsiveSheetVariant() === "dialog";
   const countdown = useCountdown(batch.pickup_end_time);
+  const originSource = useLocationStore((s) => s.source);
+  const originLabel = useLocationStore((s) => s.label);
   const [rawQty, setQty] = useState(1);
+  const [method, setMethod] = useState<QuickPayMethod>("QRIS");
+  const [rawLauk, setLauk] = useState<string | null>(() => defaultLauk(batch));
+  const [photoFailed, setPhotoFailed] = useState(false);
+
   const pilot = Boolean(batch.merchant_is_pilot);
-  const qty = clampQuickOrderQty(rawQty, batch.available_stock, pilot);
-  const max = quickOrderMaxQty(batch.available_stock, pilot);
+  const cash = quickOrderIsCash(batch, method);
+  const qty = clampQuickOrderQty(rawQty, batch.available_stock, cash);
+  const max = quickOrderMaxQty(batch.available_stock, cash);
+  // A chosen lauk that ran out meanwhile (live update) falls back to the first one left.
+  const lauk = (rawLauk !== null ? findItem(batch.lauk_available, rawLauk) : null) ?? defaultLauk(batch);
 
   const soldOut = batch.available_stock <= 0;
   const closed = countdown.ready && countdown.isOver;
@@ -174,9 +261,12 @@ function QuickOrderBody({
       },
     ],
     voucher: null,
-    serviceFeeIdr: batch.merchant_is_pilot ? 0 : undefined,
+    method: cash ? "BAYAR_DI_WARUNG" : "QRIS",
   });
   const foodGrams = qty * batch.portion_weight_grams;
+  const rating = cachedRating(qc, batch);
+  const distance = distanceLine(batch.distance_m, { source: originSource, label: originLabel }, "long");
+  const showDescription = batch.contents.length === 0 && batch.lauk_options.length === 0 && Boolean(batch.description);
 
   const refreshLists = () => {
     void qc.invalidateQueries({ queryKey: customerKeys.warungAll });
@@ -193,21 +283,16 @@ function QuickOrderBody({
   };
 
   const checkout = useMutation({
-    mutationFn: () => api.post<CheckoutResponse>("/orders/checkout", quickOrderBody(batch, qty)),
+    mutationFn: () => api.post<CheckoutResponse>("/orders/checkout", quickOrderBody(batch, qty, { method, lauk })),
     onSuccess: ({ order }) => {
       qc.setQueryData(customerKeys.order(order.id), { order });
       void qc.invalidateQueries({ queryKey: customerKeys.ordersAll });
       refreshLists();
       // Close before navigating: Back must not land on a still-open sheet
-      // whose CTA would place a duplicate PENDING_PAYMENT order.
+      // whose CTA would place a duplicate order.
       onClose();
       router.push(`/orders/${order.id}`);
-      toast.success(
-        order.payment_method === "BAYAR_DI_WARUNG"
-          ? "Pesanan tercatat. Bayar langsung di warung saat mengambil."
-          : "Stok dikunci 10 menit. Scan QRIS untuk bayar.",
-        { id: "qo-ok" },
-      );
+      toast.success(lockedToastText(order.payment_method === "BAYAR_DI_WARUNG"), { id: "qo-ok" });
     },
     onError: (err) => {
       if (!(err instanceof ApiClientError)) {
@@ -230,8 +315,14 @@ function QuickOrderBody({
           onClose();
           refreshLists();
           return;
+        case "lauk":
+          // Keep the sheet open on tonight's remaining lauk; the list refetch brings the batch up to date.
+          toast.error(e.title, { description: e.description });
+          setLauk(e.lauk_available[0] ?? null);
+          refreshLists();
+          return;
         default: {
-          // Fair-use limit: an unpaid order is already waiting — offer to open it.
+          // Fair-use limit: an unpaid order is already waiting, so offer to open it.
           const href = unpaidOrderHref(err.code, err.details);
           if (href) {
             toast.error(err.message, {
@@ -267,7 +358,8 @@ function QuickOrderBody({
           <FoodThumb
             category={batch.category}
             imageUrl={batch.image_url}
-            mystery={batch.is_mystery_bag}
+            photo={batch.photo}
+            onPhotoError={() => setPhotoFailed(true)}
             alt={batch.menu_name}
             className={cn("size-28 shrink-0 rounded-2xl", desktop && "size-44 rounded-3xl", blocked && "grayscale")}
             noPhotoLabel
@@ -280,11 +372,11 @@ function QuickOrderBody({
             >
               {batch.menu_name}
             </ResponsiveSheetTitle>
-            <ResponsiveSheetDescription className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <StoreIcon className="size-3.5 shrink-0" aria-hidden />
-              <span className="truncate">
+            <ResponsiveSheetDescription className="mt-0.5 flex items-start gap-1 text-xs text-muted-foreground">
+              <StoreIcon className="mt-px size-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0">
                 {batch.merchant_name}
-                {batch.distance_m !== null && ` · ${formatDistance(batch.distance_m)}`}
+                {distance && ` · ${distance}`}
               </span>
             </ResponsiveSheetDescription>
             <PriceTag
@@ -298,13 +390,29 @@ function QuickOrderBody({
           </div>
         </div>
 
-        {batch.is_mystery_bag ? (
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-deal">
-            <GiftIcon className="size-3.5" aria-hidden /> Paket kejutan, isinya dipilihkan warung
-          </p>
-        ) : (
-          batch.description && <p className="mt-3 text-sm leading-relaxed text-foreground/80">{batch.description}</p>
+        {batch.photo && !photoFailed && <PhotoBadge photo={batch.photo} variant="line" className="mt-2" />}
+
+        {(rating || batch.merchant_trust.hygiene || batch.merchant_trust.portion_full) && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            {rating && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground/80 tabular-nums">
+                {rating.count > 0 && <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />}
+                {ratingText(rating.avg, rating.count, "long")}
+              </span>
+            )}
+            {/* A smaller portion tonight is said in full below, so no review-based portion chip then. */}
+            <TrustBadges trust={batch.merchant_trust} variant="short" only={batch.full_portion ? undefined : "hygiene"} />
+          </div>
         )}
+
+        <LaukSummary batch={batch} lines="full" className="mt-3 text-sm" />
+        {showDescription && <p className="mt-3 text-sm leading-relaxed text-foreground/80">{batch.description}</p>}
+
+        {!blocked && <LaukPicker batch={batch} value={lauk} onChange={setLauk} className="mt-3" />}
+
+        <p className={cn("mt-3 text-sm", batch.full_portion ? "text-muted-foreground" : "font-semibold text-foreground")}>
+          {batch.full_portion ? "Janji warung: porsi sama dengan porsi normal." : "Porsi malam ini lebih kecil dari biasa."}
+        </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <StockBadge available={batch.available_stock} />
@@ -319,11 +427,10 @@ function QuickOrderBody({
         <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-muted/70 p-3">
           <div className="min-w-0">
             <p className="flex items-center gap-1 text-sm font-semibold">
-              <HandPlatterIcon className="size-4 text-deal" aria-hidden /> Ambil Sendiri di Warung
+              <HandPlatterIcon className="size-4 shrink-0 text-primary" aria-hidden /> Ambil sendiri ke warung
             </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <FootprintsIcon className="size-3.5 shrink-0" aria-hidden />
-              Secepatnya · s/d {formatClockId(batch.pickup_end_time)} WIB
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Rp 0 · s/d {formatClockId(batch.pickup_end_time)} WIB
             </p>
           </div>
           {!blocked && (
@@ -332,19 +439,33 @@ function QuickOrderBody({
         </div>
 
         {!blocked && (
-          <div className="mt-3 flex items-baseline justify-between text-sm">
-            <span className="text-muted-foreground">
-              {batch.merchant_is_pilot ? (
-                <>
-                  Bayar di warung <span className="text-xs">(uji coba, tanpa biaya layanan)</span>
-                </>
-              ) : (
-                <>
+          <div className="mt-3 space-y-2">
+            {pilot ? (
+              <p className="text-sm font-semibold">
+                Bayar tunai di warung{" "}
+                <span className="text-xs font-normal text-muted-foreground">(warung uji coba, tanpa biaya layanan)</span>
+              </p>
+            ) : (
+              <PayChoice value={method} onChange={setMethod} />
+            )}
+            {cash ? (
+              <p className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  Bayar di warung saat ambil <span className="text-xs">(tanpa biaya layanan)</span>
+                </span>
+                <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
+              </p>
+            ) : (
+              <p className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
                   Total bayar <span className="text-xs">(termasuk biaya layanan {formatIdr(totals.service_fee_idr)})</span>
-                </>
-              )}
-            </span>
-            <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
+                </span>
+                <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
+              </p>
+            )}
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <LockIcon className="mt-px size-3 shrink-0" aria-hidden /> {holdNoteText(cash)}
+            </p>
           </div>
         )}
       </div>
@@ -359,16 +480,16 @@ function QuickOrderBody({
           {checkout.isPending ? (
             <Loader2Icon className="size-5 animate-spin" aria-hidden />
           ) : (
-            <QrCodeIcon className="size-5" aria-hidden />
+            <LockIcon className="size-5" aria-hidden />
           )}
-          {blocked ? blockedLabel : checkout.isPending ? "Mengunci stok…" : "Pesan & Ambil Sendiri"}
+          {blocked ? blockedLabel : checkout.isPending ? "Mengunci porsi…" : "Kunci Porsi Sekarang"}
         </Button>
         {!blocked && (
           <Button
             variant="outline"
             className={cn("h-11 w-full rounded-xl font-semibold", desktop && "h-12")}
             disabled={checkout.isPending}
-            onClick={() => onAddToCart(qty)}
+            onClick={() => onAddToCart(qty, lauk)}
           >
             Tambah ke Keranjang
           </Button>

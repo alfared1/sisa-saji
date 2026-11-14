@@ -10,7 +10,11 @@ test.describe("welcome + PWA", () => {
     await expect(impact.getByText("pangan diselamatkan")).toBeVisible();
     await expect(impact.getByText("pesanan diambil")).toBeVisible();
     await expect(impact.getByText("Data demo", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Makan malam kenyang mulai Rp 10.000 dari warung terdekat sebelum tutup",
+    );
     await expect(page.getByRole("heading", { name: "Harga turun mendekati jam tutup" })).toBeVisible();
+    await expect(page.getByText(/bayar tunai di warung dengan porsi ditahan 30 menit/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Masuk" }).first()).toBeVisible();
   });
 
@@ -19,6 +23,7 @@ test.describe("welcome + PWA", () => {
     expect(res.status()).toBe(200);
     const manifest = (await res.json()) as { name: string; start_url: string; display: string; icons: { src: string }[] };
     expect(manifest.display).toBe("standalone");
+    expect(JSON.stringify(manifest)).not.toContain("70%");
     expect(manifest.icons.length).toBeGreaterThanOrEqual(3);
     for (const icon of manifest.icons) {
       const img = await request.get(icon.src);

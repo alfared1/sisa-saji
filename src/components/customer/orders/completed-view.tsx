@@ -4,7 +4,7 @@
  * COMPLETED: ThankyouScreen (impact infographic + share), ImpactCelebrationModal
  * (confetti motion) and ReviewFormSheet → POST /orders/:id/review.
  */
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
@@ -42,7 +42,15 @@ import { cn } from "@/lib/utils";
 import { RatingStars } from "../bits";
 import { impactShareText } from "../lib/checkout-logic";
 import { formatDateTimeId, formatDecimal } from "../lib/format";
-import { PICKUP_TAGS, RATING_COPY } from "../lib/order-status";
+import {
+  HYGIENE_QUESTION,
+  HYGIENE_SCALE_ENDS,
+  PICKUP_TAGS,
+  PORTION_ANSWERS,
+  PORTION_QUESTION,
+  RATING_COPY,
+  reviewAnswerChips,
+} from "../lib/order-status";
 import { customerKeys } from "../lib/queries";
 import { OrderItemsCard } from "./order-bits";
 
@@ -206,6 +214,88 @@ export function ImpactCelebrationModal({
 
 /* ------------------------------- Review ------------------------------- */
 
+/**
+ * Optional single-choice question as a radiogroup of chips (arrow keys move the choice,
+ * tapping the chosen chip again clears it, since the question may be skipped).
+ */
+function ChoiceQuestion<T extends string | number | boolean>({
+  question,
+  options,
+  value,
+  onChange,
+  ends,
+}: {
+  question: string;
+  options: readonly { value: T; label: string; ariaLabel?: string }[];
+  value: T | null;
+  onChange: (v: T | null) => void;
+  /** Words under the first and last chip of a scale ("Kurang bersih" … "Sangat bersih"). */
+  ends?: { low: string; high: string };
+}) {
+  const labelId = useId();
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const checkedIndex = options.findIndex((o) => o.value === value);
+  const move = (from: number, delta: number) => {
+    const next = (from + delta + options.length) % options.length;
+    onChange(options[next].value);
+    refs.current[next]?.focus();
+  };
+  return (
+    <div>
+      <p id={labelId} className="mb-2 text-sm font-semibold text-muted-foreground">
+        {question} <span className="font-normal">(opsional)</span>
+      </p>
+      <div role="radiogroup" aria-labelledby={labelId} className={cn("flex flex-wrap gap-2", ends && "flex-nowrap")}>
+        {options.map((o, i) => {
+          const checked = o.value === value;
+          return (
+            <button
+              key={String(o.value)}
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              aria-label={o.ariaLabel}
+              tabIndex={checked || (checkedIndex === -1 && i === 0) ? 0 : -1}
+              onClick={() => onChange(checked ? null : o.value)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                  e.preventDefault();
+                  move(i, 1);
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  move(i, -1);
+                }
+              }}
+              className={cn(
+                "h-10 rounded-full px-3.5 text-sm font-semibold tabular-nums ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                ends && "min-w-0 flex-1 px-0",
+                checked ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
+              )}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      {ends && (
+        <p className="mt-1 flex justify-between text-[11px] text-muted-foreground" aria-hidden>
+          <span>{ends.low}</span>
+          <span>{ends.high}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+const HYGIENE_OPTIONS = [1, 2, 3, 4, 5].map((n) => ({
+  value: n,
+  label: String(n),
+  ariaLabel: `${n} dari 5${n === 1 ? `, ${HYGIENE_SCALE_ENDS.low.toLowerCase()}` : n === 5 ? `, ${HYGIENE_SCALE_ENDS.high.toLowerCase()}` : ""}`,
+}));
+
 export function ReviewFormSheet({
   order,
   open,
@@ -217,6 +307,8 @@ export function ReviewFormSheet({
 }) {
   const qc = useQueryClient();
   const [rating, setRating] = useState(0);
+  const [hygiene, setHygiene] = useState<number | null>(null);
+  const [portionFull, setPortionFull] = useState<boolean | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [comment, setComment] = useState("");
 
@@ -241,7 +333,13 @@ export function ReviewFormSheet({
           onSubmit={(e) => {
             e.preventDefault();
             if (rating < 1) return;
-            submit.mutate({ rating, tags, comment: comment.trim() || undefined });
+            submit.mutate({
+              rating,
+              tags,
+              comment: comment.trim() || undefined,
+              ...(hygiene !== null ? { hygiene_rating: hygiene } : {}),
+              ...(portionFull !== null ? { portion_full: portionFull } : {}),
+            });
           }}
         >
           <div className="text-center">
@@ -267,6 +365,16 @@ export function ReviewFormSheet({
             </div>
             <p className="mt-1 h-5 text-sm font-semibold text-foreground/80">{RATING_COPY[rating]}</p>
           </div>
+
+          <ChoiceQuestion
+            question={HYGIENE_QUESTION}
+            options={HYGIENE_OPTIONS}
+            value={hygiene}
+            onChange={setHygiene}
+            ends={HYGIENE_SCALE_ENDS}
+          />
+
+          <ChoiceQuestion question={PORTION_QUESTION} options={PORTION_ANSWERS} value={portionFull} onChange={setPortionFull} />
 
           <fieldset>
             <legend className="mb-2 text-sm font-semibold text-muted-foreground">
@@ -357,6 +465,22 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
         <section className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border">
           <h2 className="text-sm font-semibold">Ulasanmu</h2>
           <RatingStars value={order.review.rating} className="mt-2 [&_svg]:size-5" />
+          {reviewAnswerChips(order.review).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {reviewAnswerChips(order.review).map((t) => (
+                <span
+                  key={t}
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                    // Green only for a good answer; "Porsi kurang" stays neutral, as on the warung page.
+                    t === "Porsi kurang" ? "bg-muted text-foreground/80" : "bg-brand-soft text-brand-strong",
+                  )}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
           {order.review.comment && <p className="mt-2 text-sm leading-relaxed">{order.review.comment}</p>}
           {order.review.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">

@@ -195,7 +195,7 @@ async function completePickup(
         : verifyPickupToken(parsed.token, o.pickupCode, args.pickupQrSecret) === o.id;
     if (!matches) throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak cocok dengan pesanan ini");
 
-    // Pilot "bayar di warung": the customer pays the warung at this moment.
+    // "Bayar di warung" (any warung): the customer pays the warung at this moment.
     const payAtWarung = o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
     // A free pay-at-warung hold ends exactly at its deadline; paid orders get a grace period.
     if (payAtWarung && isHoldOver(o.pickupDeadlineAt, now)) {
@@ -275,7 +275,7 @@ export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
  * (exactly once, in the same transaction as the status change). The customer gets
  * no impact / points credit — the food was not rescued by them. Stock stays sold.
  *
- * Pilot "bayar di warung" tickets were never paid: they expire without a payout as soon
+ * "Bayar di warung" tickets (any warung) were never paid: they expire without a payout as soon
  * as their short hold ends (pickup_deadline_at, no grace; see hold.ts) and their reserved
  * portions go back to the batch (abandonPayAtWarungOrder).
  */

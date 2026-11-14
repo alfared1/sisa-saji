@@ -17,6 +17,7 @@ export const GET = handle<Ctx>(async (req, { params }) => {
     lat: q.lat,
     lng: q.lng,
     userId: me?.id ?? null,
+    viewerIsDemo: me?.is_demo === true,
   });
   return ok<MerchantDetail>(detail);
 });

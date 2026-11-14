@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CirclePlayIcon, Clock3Icon } from "lucide-react";
+import { CirclePlayIcon, Clock3Icon, FootprintsIcon } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { PriceTag } from "@/components/common/price-tag";
 import { StockBadge } from "@/components/common/stock-badge";
@@ -11,12 +11,11 @@ import { InstallBanner } from "@/components/pwa/install-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGlobalStats } from "@/hooks/use-global-stats";
-import { PAYMENT_TTL_SECONDS, SURPLUS_WINDOW_END, SURPLUS_WINDOW_START } from "@/lib/constants";
-import { EVENING_EXAMPLE, EVENING_TIMELINE } from "@/lib/pricing/evening-example";
+import { PAY_AT_WARUNG_HOLD_MINUTES, PAYMENT_TTL_SECONDS } from "@/lib/constants";
+import { EVENING_CARD_QUOTE, EVENING_EXAMPLE, EVENING_TIMELINE } from "@/lib/pricing/evening-example";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
-const WINDOW_LABEL = `${SURPLUS_WINDOW_START.replace(":", ".")}–${SURPLUS_WINDOW_END.replace(":", ".")} WIB`;
 const LOCK_MINUTES = Math.round(PAYMENT_TTL_SECONDS / 60);
 
 const EXAMPLE = EVENING_EXAMPLE;
@@ -87,24 +86,37 @@ export function ImpactStats() {
   );
 }
 
-/** What a deal card looks like in the app (illustration, hidden from screen readers). */
+/**
+ * What a menu card looks like in the app: an illustration labelled "Contoh", hidden from
+ * screen readers. No photo badge: "Foto asli" is only ever claimed for a warung's own upload.
+ */
 function DealPreview() {
-  const flash = TIMELINE[2].quote;
+  const q = EVENING_CARD_QUOTE;
   return (
-    <div className="rounded-3xl bg-card p-3 shadow-card ring-1 ring-border" aria-hidden>
+    <div className="relative rounded-3xl bg-card p-3 shadow-card ring-1 ring-border" aria-hidden>
+      <span className="absolute top-3 right-3 rounded-full bg-muted px-2 py-1 text-[11px] leading-none font-semibold text-muted-foreground">
+        Contoh
+      </span>
       <div className="flex gap-3">
         <FoodThumb category="MAKANAN_BERAT" alt="" className="size-20 shrink-0 rounded-2xl" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{EXAMPLE.name}</p>
-          <p className="truncate text-xs text-muted-foreground">Warung contoh · 240 m</p>
-          <PriceTag original={EXAMPLE.priceIdr} selling={flash.recommendedSellingPriceIdr} discountPct={flash.recommendedDiscountPct} className="mt-1.5" />
+          <p className="truncate pr-14 text-sm font-semibold">{EXAMPLE.name}</p>
+          <p className="truncate text-xs text-muted-foreground">Warung Nasi contoh</p>
+          <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Lauk tersisa:</span> Ayam goreng, Pepes ikan mas
+          </p>
+          <PriceTag original={EXAMPLE.priceIdr} selling={q.recommendedSellingPriceIdr} discountPct={q.recommendedDiscountPct} className="mt-1.5" />
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             <StockBadge available={3} />
-            <span className="inline-flex items-center gap-1 rounded-full bg-urgent-soft px-2 py-1 text-xs leading-none font-semibold text-urgent tabular-nums">
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs leading-none font-semibold text-secondary-foreground tabular-nums">
               <Clock3Icon className="size-3.5 shrink-0" aria-hidden />
-              Tutup 00:28:12
+              Tutup dalam 01:15:20
             </span>
           </div>
+          <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <FootprintsIcon className="size-3.5 shrink-0" aria-hidden />
+            350 m dari lokasi kamu, bisa jalan kaki
+          </p>
         </div>
       </div>
     </div>
@@ -141,8 +153,8 @@ function EveningTimeline() {
         <li className="grid grid-cols-[5.5rem_1fr] gap-3 border-t border-border py-4 lg:grid-cols-1 lg:gap-2">
           <p className="text-sm font-semibold">Kamu pesan</p>
           <p className="text-sm leading-snug text-muted-foreground">
-            Porsimu dikunci {LOCK_MINUTES} menit selama bayar lewat QRIS. Setelah itu datang ke warung dan tunjukkan QR atau kode
-            SJ-XXXX. Tidak ada pengantaran.
+            Kunci porsi: bayar QRIS dalam {LOCK_MINUTES} menit, atau bayar tunai di warung dengan porsi ditahan{" "}
+            {PAY_AT_WARUNG_HOLD_MINUTES} menit. Tunjukkan QR atau PIN saat ambil. Tidak ada pengantaran.
           </p>
         </li>
       </ol>
@@ -153,8 +165,8 @@ function EveningTimeline() {
 const ROLE_CARDS = [
   {
     href: "/discover",
-    title: "Cari makanan hemat",
-    body: "Lihat porsi surplus warung dalam radius 2 km dari kampusmu.",
+    title: "Cari makan malam hemat",
+    body: "Lihat porsi malam ini dari warung beberapa ratus meter dari kosmu.",
     tone: "bg-primary text-primary-foreground",
     cta: "Lihat menu malam ini",
   },
@@ -187,11 +199,11 @@ export function WelcomeView() {
         <div className="grid grid-cols-1 gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-14 lg:pt-12">
           <section className="space-y-5">
             <h1 className="text-[2rem] leading-[1.1] font-bold sm:text-5xl">
-              Makanan enak tetap <span className="text-primary">termakan</span>, dompet tetap aman.
+              Makan malam kenyang mulai <span className="text-primary">Rp 10.000</span> dari warung terdekat sebelum tutup
             </h1>
             <p className="max-w-prose text-base leading-relaxed text-muted-foreground">
-              Setiap malam pukul {WINDOW_LABEL}, warung di sekitar kampus menjual porsi yang belum laku dengan potongan
-              harga. Kamu pesan dan bayar di aplikasi, lalu ambil sendiri sebelum warung tutup.
+              Isi menunya jelas, porsinya normal, dan kebersihannya dinilai pembeli lain. Kunci porsimu, lalu jalan ke warung
+              dekat kos sebelum tutup.
             </p>
             <Link
               href="/tour"
@@ -223,13 +235,16 @@ export function WelcomeView() {
             </div>
           </section>
 
-          <section className="space-y-4" aria-label="Contoh dan dampak">
+          <div>
             <DealPreview />
-            <ImpactStats />
-          </section>
+          </div>
         </div>
 
         <EveningTimeline />
+
+        <div className="mt-8 lg:max-w-md">
+          <ImpactStats />
+        </div>
 
         <InstallBanner className="mt-8 lg:max-w-md" />
       </div>

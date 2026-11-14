@@ -1,6 +1,7 @@
 /**
  * Small, pure formatting helpers for the customer app (client-safe, unit-tested).
  */
+import { WALK_MINUTES_COPY_MAX_M, WALKABLE_DISTANCE_M } from "@/lib/constants";
 import { formatClockId } from "@/lib/time";
 
 /** "450 m" under 1 km, "1,2 km" above. `null` → "". */
@@ -15,6 +16,36 @@ export function travelMinutes(meters: number | null | undefined, mode: "walk" | 
   if (meters === null || meters === undefined || !Number.isFinite(meters)) return null;
   const perMin = mode === "walk" ? 80 : 330;
   return Math.max(1, Math.round(meters / perMin));
+}
+
+/** Where a distance is measured from: the location store's source and label. */
+export type DistanceOrigin = { source: "gps" | "campus" | "manual"; label: string };
+
+/**
+ * Distance with what it is measured from, in walking terms (the buyer walks to the warung):
+ *  - long:  "350 m dari lokasi kamu, bisa jalan kaki" (≤ 500 m),
+ *           "750 m dari lokasi kamu · 9 mnt jalan kaki" (≤ 1,5 km),
+ *           "2,4 km dari IPB Dramaga, Bogor" (farther);
+ *  - short: "350 m · jalan kaki", "750 m · 9 mnt jalan", "2,4 km".
+ * The place is "lokasi kamu" only for a GPS fix, "titik pilihanmu" for a picked point, and
+ * the campus name for a campus. `null` → "".
+ */
+export function distanceLine(
+  meters: number | null | undefined,
+  origin: DistanceOrigin,
+  variant: "short" | "long",
+): string {
+  const d = formatDistance(meters);
+  if (!d || meters === null || meters === undefined) return "";
+  const walkable = meters <= WALKABLE_DISTANCE_M;
+  const walkMinutes = meters <= WALK_MINUTES_COPY_MAX_M ? travelMinutes(meters, "walk") : null;
+  if (variant === "short") {
+    if (walkable) return `${d} · jalan kaki`;
+    return walkMinutes !== null ? `${d} · ${walkMinutes} mnt jalan` : d;
+  }
+  const place = origin.source === "gps" ? "lokasi kamu" : origin.source === "manual" ? "titik pilihanmu" : origin.label;
+  if (walkable) return `${d} dari ${place}, bisa jalan kaki`;
+  return walkMinutes !== null ? `${d} dari ${place} · ${walkMinutes} mnt jalan kaki` : `${d} dari ${place}`;
 }
 
 /** "4,4" — rating with one decimal, Indonesian comma. */

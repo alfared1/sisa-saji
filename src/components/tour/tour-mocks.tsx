@@ -16,13 +16,11 @@ import {
   Clock3Icon,
   CloudIcon,
   CloudOffIcon,
-  FlameIcon,
   LeafIcon,
   MapPinIcon,
   MinusIcon,
   PackageCheckIcon,
   PlusIcon,
-  QrCodeIcon,
   ScanLineIcon,
   ShieldCheckIcon,
   SproutIcon,
@@ -55,11 +53,15 @@ import {
 } from "./tour-steps";
 
 const DEMO_WARUNG = "Warung Nasi Teh Euis";
-const TIMBEL = "Nasi Timbel Ayam Goreng + Sayur Asem";
+const TIMBEL = "Nasi Timbel + Lauk Pilihan";
+const TIMBEL_LAUK = "Ayam goreng";
 const TIMBEL_PRICE = 18_000;
-const TIMBEL_RECOVERY = 9_000;
-/** Minimum price the demo seed sets for every menu: 30 % of the normal price, rounded up to Rp 500. */
-const TIMBEL_FLOOR = Math.ceil((TIMBEL_PRICE * 0.3) / 500) * 500;
+/** Minimum price the demo seed sets for every menu: Rp 10.000 (or the menu price, if lower). */
+const SEED_FLOOR = 10_000;
+const TIMBEL_FLOOR = Math.min(SEED_FLOOR, TIMBEL_PRICE);
+/** The optimizer's 50% (Rp 9.000) is under the floor, so the price stops at the floor. */
+const TIMBEL_RECOVERY = Math.max(TIMBEL_FLOOR, TIMBEL_PRICE / 2);
+const TIMBEL_PCT = Math.round((1 - TIMBEL_RECOVERY / TIMBEL_PRICE) * 100);
 
 function fmtNumber(n: number, digits = 0): string {
   return n.toLocaleString("id-ID", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
@@ -144,7 +146,7 @@ function SambutMock() {
 
       <div className={cn(CARD, "p-2.5 shadow-soft")}>
         <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="h-28 rounded-xl">
-          <DiscountBadge pct={50} minutesToClose={null} className="absolute top-2 left-2" />
+          <DiscountBadge pct={TIMBEL_PCT} minutesToClose={null} className="absolute top-2 left-2" />
         </FoodThumb>
         <p className="mt-2 truncate text-[13px] font-semibold">{TIMBEL}</p>
         <p className="truncate text-[11px] text-muted-foreground">{DEMO_WARUNG} · 240 m</p>
@@ -173,6 +175,8 @@ type Deal = {
   pct: number;
   stock: number;
   grams: number;
+  /** "Lauk tersisa" line, for menus with a lauk choice. */
+  lauk?: string;
 };
 
 /**
@@ -195,6 +199,11 @@ function DealCard({ deal: d, coach }: { deal: Deal; coach: string }) {
       <p className="truncate text-[11px] text-muted-foreground">
         {d.warung} · {d.distance}
       </p>
+      {d.lauk && (
+        <p className="truncate text-[11px] text-muted-foreground">
+          <span className="font-semibold text-foreground/80">Lauk tersisa:</span> {d.lauk}
+        </p>
+      )}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <PriceTag original={d.original} selling={d.selling} showBadge={false} size="sm" />
         <StockBadge available={d.stock} />
@@ -225,29 +234,34 @@ function DealRow({ deal: d }: { deal: Deal }) {
   );
 }
 
-const AYAM_BAKAR: Deal = {
-  name: "Nasi Box Ayam Bakar Kecap",
-  warung: "Dapur Ceu Popon",
-  distance: "650 m",
-  category: "MAKANAN_BERAT",
-  original: 20_000,
-  selling: 6_000,
-  pct: 70,
-  stock: 2,
-  grams: 300,
-};
-
-const TIMBEL_DEAL: Deal = {
-  name: TIMBEL,
+/** Seed menu Rp 22.000 at the Rp 10.000 floor; one of its four lauk already sold out. */
+const RAMES_DEAL: Deal = {
+  name: "Nasi Rames Teh Euis + 1 Lauk",
   warung: DEMO_WARUNG,
   distance: "240 m",
   category: "MAKANAN_BERAT",
-  original: TIMBEL_PRICE,
-  selling: TIMBEL_RECOVERY,
-  pct: 50,
-  stock: 4,
-  grams: 300,
+  original: 22_000,
+  selling: SEED_FLOOR,
+  pct: Math.round((1 - SEED_FLOOR / 22_000) * 100),
+  stock: 2,
+  grams: 350,
+  lauk: "Ayam bakar, Telur balado, Perkedel jagung",
 };
+
+const GEPREK_DEAL: Deal = {
+  name: "Ayam Geprek + Nasi + Es Teh",
+  warung: "Ayam Geprek Kang Dadan",
+  distance: "410 m",
+  category: "MAKANAN_BERAT",
+  original: 18_000,
+  selling: SEED_FLOOR,
+  pct: Math.round((1 - SEED_FLOOR / 18_000) * 100),
+  stock: 4,
+  grams: 250,
+};
+
+/** The quick filters above the /discover list ("< 500 m" switched on). */
+const QUICK_FILTERS = ["< 500 m", "Harga ≤ Rp 12.000", "Diskon ≥ 30%"] as const;
 
 function CariMock() {
   const campus = CAMPUSES[0];
@@ -270,15 +284,23 @@ function CariMock() {
           <ChevronDownIcon className="size-3.5" />
         </span>
       </div>
-      <div className="pt-1">
-        <p className="flex items-center gap-1.5 text-[15px] leading-tight font-semibold">
-          <FlameIcon className="size-4 shrink-0 text-urgent" />
-          Hampir Habis &amp; Diskon Tertinggi
-        </p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">Segera tutup atau diskon 60% ke atas</p>
+      {/* Same height as the section heading it replaced, so focusY stays measured. */}
+      <div className="flex h-[41px] items-center gap-1.5 overflow-hidden pt-1">
+        {QUICK_FILTERS.map((f, i) => (
+          <span
+            key={f}
+            className={cn(
+              "inline-flex h-7 shrink-0 items-center gap-1 rounded-full px-2.5 text-[11px] font-semibold whitespace-nowrap",
+              i === 0 ? "bg-primary text-primary-foreground" : "bg-card ring-1 ring-border",
+            )}
+          >
+            {i === 0 && <CheckIcon className="size-3" />}
+            {keepTogether(f)}
+          </span>
+        ))}
       </div>
-      <DealCard deal={AYAM_BAKAR} coach="Harga turun otomatis menjelang tutup" />
-      <DealRow deal={TIMBEL_DEAL} />
+      <DealCard deal={RAMES_DEAL} coach="Harga turun otomatis menjelang tutup" />
+      <DealRow deal={GEPREK_DEAL} />
     </div>
   );
 }
@@ -287,19 +309,22 @@ function PesanMock() {
   const total = TIMBEL_RECOVERY + PLATFORM_COMMISSION_DEFAULT_IDR;
   return (
     <div className="space-y-3">
-      {/* Quick-order sheet: grab handle, no title, so "Bayar QRIS" stays in view on small phones. */}
+      {/* Quick-order sheet: grab handle, no title, so "Kunci Porsi Sekarang" stays in view on small phones. */}
       <span className="mx-auto mt-1 block h-1 w-10 rounded-full bg-border" />
-      {/* Bottom margin = room for the callout above "Bayar QRIS" (sized in on-screen px via --z). */}
+      {/* Bottom margin = room for the callout above the lock button (sized in on-screen px via --z). */}
       <div className={cn(CARD, "mb-[calc(72px/var(--z))] p-2.5")}>
         <div className="flex gap-2.5">
           <FoodThumb category="MAKANAN_BERAT" alt={TIMBEL} className="size-14 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-[13px] leading-snug font-semibold">{TIMBEL}</p>
             <p className="truncate text-[11px] text-muted-foreground">{DEMO_WARUNG}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              <span className="font-semibold text-foreground/80">Lauk:</span> {TIMBEL_LAUK}
+            </p>
           </div>
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-border pt-2.5">
-          <PriceTag original={TIMBEL_PRICE} selling={TIMBEL_RECOVERY} discountPct={50} size="sm" />
+          <PriceTag original={TIMBEL_PRICE} selling={TIMBEL_RECOVERY} discountPct={TIMBEL_PCT} size="sm" />
           <Stepper value={1} />
         </div>
       </div>
@@ -311,9 +336,8 @@ function PesanMock() {
           </p>
         </div>
         <Coachmark label={`Porsi dikunci ${LOCK_MINUTES} menit untukmu`} side="top" align="end" radius="rounded-full" className="shrink-0">
-          <span className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl bg-primary px-5 text-[14px] font-semibold whitespace-nowrap text-primary-foreground">
-            <QrCodeIcon className="size-4" />
-            Bayar QRIS
+          <span className="inline-flex h-11 shrink-0 items-center rounded-xl bg-primary px-4 text-[14px] font-semibold whitespace-nowrap text-primary-foreground">
+            Kunci Porsi Sekarang
           </span>
         </Coachmark>
       </div>
@@ -475,7 +499,7 @@ function GabungMock() {
   );
 }
 
-const MENU_CHOICES = ["Nasi Timbel", "Pepes Ikan Mas", "Paket Kejutan"] as const;
+const MENU_CHOICES = ["Nasi Timbel", "Nasi Pepes Ikan Mas", "Nasi Rames"] as const;
 
 function PublikasiMock() {
   return (
@@ -508,7 +532,7 @@ function PublikasiMock() {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 py-0.5">
             <span className="text-[26px] leading-none font-extrabold tabular-nums">{formatIdr(TIMBEL_RECOVERY)}</span>
             <span className="text-[12px] text-muted-foreground tabular-nums line-through">{formatIdr(TIMBEL_PRICE)}</span>
-            <DiscountBadge pct={50} minutesToClose={null} />
+            <DiscountBadge pct={TIMBEL_PCT} minutesToClose={null} />
           </div>
         </Coachmark>
       </div>
@@ -519,14 +543,22 @@ function PublikasiMock() {
   );
 }
 
-/** 18.000 → floor-safe recovery price rounded up to Rp 500 (same rule as the optimizer). */
+/** A seed menu of Rp 25.000 (Soto Kuning Mang Oyo). */
+const ESCALATION_MENU = { name: "Soto Kuning Daging", warung: "Soto Kuning Mang Oyo", price: 25_000 } as const;
+/**
+ * The optimizer's rule discount at each check, rounded up to Rp 500 and never under the
+ * Rp 10.000 floor (same rule as the optimizer); `pct` is the discount the buyer sees.
+ */
 const ESCALATION = [
-  { time: "20.00", minutes: 150, pct: 50 },
-  { time: "20.30", minutes: 120, pct: 50 },
-  { time: "21.00", minutes: 90, pct: 55 },
-  { time: "21.30", minutes: 60, pct: 60 },
-  { time: "22.00", minutes: 30, pct: 70 },
-].map((s) => ({ ...s, price: Math.ceil((TIMBEL_PRICE * (100 - s.pct)) / 100 / 500) * 500 }));
+  { time: "20.00", minutes: 150, rule: 50 },
+  { time: "20.30", minutes: 120, rule: 50 },
+  { time: "21.00", minutes: 90, rule: 55 },
+  { time: "21.30", minutes: 60, rule: 60 },
+  { time: "22.00", minutes: 30, rule: 70 },
+].map((s) => {
+  const price = Math.max(SEED_FLOOR, Math.ceil((ESCALATION_MENU.price * (100 - s.rule)) / 100 / 500) * 500);
+  return { ...s, price, pct: Math.round((1 - price / ESCALATION_MENU.price) * 100) };
+});
 
 function EskalasiMock() {
   return (
@@ -534,7 +566,7 @@ function EskalasiMock() {
       {/* The curve first (with its time axis and the 22.30 closing mark), the push it triggers below. */}
       <div className={cn(CARD, "mt-1 p-3 shadow-soft")}>
         <p className="text-[12px] font-semibold text-muted-foreground">Kurva harga otomatis</p>
-        {/* Top margin = room for the callout above the 70% column. */}
+        {/* Top margin = room for the callout above the last column. */}
         <ol className="mt-[calc(58px/var(--z))] flex items-end gap-1.5">
           {ESCALATION.map((s, i) => {
             const variant = discountBadgeState(s.pct, s.minutes).variant;
@@ -546,7 +578,7 @@ function EskalasiMock() {
                     "flex w-full items-end justify-center rounded-t-lg rounded-b-sm pb-1 text-[10px] font-semibold text-white tabular-nums",
                     DISCOUNT_VARIANT_CLASS[variant],
                   )}
-                  style={{ height: 26 + ((s.pct - 45) / 25) * 70 }}
+                  style={{ height: 26 + ((s.pct - 45) / 15) * 70 }}
                 >
                   {fmtNumber(s.price / 1000, 1)}rb
                 </span>
@@ -572,7 +604,7 @@ function EskalasiMock() {
         </ol>
         <p className="mt-2.5 flex items-center gap-1 text-[11px] text-muted-foreground">
           <ShieldCheckIcon className="size-3.5 shrink-0 text-primary" />
-          Harga tidak pernah di bawah harga minimummu
+          Berhenti di harga minimummu, {formatIdr(SEED_FLOOR)}
         </p>
       </div>
       <div className="flex gap-2.5 rounded-2xl bg-card p-2.5 shadow-card ring-1 ring-border">
@@ -582,8 +614,10 @@ function EskalasiMock() {
             <span className="font-semibold text-foreground">Sisa-Saji</span>
             <span>sekarang</span>
           </p>
-          <p className="text-[12px] leading-snug font-semibold">Diskon Kilat 70% di {DEMO_WARUNG}</p>
-          <p className="text-[11px] leading-snug text-muted-foreground">Nasi Timbel tinggal 5 porsi. Ambil sebelum 22.30.</p>
+          <p className="text-[12px] leading-snug font-semibold">Diskon Kilat di {ESCALATION_MENU.warung}</p>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {ESCALATION_MENU.name} {formatIdr(SEED_FLOOR)}, tinggal 5 porsi. Ambil sebelum 22.30.
+          </p>
         </div>
       </div>
     </div>
@@ -732,7 +766,7 @@ export const TOUR_MOCKS: Record<TourMockId, TourMock> = {
   "pembeli-sambut": { Mock: SambutMock, focusY: 201, focusBelow: CALLOUT_BELOW, clock: "20.41" },
   // The "Hampir Habis!" label under the photo, so badge, callout and stock label all show.
   "pembeli-cari": { Mock: CariMock, focusY: 325, focusBelow: CLEAR, clock: "20.41" },
-  // "Bayar QRIS" sits under the 72 px callout gap of the order card.
+  // "Kunci Porsi Sekarang" sits under the 72 px callout gap of the order card.
   "pembeli-pesan": { Mock: PesanMock, focusY: 227, focusBelow: CLEAR + 72, clock: "20.41" },
   "pembeli-ambil": { Mock: AmbilMock, focusY: 173, focusBelow: CALLOUT_BELOW, clock: "21.50" },
   "pembeli-dampak": { Mock: DampakMock, focusY: 172, focusBelow: CALLOUT_BELOW, clock: "20.41" },

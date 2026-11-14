@@ -20,9 +20,9 @@ const t0 = new Date("2026-11-12T13:00:00Z"); // 20.00 WIB
 const plus = (min: number) => new Date(t0.getTime() + min * 60_000);
 
 describe("payAtWarungHoldEnd", () => {
-  it("is a short hold, not the whole evening", () => {
-    expect(PAY_AT_WARUNG_HOLD_MINUTES).toBeLessThanOrEqual(60);
-    expect(payAtWarungHoldEnd(t0, plus(180))).toEqual(plus(PAY_AT_WARUNG_HOLD_MINUTES));
+  it("is a short hold, not the whole evening: 30 minutes for every cash ticket", () => {
+    expect(PAY_AT_WARUNG_HOLD_MINUTES).toBe(30);
+    expect(payAtWarungHoldEnd(t0, plus(180))).toEqual(plus(30));
   });
 
   it("never runs past the batch's pickup end", () => {
@@ -34,6 +34,8 @@ describe("payAtWarungHoldEnd", () => {
 describe("noShowCancelOpensAt", () => {
   it(`opens "Tidak datang" only in the last ${PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES} minutes of a full hold`, () => {
     expect(noShowCancelOpensAt(t0, plus(60))).toEqual(plus(60 - PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES));
+    // A full 30-minute cash hold: from +15 (half of the hold, also the last 15 minutes).
+    expect(noShowCancelOpensAt(t0, payAtWarungHoldEnd(t0, plus(180)))).toEqual(plus(15));
   });
 
   it("never before half of a short hold has passed", () => {

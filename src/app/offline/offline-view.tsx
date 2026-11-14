@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDownIcon, MapPinIcon, RotateCwIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { Logo } from "@/components/common/logo";
+import { orderLineText } from "@/components/customer/lib/order-status";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { Button } from "@/components/ui/button";
 import { PICKUP_CODE_PREFIX } from "@/lib/constants";
@@ -30,7 +31,8 @@ function useOnline(): boolean {
 function TicketPass({ ticket }: { ticket: SavedTicket }) {
   const [showQr, setShowQr] = useState(false);
   const { order } = ticket;
-  const items = order.items.map((i) => `${i.quantity}× ${i.menu_name}`).join(", ");
+  // Tickets saved before lauk existed have no `lauk` field; orderLineText skips it then.
+  const items = order.items.map(orderLineText).join("; ");
 
   return (
     <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
@@ -41,7 +43,7 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
             <MapPinIcon className="size-3 shrink-0" /> {order.merchant.address}
           </p>
         </div>
-        <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil" overLabel="Lewat batas" />
+        <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil dalam" overLabel="Lewat batas" />
       </div>
       <div className="relative border-t border-dashed border-border px-4 py-4">
         <span className="absolute -top-2.5 -left-2.5 size-5 rounded-full bg-background ring-1 ring-border" aria-hidden />

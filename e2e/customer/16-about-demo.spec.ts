@@ -7,7 +7,7 @@ test.describe("about page + demo login", () => {
     await page.getByRole("link", { name: "Tentang" }).click();
     await expect(page).toHaveURL(/\/tentang$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("terjual sebelum");
-    for (const name of ["Masalahnya", "Cara kerjanya", "Dampak yang dihitung", "Teknologi di baliknya", "Model bisnis", "Sumber"]) {
+    for (const name of ["Masalahnya", "Riset pengguna", "Cara kerjanya", "Dampak yang dihitung", "Teknologi di baliknya", "Model bisnis", "Sumber"]) {
       await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
     }
     await expect(page.getByText("SDG 12.3", { exact: true })).toBeVisible();

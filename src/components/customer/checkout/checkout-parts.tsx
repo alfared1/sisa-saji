@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Checkout building blocks: SelfPickupInfoCard, PickupTimeSlotSelector,
- * BringOwnContainerToggle (+ LunchboxModal), VoucherSelectorSheet,
+ * Checkout building blocks: PickupOptionsCard (+ the "Titip Antar Kolektif" waiting list),
+ * PickupTimeSlotSelector, BringOwnContainerToggle (+ LunchboxModal), VoucherSelectorSheet,
  * PaymentMethodPicker and PriceAndImpactBreakdown.
  */
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   BikeIcon,
   CheckIcon,
@@ -13,14 +14,15 @@ import {
   FootprintsIcon,
   HandPlatterIcon,
   LeafIcon,
+  Loader2Icon,
   MapPinIcon,
   ReceiptTextIcon,
   RecycleIcon,
   TicketPercentIcon,
-  TriangleAlertIcon,
   XIcon,
   ZapIcon,
 } from "lucide-react";
+import { DemoLockNotice } from "@/components/common/demo-lock-notice";
 import { ImpactLine } from "@/components/common/impact-line";
 import { Money } from "@/components/common/money";
 import {
@@ -39,9 +41,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import type { PaymentMethod, Voucher } from "@/lib/contracts";
+import { useDeliveryInterest } from "@/hooks/use-delivery-interest";
+import { ApiClientError } from "@/lib/api/client";
+import { COLLECTIVE_DELIVERY_FEE_DISPLAY_IDR, PAY_AT_WARUNG_HOLD_MINUTES } from "@/lib/constants";
+import {
+  CHECKOUT_PAYMENT_CHOICES,
+  type CheckoutPaymentChoice,
+  type PaymentMethod,
+  type SessionUser,
+  type Voucher,
+} from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { voucherEligibility, type PricePreview } from "../lib/checkout-logic";
@@ -75,11 +87,32 @@ export function CheckoutCard({
   );
 }
 
-/* ------------------------------ Self pickup ------------------------------ */
+/* ------------------------------ Pickup options ------------------------------ */
 
-export function SelfPickupInfoCard({
+/** Radio dot for the custom radio rows (decorative; the row carries role="radio"). */
+function RadioDot({ checked, muted = false }: { checked: boolean; muted?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-full ring-2",
+        checked ? "ring-primary" : muted ? "ring-muted-foreground/30" : "ring-muted-foreground/50",
+      )}
+    >
+      {checked && <span className="size-2.5 rounded-full bg-primary" />}
+    </span>
+  );
+}
+
+/**
+ * How the order is collected. Self-pickup is the only way (docs/ARCHITECTURE.md, "Hanya ambil
+ * sendiri"); "Titip Antar Kolektif" is shown as a disabled, not selectable option with
+ * "Segera hadir" and a waiting list. Nothing here is sent with the checkout.
+ */
+export function PickupOptionsCard({
   merchant,
   userLocation,
+  user,
 }: {
   merchant: {
     id: string;
@@ -93,11 +126,12 @@ export function SelfPickupInfoCard({
     closes_at: string | null;
   } | null;
   userLocation: { lat: number; lng: number } | null;
+  user: SessionUser | null;
 }) {
   const walk = travelMinutes(merchant?.distance_m);
   const motor = travelMinutes(merchant?.distance_m, "motor");
   return (
-    <CheckoutCard title="Ambil Sendiri di Warung" icon={HandPlatterIcon}>
+    <CheckoutCard title="Cara ambil" icon={HandPlatterIcon}>
       <div className="overflow-hidden rounded-2xl ring-1 ring-border">
         <div className="pointer-events-none h-32">
           {merchant ? (
@@ -123,10 +157,6 @@ export function SelfPickupInfoCard({
           ) : (
             <Skeleton className="h-32 w-full rounded-none" />
           )}
-        </div>
-        <div className="flex items-start gap-2 bg-deal-soft/70 px-3 py-2 text-xs font-semibold text-deal">
-          <TriangleAlertIcon className="mt-px size-3.5 shrink-0" />
-          Khusus Ambil Sendiri di Warung. Tidak ada pengantaran.
         </div>
       </div>
       {merchant && (
@@ -155,7 +185,195 @@ export function SelfPickupInfoCard({
           </Button>
         </div>
       )}
+
+      <div role="radiogroup" aria-label="Cara ambil" className="mt-4 space-y-2">
+        <div
+          role="radio"
+          aria-checked="true"
+          tabIndex={0}
+          className="flex items-center gap-3 rounded-2xl bg-brand-soft p-3 ring-2 ring-primary outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <RadioDot checked />
+          <span className="min-w-0 flex-1 text-sm font-semibold">Ambil sendiri ke warung</span>
+          <span className="shrink-0 text-sm font-extrabold tabular-nums">Rp 0</span>
+        </div>
+        <div
+          role="radio"
+          aria-checked="false"
+          aria-disabled="true"
+          tabIndex={-1}
+          className="flex items-start gap-3 rounded-2xl bg-muted/50 p-3 ring-1 ring-border"
+        >
+          <span className="mt-0.5">
+            <RadioDot checked={false} muted />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-muted-foreground">Titip Antar Kolektif Kos/Asrama</span>
+            <span className="mt-1 inline-flex rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+              Segera hadir
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-muted-foreground tabular-nums">
+            +{formatIdr(COLLECTIVE_DELIVERY_FEE_DISPLAY_IDR)}
+          </span>
+        </div>
+      </div>
+
+      <DeliveryInterestFooter user={user} />
     </CheckoutCard>
+  );
+}
+
+/**
+ * Waiting list under the pickup options: how many buyers want collective delivery, and
+ * "Kabari saya" to add your kos or asrama (only the count is ever public). Demo accounts
+ * are refused by the API, so their form is locked here.
+ */
+function DeliveryInterestFooter({ user }: { user: SessionUser | null }) {
+  const [open, setOpen] = useState(false);
+  const { data, register, cancel } = useDeliveryInterest({ userId: user?.id ?? null });
+  const mine = data?.mine ?? null;
+  const count = data?.count ?? null;
+  const countText = count === null ? null : count >= 1 ? `${count} orang ingin fitur ini` : "Jadilah yang pertama";
+
+  return (
+    <div className="mt-3 space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
+      <p>Saat ini hanya ambil sendiri di warung.</p>
+      {mine ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="min-w-0">
+            <span className="font-semibold text-foreground">Kamu sudah terdaftar ({mine.kos_name})</span>
+            {countText && <span className="block">{countText}</span>}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 rounded-xl px-2 text-xs font-semibold text-urgent hover:bg-urgent-soft hover:text-urgent"
+            disabled={cancel.isPending}
+            onClick={() =>
+              cancel.mutate(undefined, {
+                onSuccess: () => toast("Pendaftaran titip antar dibatalkan"),
+                onError: (err) => toast.error(err instanceof ApiClientError ? err.message : "Gagal membatalkan."),
+              })
+            }
+          >
+            {cancel.isPending && <Loader2Icon className="size-3.5 animate-spin" aria-hidden />}
+            Batalkan
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <p className="min-w-0">{countText}</p>
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl px-3 text-xs font-semibold"
+              onClick={() => setOpen(true)}
+            >
+              Kabari saya
+            </Button>
+          )}
+        </div>
+      )}
+      {user && (
+        <DeliveryInterestSheet
+          open={open}
+          onOpenChange={setOpen}
+          demo={user.is_demo}
+          pending={register.isPending}
+          onSubmit={(kos) =>
+            register.mutate(
+              { kos_name: kos },
+              {
+                onSuccess: () => {
+                  setOpen(false);
+                  toast.success("Oke, nanti kami kabari.");
+                },
+                onError: (err) => toast.error(err instanceof ApiClientError ? err.message : "Gagal mendaftar. Coba lagi."),
+              },
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function DeliveryInterestSheet({
+  open,
+  onOpenChange,
+  demo,
+  pending,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  demo: boolean;
+  pending: boolean;
+  onSubmit: (kosName: string) => void;
+}) {
+  const inputId = useId();
+  const [kos, setKos] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
+      <ResponsiveSheetContent className="mx-auto max-w-md rounded-t-3xl">
+        <ResponsiveSheetHeader className="text-left">
+          <ResponsiveSheetTitle className="text-lg font-bold">Kabari saya saat titip antar hadir</ResponsiveSheetTitle>
+          <ResponsiveSheetDescription>
+            Titip antar kolektif belum tersedia. Kami mencatat kos atau asramamu untuk menghitung minat, dan namanya tidak
+            ditampilkan ke orang lain.
+          </ResponsiveSheetDescription>
+        </ResponsiveSheetHeader>
+        <form
+          className="space-y-4 px-4 pb-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (demo || pending) return;
+            const name = kos.trim().replace(/\s+/g, " ");
+            if (name.length < 2) {
+              setError("Tulis nama kos atau asrama, minimal 2 huruf.");
+              return;
+            }
+            onSubmit(name);
+          }}
+        >
+          {demo && <DemoLockNotice message="Akun demo tidak bisa mendaftar. Masuk dengan akunmu sendiri." />}
+          <div className="space-y-1.5">
+            <label htmlFor={inputId} className="text-sm font-semibold text-muted-foreground">
+              Nama kos atau asrama
+            </label>
+            <Input
+              id={inputId}
+              value={kos}
+              maxLength={60}
+              placeholder="Contoh: Asrama Putra IPB"
+              disabled={demo}
+              onChange={(e) => {
+                setKos(e.target.value);
+                setError(null);
+              }}
+              className="h-12 rounded-xl text-base"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${inputId}-error` : undefined}
+            />
+            {error && (
+              <p id={`${inputId}-error`} role="alert" className="text-xs font-medium text-destructive">
+                {error}
+              </p>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Rencana biaya titip antar {formatIdr(COLLECTIVE_DELIVERY_FEE_DISPLAY_IDR)} per pesanan. Belum ada yang ditagih.
+          </p>
+          <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={demo || pending}>
+            {pending && <Loader2Icon className="size-4 animate-spin" aria-hidden />}
+            Kabari saya
+          </Button>
+        </form>
+      </ResponsiveSheetContent>
+    </ResponsiveSheet>
   );
 }
 
@@ -167,15 +385,18 @@ export function PickupTimeSlotSelector({
   onChange,
   deadlineLabel,
   loading,
+  asapSub = "Langsung setelah bayar",
 }: {
   slots: PickupSlot[];
   value: string | null;
   onChange: (iso: string | null) => void;
   deadlineLabel: string | null;
   loading: boolean;
+  /** Sub-label of "Secepatnya" (a cash ticket says "Datang sebelum 20.45"). */
+  asapSub?: string;
 }) {
   const options: { key: string | null; label: string; sub?: string }[] = [
-    { key: null, label: "Secepatnya", sub: "Langsung setelah bayar" },
+    { key: null, label: "Secepatnya", sub: asapSub },
     ...slots.map((s) => ({ key: s.iso, label: s.label, sub: "WIB" })),
   ];
   return (
@@ -429,33 +650,98 @@ export function VoucherSelectorSheet({
 
 /* ----------------------------- Payment method ----------------------------- */
 
-/** Brand tints, each ≥ 4.5:1 on the card and on the selected (brand-soft) chip in both themes. */
-const METHODS: { key: PaymentMethod; label: string; tint: string }[] = [
-  { key: "QRIS", label: "QRIS", tint: "text-foreground" },
-  { key: "GOPAY", label: "GoPay", tint: "text-sky-700 dark:text-sky-400" },
-  { key: "OVO", label: "OVO", tint: "text-violet-600 dark:text-violet-400" },
-  { key: "DANA", label: "DANA", tint: "text-blue-600 dark:text-blue-400" },
-];
+/**
+ * Picker rows in CHECKOUT_PAYMENT_CHOICES order. E-wallet names keep their brand tint, each
+ * ≥ 4.5:1 on the card and on the selected (brand-soft) row in both themes. "Paling populer"
+ * is backed by the team's survey (QRIS 86%).
+ */
+const METHODS: Record<CheckoutPaymentChoice, { label: string; sub: string; chip?: string; tint: string }> = {
+  QRIS: { label: "QRIS Instan", sub: "Scan dari e-wallet atau m-banking apa saja", chip: "Paling populer", tint: "text-foreground" },
+  BAYAR_DI_WARUNG: {
+    label: "Bayar Tunai di Warung",
+    sub: `Komitmen ambil. Porsi ditahan ${PAY_AT_WARUNG_HOLD_MINUTES} menit, bayar saat ambil.`,
+    tint: "text-foreground",
+  },
+  GOPAY: { label: "GoPay", sub: "Dibayar lewat kode QRIS", tint: "text-sky-700 dark:text-sky-400" },
+  DANA: { label: "DANA", sub: "Dibayar lewat kode QRIS", tint: "text-blue-600 dark:text-blue-400" },
+};
 
-export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod; onChange: (m: PaymentMethod) => void }) {
+/**
+ * Vertical radio list "Metode pembayaran" (arrow keys move the choice). `cashDisabledReason`
+ * turns the cash row off with that reason (e.g. more than PAY_AT_WARUNG_MAX_PORTIONS portions).
+ */
+export function PaymentMethodPicker({
+  value,
+  onChange,
+  cashDisabledReason,
+}: {
+  value: PaymentMethod;
+  onChange: (m: CheckoutPaymentChoice) => void;
+  cashDisabledReason?: string | null;
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const keys = CHECKOUT_PAYMENT_CHOICES;
+  const isDisabled = (k: CheckoutPaymentChoice) => k === "BAYAR_DI_WARUNG" && Boolean(cashDisabledReason);
+  const checkedIndex = keys.findIndex((k) => k === value);
+  const move = (from: number, delta: number) => {
+    for (let step = 1; step <= keys.length; step++) {
+      const next = (from + delta * step + keys.length) % keys.length;
+      if (!isDisabled(keys[next])) {
+        onChange(keys[next]);
+        refs.current[next]?.focus();
+        return;
+      }
+    }
+  };
   return (
-    <div role="radiogroup" aria-label="Metode pembayaran" className="grid grid-cols-4 gap-2">
-      {METHODS.map((m) => {
-        const active = value === m.key;
+    <div role="radiogroup" aria-label="Metode pembayaran" className="space-y-2">
+      {keys.map((k, i) => {
+        const m = METHODS[k];
+        const active = value === k;
+        const disabled = isDisabled(k);
         return (
           <button
-            key={m.key}
+            key={k}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
             type="button"
             role="radio"
             aria-checked={active}
-            onClick={() => onChange(m.key)}
+            disabled={disabled}
+            tabIndex={active || (checkedIndex === -1 && i === 0) ? 0 : -1}
+            onClick={() => onChange(k)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+                e.preventDefault();
+                move(i, 1);
+              } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                move(i, -1);
+              }
+            }}
             className={cn(
-              "flex h-12 items-center justify-center rounded-2xl text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+              "flex w-full items-start gap-3 rounded-2xl p-3 text-left ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed",
               active ? "bg-brand-soft ring-2 ring-primary" : "bg-card ring-border hover:bg-muted",
-              m.tint,
+              disabled && "bg-muted/50 hover:bg-muted/50",
             )}
           >
-            {m.label}
+            <span className="mt-0.5">
+              <RadioDot checked={active} muted={disabled} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className={cn("text-sm font-semibold", disabled ? "text-muted-foreground" : m.tint)}>{m.label}</span>
+                {m.chip && (
+                  <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-strong ring-1 ring-primary/20">
+                    {m.chip}
+                  </span>
+                )}
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                {disabled && cashDisabledReason ? cashDisabledReason : m.sub}
+              </span>
+            </span>
           </button>
         );
       })}
@@ -468,10 +754,13 @@ export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod;
 export function PriceAndImpactBreakdown({
   p,
   voucherCode,
+  totalLabel = "Total bayar",
   children,
 }: {
   p: PricePreview;
   voucherCode: string | null;
+  /** "Bayar di warung saat ambil" for a cash ticket. */
+  totalLabel?: string;
   /** Rendered at the bottom of the card (checkout uses it for the lg+ pay button). */
   children?: React.ReactNode;
 }) {
@@ -503,7 +792,7 @@ export function PriceAndImpactBreakdown({
           </div>
         )}
         <div className="flex items-baseline justify-between gap-2 border-t border-dashed border-border pt-3">
-          <dt className="font-semibold">Total bayar</dt>
+          <dt className="font-semibold">{totalLabel}</dt>
           <dd className="text-xl font-bold">
             <Money value={p.total_idr} />
           </dd>

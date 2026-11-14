@@ -33,6 +33,9 @@ const METHOD_CHIPS: { key: PaymentMethod | "SHOPEEPAY" | "BANK"; label: string }
   { key: "BANK", label: "m-Banking" },
 ];
 
+/** Wallet choices that are settled by scanning the same QRIS ("Bayar dengan GoPay lewat QRIS"). */
+const WALLET_NAMES: Partial<Record<PaymentMethod, string>> = { GOPAY: "GoPay", DANA: "DANA" };
+
 async function downloadQrPng(container: HTMLElement | null, fileName: string) {
   const svg = container?.querySelector("svg");
   if (!svg) throw new Error("QR tidak ditemukan");
@@ -113,6 +116,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
   const pct = c.ready ? Math.min(100, (c.totalSeconds / totalTtl) * 100) : 100;
   const timesUp = c.ready && c.isOver;
   const mmss = `${String(Math.floor(c.totalSeconds / 60)).padStart(2, "0")}:${String(c.seconds).padStart(2, "0")}`;
+  const walletName = WALLET_NAMES[order.payment_method] ?? null;
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
@@ -138,7 +142,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-balance">Selesaikan pembayaran dalam</p>
             <p className="text-xs text-balance text-muted-foreground">
-              Stok dikunci untukmu sampai {formatClockId(order.payment_expires_at)} WIB
+              Porsi dikunci untukmu sampai {formatClockId(order.payment_expires_at)} WIB
             </p>
           </div>
           <span
@@ -165,6 +169,10 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           <span className="rounded-md bg-foreground px-2 py-1 text-xs font-black tracking-widest text-background">QRIS</span>
           <span className="text-xs font-semibold text-muted-foreground">Sisa-Saji · {order.merchant.name}</span>
         </div>
+        {walletName && (
+          // GoPay / DANA are paid by scanning this QRIS from the wallet app; say so instead of implying a wallet link.
+          <h2 className="mt-3 text-base font-bold">Bayar dengan {walletName} lewat QRIS</h2>
+        )}
         <p className="mt-3 text-xs text-muted-foreground">Total pembayaran</p>
         <p className="text-3xl font-bold">
           <Money value={order.total_customer_paid_idr} />

@@ -2,8 +2,15 @@
 
 /**
  * /discover — DiscoverScreen: sticky location + radius header, search, category
- * chips, ImpactCard, "Hampir Habis & Diskon Tertinggi", "Di Bawah Rp 10.000",
- * "Mitra Terdekat" with sort, live SSE price/stock updates.
+ * chips, quick filters ("< 500 m", "< 1 km", "Harga ≤ Rp 12.000", "Diskon ≥ 30%"),
+ * ImpactCard, the Jam Lapar notification banner, "Hampir Habis & Diskon Tertinggi",
+ * "Harga ceban, maksimal Rp 12.000", "Mitra Terdekat" with sort, live SSE
+ * price/stock/lauk updates.
+ *
+ * Search, a category or a quick filter switch the sections to "Menu yang Cocok"
+ * (the matching menus themselves) above the matching warung. Quick filters run on
+ * the client over the radius already loaded; the quick-order sheet keeps the
+ * unfiltered list, so a batch opened from elsewhere still finds its data.
  *
  * Laptops (lg+): two areas. The ShellHeader becomes a sticky left rail card
  * (search, wrapped category chips, sort, radius, impact card, map shortcut);
@@ -25,6 +32,7 @@ import {
   SearchIcon,
   SearchXIcon,
   StoreIcon,
+  SlidersHorizontalIcon,
   TicketIcon,
   WalletIcon,
   WifiOffIcon,
@@ -53,7 +61,9 @@ import { useNow } from "@/hooks/use-now";
 import { useOnline } from "@/hooks/use-online";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import { DISCOVER_SORTS, type MenuCategory, type NearbyResponse } from "@/lib/contracts";
+import { CEBAN_MAX_PRICE_IDR } from "@/lib/constants";
+import { BUYER_MENU_CATEGORIES, DISCOVER_SORTS, type MenuCategory, type NearbyResponse } from "@/lib/contracts";
+import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useTicketsStore } from "@/stores/tickets";
@@ -64,10 +74,22 @@ import { useBatchStream } from "../hooks/use-batch-stream";
 import { useDebounced } from "../hooks/use-debounced";
 import { GuestImpactBanner, ImpactCard } from "../impact-card";
 import { MerchantCard } from "../merchant-card";
-import { deriveDiscoverSections, nextRadius } from "../lib/discover-sections";
+import {
+  HOT_DISCOUNT_PCT,
+  NO_QUICK_FILTERS,
+  applyQuickFilters,
+  deriveDiscoverSections,
+  hasQuickFilters,
+  nextRadius,
+  quickFilterCriteria,
+  quickFilterDistanceM,
+  type QuickFilterState,
+} from "../lib/discover-sections";
 import { cartMerchantFromBatch, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
+import { HungerAlertBanner } from "../notifications/hunger-alert-banner";
 import { RadiusSegmented, RailLabel, SegmentedRadio } from "./desktop-filters";
+import { QuickFilters } from "./quick-filters";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
 
 type Sort = (typeof DISCOVER_SORTS)[number];
@@ -292,6 +314,7 @@ export function DiscoverScreen() {
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim().slice(0, 60), 350);
   const [sort, setSort] = useState<Sort>("priority_distance");
+  const [quick, setQuick] = useState<QuickFilterState>(NO_QUICK_FILTERS);
   const { query, params, hydrated } = useNearby({ category, q, sort });
   const setRadius = useLocationStore((s) => s.setRadius);
   const now = useNow(30_000);
@@ -299,14 +322,30 @@ export function DiscoverScreen() {
 
   useBatchStream({ lat: params.lat, lng: params.lng, radiusM: params.radius_m, enabled: hydrated });
 
-  const sections = useMemo(() => deriveDiscoverSections(query.data, now), [query.data, now]);
+  const quickOn = hasQuickFilters(quick);
+  const quickDistanceM = quickFilterDistanceM(quick);
+  const shown = useMemo(() => applyQuickFilters(query.data, quickFilterCriteria(quick)), [query.data, quick]);
+  const sections = useMemo(() => deriveDiscoverSections(shown, now), [shown, now]);
+  const matchBatches = useMemo(() => (shown?.merchants ?? []).flatMap((m) => m.batches), [shown]);
+  // The sheet gets every loaded batch, not only the ones the quick filters keep.
   const allBatches = useMemo(() => (query.data?.merchants ?? []).flatMap((m) => m.batches), [query.data]);
-  // Quick order (≤ 3 steps): tap a card → sheet → "Pesan & Ambil Sendiri" → QRIS.
+  // Quick order (≤ 3 steps): tap a card → sheet → "Kunci Porsi Sekarang" → QRIS.
   const { openQuickOrder, sheet } = useQuickOrder(allBatches);
   const loading = !hydrated || (query.isPending && !query.data);
   const filtered = Boolean(category || q);
+  const showMatches = filtered || quickOn;
   const bigger = nextRadius(params.radius_m, RADIUS_OPTIONS);
+  // A wider radius cannot add warung closer than the active distance chip.
+  const offerBigger = quickDistanceM === null ? bigger : null;
+  const scopeLabel = formatRadius(quickDistanceM ?? params.radius_m);
+  const serverEmpty = (query.data?.merchants.length ?? 0) === 0;
   const isEmpty = !loading && !query.isError && sections.merchants.length === 0;
+  const quickEmpty = isEmpty && quickOn && !serverEmpty;
+  const clearFilters = () => {
+    setSearch("");
+    setCategory(null);
+    setQuick(NO_QUICK_FILTERS);
+  };
   const online = useOnline();
   const offline =
     !online || (query.isError && query.error instanceof ApiClientError && query.error.code === "NETWORK_ERROR");
@@ -348,7 +387,16 @@ export function DiscoverScreen() {
         <CategoryChips
           value={category}
           onChange={setCategory}
-          className="mt-2 pb-3 lg:mx-0 lg:mt-0 lg:flex-wrap lg:gap-1.5 lg:overflow-visible lg:px-0 lg:pb-0"
+          categories={BUYER_MENU_CATEGORIES}
+          className="mt-2 lg:mx-0 lg:mt-0 lg:flex-wrap lg:gap-1.5 lg:overflow-visible lg:px-0"
+        />
+        <div className="hidden lg:mt-5 lg:mb-2 lg:block">
+          <RailLabel>Filter cepat</RailLabel>
+        </div>
+        <QuickFilters
+          value={quick}
+          onChange={setQuick}
+          className="pb-3 lg:mx-0 lg:flex-wrap lg:gap-1.5 lg:overflow-visible lg:px-0 lg:pb-0"
         />
         <DesktopRail sort={sort} onSort={setSort} />
       </ShellHeader>
@@ -357,7 +405,7 @@ export function DiscoverScreen() {
         <OfflineTicketBanner offline={offline} />
         <GeoPrompt />
 
-        {!filtered && (
+        {!showMatches && (
           <div className="lg:hidden">
             <ImpactSlot />
           </div>
@@ -376,7 +424,7 @@ export function DiscoverScreen() {
                 ? "Offline · daftar belum bisa diperbarui"
                 : loading
                   ? "Mencari surplus di sekitarmu…"
-                  : `Live · ${sections.totalBatches} menu, ${sections.totalPortions} porsi dalam ${formatRadius(params.radius_m)}`}
+                  : `Live · ${sections.totalBatches} menu, ${sections.totalPortions} porsi dalam ${scopeLabel}`}
             </span>
           </p>
           <Button
@@ -392,10 +440,34 @@ export function DiscoverScreen() {
           </Button>
         </div>
 
+        <HungerAlertBanner />
+
         {loading ? (
           <DiscoverSkeleton />
         ) : query.isError && !query.data ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} retrying={query.isFetching} />
+        ) : quickEmpty ? (
+          <EmptyState
+            icon={SlidersHorizontalIcon}
+            title="Belum ada menu yang cocok dengan filter cepat"
+            description={
+              quickDistanceM !== null
+                ? `Belum ada surplus dalam ${formatRadius(quickDistanceM)} yang sesuai. Coba lepas salah satu filter.`
+                : "Coba lepas salah satu filter, atau perluas radius pencarian."
+            }
+            action={
+              <div className="flex flex-col items-center gap-2">
+                <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => setQuick(NO_QUICK_FILTERS)}>
+                  Hapus filter cepat
+                </Button>
+                {offerBigger !== null && (
+                  <Button variant="ghost" className="h-10 rounded-full" onClick={() => setRadius(offerBigger)}>
+                    Perluas ke {formatRadius(offerBigger)}
+                  </Button>
+                )}
+              </div>
+            }
+          />
         ) : isEmpty ? (
           <EmptyState
             icon={filtered ? SearchXIcon : StoreIcon}
@@ -407,20 +479,13 @@ export function DiscoverScreen() {
             }
             action={
               <div className="flex flex-col items-center gap-2">
-                {bigger && (
-                  <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => setRadius(bigger)}>
-                    Perluas ke {formatRadius(bigger)}
+                {offerBigger !== null && (
+                  <Button className="h-11 rounded-xl px-5 font-semibold" onClick={() => setRadius(offerBigger)}>
+                    Perluas ke {formatRadius(offerBigger)}
                   </Button>
                 )}
-                {filtered && (
-                  <Button
-                    variant="ghost"
-                    className="h-10 rounded-full"
-                    onClick={() => {
-                      setSearch("");
-                      setCategory(null);
-                    }}
-                  >
+                {(filtered || quickOn) && (
+                  <Button variant="ghost" className="h-10 rounded-full" onClick={clearFilters}>
                     Hapus filter
                   </Button>
                 )}
@@ -433,14 +498,14 @@ export function DiscoverScreen() {
               <ErrorState compact error={query.error} onRetry={() => void query.refetch()} retrying={query.isFetching} />
             )}
 
-            {/* Search / category: show the matching menus themselves (tap → quick order),
-                not only the warung cards they belong to. */}
-            {filtered && allBatches.length > 0 && (
+            {/* Search / category / quick filter: show the matching menus themselves (tap →
+                quick order), not only the warung cards they belong to. */}
+            {showMatches && matchBatches.length > 0 && (
               <section aria-labelledby="sec-match" className="space-y-3">
                 <SectionHeader
                   id="sec-match"
                   title="Menu yang Cocok"
-                  subtitle={`${allBatches.length} menu ${q ? `untuk “${q}”` : "di kategori ini"}`}
+                  subtitle={`${matchBatches.length} menu ${q ? `untuk “${q}”` : category ? "di kategori ini" : "sesuai filter cepat"}`}
                   icon={SearchIcon}
                   iconClassName="text-primary"
                 />
@@ -450,11 +515,12 @@ export function DiscoverScreen() {
                     query.isPlaceholderData && "opacity-60",
                   )}
                 >
-                  {allBatches.map((b) => (
+                  {matchBatches.map((b) => (
                     <DynamicPriceMenuCard
                       key={b.batch_id}
                       batch={b}
                       merchant={cartMerchantFromBatch(b)}
+                      showMerchant
                       onAdd={addToCart}
                       onOpenDetail={() => openQuickOrder(b)}
                     />
@@ -463,12 +529,12 @@ export function DiscoverScreen() {
               </section>
             )}
 
-            {!filtered && sections.urgent.length > 0 && (
+            {!showMatches && sections.urgent.length > 0 && (
               <section aria-labelledby="sec-urgent" className="space-y-3">
                 <SectionHeader
                   id="sec-urgent"
                   title="Hampir Habis & Diskon Tertinggi"
-                  subtitle="Segera tutup atau diskon 60% ke atas"
+                  subtitle={`Segera tutup atau diskon ${HOT_DISCOUNT_PCT}% ke atas`}
                   icon={FlameIcon}
                   iconClassName="text-urgent"
                 />
@@ -486,23 +552,23 @@ export function DiscoverScreen() {
               </section>
             )}
 
-            {!filtered && sections.under10k.length > 0 && (
-              <section aria-labelledby="sec-10k" className="space-y-3">
+            {!showMatches && sections.ceban.length > 0 && (
+              <section aria-labelledby="sec-ceban" className="space-y-3">
                 <SectionHeader
-                  id="sec-10k"
-                  title="Di Bawah Rp 10.000"
+                  id="sec-ceban"
+                  title={`Harga ceban, maksimal ${formatIdr(CEBAN_MAX_PRICE_IDR)}`}
                   subtitle="Makan malam hemat akhir bulan"
                   icon={WalletIcon}
                   iconClassName="text-primary"
                 />
                 <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden xl:[&>*:nth-child(n+9)]:hidden">
-                  {sections.under10k.map((b) => (
+                  {sections.ceban.map((b) => (
                     <DealTile
                       key={b.batch_id}
                       batch={b}
                       onAdd={addToCart}
                       onOpenDetail={() => openQuickOrder(b)}
-                      width="w-44 lg:w-auto"
+                      width="w-48 lg:w-auto"
                     />
                   ))}
                 </div>
@@ -513,7 +579,7 @@ export function DiscoverScreen() {
               <SectionHeader
                 id="sec-near"
                 title="Mitra Terdekat"
-                subtitle={`${sections.merchants.length} warung dalam ${formatRadius(params.radius_m)}`}
+                subtitle={`${sections.merchants.length} warung dalam ${scopeLabel}`}
                 icon={StoreIcon}
                 iconClassName="text-primary"
                 action={
@@ -532,13 +598,13 @@ export function DiscoverScreen() {
                   <MerchantCard key={m.id} merchant={m} />
                 ))}
               </div>
-              {bigger && (
+              {offerBigger !== null && (
                 <button
                   type="button"
-                  onClick={() => setRadius(bigger)}
+                  onClick={() => setRadius(offerBigger)}
                   className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-3 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
                 >
-                  Sudah lihat semua · Perluas ke {formatRadius(bigger)}
+                  Sudah lihat semua · Perluas ke {formatRadius(offerBigger)}
                 </button>
               )}
             </section>

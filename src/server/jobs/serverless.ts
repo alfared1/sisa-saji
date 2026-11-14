@@ -13,9 +13,10 @@ import { and, eq, gt, inArray, like, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { jobRuns, menus, merchants, surplusBatches } from "@/db/schema";
 import { nearestCampus, isHomeRegion } from "@/lib/campuses";
-import { CAMPUSES, ESCALATION_INTERVAL_MINUTES } from "@/lib/constants";
+import { CAMPUSES, ESCALATION_INTERVAL_MINUTES, HUNGER_ALERT_HOUR, HUNGER_DIGEST_UNTIL } from "@/lib/constants";
 import { isDemoMode } from "@/lib/env";
 import { wibDate } from "@/lib/time";
+import { runHungerDigest } from "@/server/services/hunger-alert";
 import { publishSurplus } from "@/server/services/merchant/surplus";
 import {
   isCalendarJobDue,
@@ -272,6 +273,8 @@ export async function runDueJobs(db: Db, now: Date = new Date()): Promise<DueJob
   const calendar = [
     { name: "prediction-refresh", at: "00:15", run: () => runPredictionRefresh(db, now) },
     { name: "proactive-notifications", at: "17:30", until: "20:30", run: () => runProactiveNotifications(db, now) },
+    // Vercel Hobby fires the 13:00 UTC cron sometime between 20:00 and 20:59 WIB.
+    { name: "hunger-hour", at: HUNGER_ALERT_HOUR, until: HUNGER_DIGEST_UNTIL, run: () => runHungerDigest(db, now) },
   ];
   for (const job of calendar) {
     if (!isCalendarJobDue(job, now)) continue;

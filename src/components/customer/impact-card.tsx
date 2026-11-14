@@ -95,9 +95,10 @@ export function GuestImpactBanner() {
           <ShoppingBagIcon className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="text-[15px] leading-snug font-semibold">Selamatkan makanan, hemat uang</p>
+          <p className="text-[15px] leading-snug font-semibold">Makan malam hemat dari warung dekat kos</p>
           <p className="mt-0.5 text-xs leading-relaxed text-white/90">
-            Porsi surplus warung sekitar kampus, diskon <span className="whitespace-nowrap">50–70%</span> menjelang tutup.
+            Porsi malam dari warung sekitar kampus, mulai <span className="whitespace-nowrap">Rp 10.000</span>. Diskon makin
+            besar menjelang tutup.
           </p>
         </div>
       </div>

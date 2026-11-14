@@ -45,7 +45,14 @@ test("fresh merchant: OTP login → 5-step onboarding wizard → dashboard", asy
   await page.getByRole("button", { name: "Lewati", exact: true }).click();
 
   await expect(stepLine(5)).toBeVisible();
-  await page.getByPlaceholder("Nasi Ayam Goreng Lengkuas").fill("Nasi Telur Uji");
+  await page.getByPlaceholder("Nasi Timbel + Lauk Pilihan").fill("Nasi Telur Uji");
+  // "Isi porsi" is required for a new menu: Enter adds each entry as a chip.
+  const contents = page.getByRole("textbox", { name: "Isi porsi", exact: true });
+  for (const item of ["Nasi putih", "Telur dadar"]) {
+    await contents.fill(item);
+    await contents.press("Enter");
+  }
+  await expect(page.getByRole("button", { name: "Hapus Telur dadar" })).toBeVisible();
   await page.getByPlaceholder("18.000").fill("15000");
   await page.getByPlaceholder("5.500").fill("6000");
   const done = page.waitForResponse((r) => r.url().includes("/api/v1/merchant/onboarding"));

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChartColumnIcon, CheckIcon, GiftIcon } from "lucide-react";
+import { ChartColumnIcon, CheckIcon } from "lucide-react";
 import type { TonightPrediction } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { roundPortions } from "../lib/logic";
@@ -93,9 +93,6 @@ export function AiPredictionAlertCard({
                     live ? "bg-white/10 text-white/80 ring-white/15" : "bg-white text-neutral-900 ring-white hover:bg-white/90",
                   )}
                 >
-                  {/kejutan|mystery/i.test(m.menu_name) && (
-                    <GiftIcon className={cn("size-3.5 shrink-0 text-deal", !live && "dark:text-orange-600")} aria-hidden />
-                  )}
                   <span className="truncate">{m.menu_name}</span>
                   {live ? (
                     <span className="inline-flex shrink-0 items-center gap-0.5">

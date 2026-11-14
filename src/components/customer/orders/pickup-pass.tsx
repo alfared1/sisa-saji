@@ -15,18 +15,26 @@ import { Button } from "@/components/ui/button";
 import { ApiClientError, api } from "@/lib/api/client";
 import { useCountdown } from "@/hooks/use-countdown";
 import { useNow } from "@/hooks/use-now";
-import { PAY_AT_WARUNG_NO_SHOW_LIMIT, PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS } from "@/lib/constants";
+import {
+  CASH_HOLD_URGENT_MINUTES,
+  PAY_AT_WARUNG_NO_SHOW_LIMIT,
+  PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS,
+} from "@/lib/constants";
 import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr, wibTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { payAtWarungAudience } from "../lib/order-status";
 import { customerKeys } from "../lib/queries";
 import { DirectionsAndWhatsAppButtons, OrderItemsCard, pickupCodeLabel } from "./order-bits";
 
 /**
- * Pilot warung ticket: the customer pays the warung at pickup (cash or the warung's own
- * QRIS), so the amount is shown up front and the ticket stays cancellable until then.
+ * "Bayar di warung" ticket (any warung): the customer pays the warung at pickup (cash or the
+ * warung's own QRIS), so the amount is shown up front and the ticket stays cancellable until
+ * then. The copy depends on the warung (payAtWarungAudience); the no-show warning only
+ * applies at pilot warung.
  */
 function PayAtWarungCard({ order }: { order: OrderDetail }) {
+  const audience = payAtWarungAudience(order.merchant);
   const qc = useQueryClient();
   const [confirm, setConfirm] = useState(false);
   const cancel = useMutation({
@@ -47,12 +55,19 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
       <p className="text-sm font-semibold text-muted-foreground">Bayar langsung di warung</p>
       <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatIdr(order.total_customer_paid_idr)}</p>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-        Tunai atau QRIS milik warung, saat kamu mengambil. Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan.
+        {audience === "pilot"
+          ? "Tunai atau QRIS milik warung, saat kamu mengambil. Warung ini ikut uji coba Sisa-Saji, jadi tanpa biaya layanan."
+          : "Tunai atau QRIS milik warung, saat kamu mengambil. Tanpa biaya layanan."}
       </p>
+      {audience === "demo" && (
+        <p className="mt-2 rounded-xl bg-warning-soft px-3 py-2 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
+          Warung ini data demo. Tiket bisa diverifikasi lewat akun demo mitra.
+        </p>
+      )}
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        Tidak jadi datang? Batalkan saja, supaya porsinya bisa dibeli orang lain. Bila {PAY_AT_WARUNG_NO_SHOW_LIMIT} tiket
-        tidak kamu ambil dalam {PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS} hari, untuk sementara kamu tidak bisa memesan di warung uji
-        coba.
+        Tidak jadi datang? Batalkan saja, supaya porsinya bisa dibeli orang lain.
+        {audience === "pilot" &&
+          ` Bila ${PAY_AT_WARUNG_NO_SHOW_LIMIT} tiket tidak kamu ambil dalam ${PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS} hari, untuk sementara kamu tidak bisa memesan di warung uji coba.`}
       </p>
       <Button
         variant="ghost"
@@ -76,28 +91,37 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
   );
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 /**
  * Countdown to the pickup deadline. For a "bayar di warung" ticket that deadline is the end
- * of its short hold (PAY_AT_WARUNG_HOLD_MINUTES): after it the ticket is cancelled
- * automatically, so the banner says so instead of "call the warung".
+ * of its short hold (PAY_AT_WARUNG_HOLD_MINUTES): the portions are locked until then and the
+ * ticket is cancelled automatically after it, so the banner says so (MM:SS, red in the last
+ * CASH_HOLD_URGENT_MINUTES) instead of "call the warung".
  */
 export function PickupDeadlineBanner({ deadlineIso, payAtWarung = false }: { deadlineIso: string; payAtWarung?: boolean }) {
-  const c = useCountdown(deadlineIso);
+  const c = useCountdown(deadlineIso, payAtWarung ? CASH_HOLD_URGENT_MINUTES : undefined);
   const over = c.ready && c.isOver;
+  const clock = formatClockId(deadlineIso);
   const title = over
     ? payAtWarung
       ? "Batas waktu tiket sudah lewat"
       : "Batas pengambilan sudah lewat"
     : payAtWarung
-      ? `Ambil dan bayar sebelum jam ${formatClockId(deadlineIso)}`
-      : `Segera ambil pesanan kamu sebelum jam ${formatClockId(deadlineIso)}`;
+      ? "Porsi dikunci untukmu"
+      : `Segera ambil pesanan kamu sebelum jam ${clock}`;
   const hint = over
     ? payAtWarung
       ? "Tiket batal otomatis dan porsinya dikembalikan ke warung."
       : "Hubungi warung bila masih dalam perjalanan."
     : payAtWarung
-      ? "Lewat dari itu, tiket batal otomatis."
+      ? `Batal otomatis pukul ${clock} WIB kalau belum diambil.`
       : "Waktu tersisa";
+  const timer = !c.ready
+    ? "--:--"
+    : payAtWarung || c.hours === 0
+      ? `${pad2(c.totalMinutes)}:${pad2(c.seconds)}`
+      : `${c.hours}:${pad2(c.minutes)}:${pad2(c.seconds)}`;
   return (
     <section
       className={cn(
@@ -120,7 +144,7 @@ export function PickupDeadlineBanner({ deadlineIso, payAtWarung = false }: { dea
         </div>
         {!over && (
           <span className="shrink-0 rounded-2xl bg-white/20 px-2.5 py-1.5 text-lg font-extrabold tabular-nums" role="timer">
-            {c.ready ? (c.hours > 0 ? `${c.hours}:${String(c.minutes).padStart(2, "0")}:${String(c.seconds).padStart(2, "0")}` : `${String(c.minutes).padStart(2, "0")}:${String(c.seconds).padStart(2, "0")}`) : "--:--"}
+            {timer}
           </span>
         )}
       </div>

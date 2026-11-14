@@ -1,7 +1,8 @@
 /**
  * Applies live batch events (GET /stream/batches, event "batch") to cached
- * discovery data (pure, unit-tested). Returns the same reference when nothing
- * changed so TanStack Query does not re-render needlessly.
+ * discovery data (pure, unit-tested): stock, price, discount and tonight's lauk.
+ * Returns the same reference when nothing changed so TanStack Query does not
+ * re-render needlessly.
  */
 import type { BatchCard, BatchStreamEvent, MerchantDetail, MerchantSummary, NearbyResponse } from "@/lib/contracts";
 
@@ -18,16 +19,27 @@ export type PriceDrop = {
 
 export type PatchResult<T> = { data: T; found: boolean; priceDrop: PriceDrop | null };
 
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
 function patchBatch(b: BatchCard, ev: BatchStreamEvent): BatchCard {
   const stock = ev.status === "ACTIVE" ? ev.available_stock : 0;
+  // Older stream payloads (cached EventSource replays) may lack lauk_available: keep ours.
+  const lauk = Array.isArray(ev.lauk_available) ? ev.lauk_available : b.lauk_available;
   if (
     b.available_stock === stock &&
     b.discount_pct === ev.discount_pct &&
-    b.selling_price_idr === ev.selling_price_idr
+    b.selling_price_idr === ev.selling_price_idr &&
+    sameList(b.lauk_available, lauk)
   ) {
     return b;
   }
-  return { ...b, available_stock: stock, discount_pct: ev.discount_pct, selling_price_idr: ev.selling_price_idr };
+  return {
+    ...b,
+    available_stock: stock,
+    discount_pct: ev.discount_pct,
+    selling_price_idr: ev.selling_price_idr,
+    lauk_available: lauk,
+  };
 }
 
 function dropOf(before: BatchCard, after: BatchCard): PriceDrop | null {

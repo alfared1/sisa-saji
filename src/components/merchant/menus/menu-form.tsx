@@ -8,19 +8,29 @@ import { Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { MENU_CATEGORIES, MENU_CATEGORY_LABELS, MenuCreateBody, type MenuView } from "@/lib/contracts";
+import { LAUK_OPTIONS_MAX, MENU_CONTENTS_MAX } from "@/lib/constants";
+import { MENU_CATEGORY_LABELS, MERCHANT_MENU_CATEGORIES, MenuCreateBody, type MenuView } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { parseIntLoose, suggestMinPrice } from "../lib/logic";
 import { ZOD_ID_OPTIONS } from "../lib/zod-id";
 import { FieldError, MoneyInput } from "../ui";
+import { ItemListInput } from "./item-list-input";
 
 export type MenuFormInput = z.input<typeof MenuCreateBody>;
 export type MenuFormOutput = z.output<typeof MenuCreateBody>;
 
 const WEIGHT_PRESETS = [150, 200, 250, 300, 500];
+
+/** Message of the first invalid entry of a list field (react-hook-form nests them by index). */
+function firstItemError(errors: unknown): string | undefined {
+  if (!errors || typeof errors !== "object") return undefined;
+  for (const entry of Object.values(errors)) {
+    if (entry && typeof entry === "object" && "message" in entry && typeof entry.message === "string") return entry.message;
+  }
+  return undefined;
+}
 
 export function menuToFormValues(m: MenuView): MenuFormInput {
   return {
@@ -30,7 +40,8 @@ export function menuToFormValues(m: MenuView): MenuFormInput {
     original_price_idr: m.original_price_idr,
     min_recovery_price_idr: m.min_recovery_price_idr,
     portion_weight_grams: m.portion_weight_grams,
-    is_mystery_bag: m.is_mystery_bag,
+    contents: m.contents,
+    lauk_options: m.lauk_options,
   };
 }
 
@@ -41,10 +52,14 @@ export const EMPTY_MENU: MenuFormInput = {
   original_price_idr: undefined as unknown as number,
   min_recovery_price_idr: undefined as unknown as number,
   portion_weight_grams: 200,
-  is_mystery_bag: false,
+  contents: [],
+  lauk_options: [],
 };
 
-/** Create/edit menu form, validated with the contract MenuCreateBody schema. */
+/**
+ * Create/edit menu form, validated with the contract MenuCreateBody schema: a menu lists
+ * what is always in the portion ("Isi porsi") and, optionally, the lauk the buyer picks one of.
+ */
 export function MenuForm({
   defaultValues = EMPTY_MENU,
   onSubmit,
@@ -75,7 +90,6 @@ export function MenuForm({
   const errors = formState.errors;
   const original = useWatch({ control, name: "original_price_idr" });
   const minPrice = useWatch({ control, name: "min_recovery_price_idr" });
-  const mystery = useWatch({ control, name: "is_mystery_bag" });
   const suggested = original ? suggestMinPrice(original) : 0;
   // New menus only: keep the floor at the suggested 30 % until the merchant edits it.
   const autoFloor = defaultValues.min_recovery_price_idr == null;
@@ -89,7 +103,7 @@ export function MenuForm({
         </Label>
         <Input
           id={id("name")}
-          placeholder={mystery ? "Paket Kejutan Malam" : "Nasi Ayam Goreng Lengkuas"}
+          placeholder="Nasi Timbel + Lauk Pilihan"
           className="h-12 rounded-2xl bg-card text-base"
           aria-invalid={errors.menu_name ? true : undefined}
           aria-describedby={errors.menu_name ? id("name-err") : undefined}
@@ -98,64 +112,74 @@ export function MenuForm({
         <FieldError id={id("name-err")}>{errors.menu_name?.message}</FieldError>
       </div>
 
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-semibold">Kategori</legend>
+        <Controller
+          control={control}
+          name="category"
+          render={({ field }) => (
+            <div role="radiogroup" aria-label="Kategori menu" className="flex flex-wrap gap-2">
+              {MERCHANT_MENU_CATEGORIES.map((c) => {
+                const active = field.value === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => field.onChange(c)}
+                    className={cn(
+                      "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      active ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
+                    )}
+                  >
+                    {MENU_CATEGORY_LABELS[c]}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        />
+        {/* An old surprise menu being edited has no valid category yet: the schema asks for one. */}
+        <FieldError>{errors.category?.message}</FieldError>
+      </fieldset>
+
       <Controller
         control={control}
-        name="is_mystery_bag"
+        name="contents"
         render={({ field }) => (
-          <label
-            className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-2xl p-3 ring-1 transition-colors",
-              field.value ? "bg-deal-soft ring-deal/40" : "bg-card ring-border",
-            )}
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">Paket Kejutan (Mystery Bag)</span>
-              <span className="block text-xs text-muted-foreground">Isi campuran sisa hari itu. Biasanya paling cepat habis.</span>
-            </span>
-            <Switch
-              checked={Boolean(field.value)}
-              onCheckedChange={(v) => {
-                field.onChange(v);
-                if (v) setValue("category", "MYSTERY_BAG");
-                else setValue("category", "MAKANAN_BERAT");
-              }}
-              aria-label="Paket Kejutan"
-            />
-          </label>
+          <ItemListInput
+            id={id("contents")}
+            label="Isi porsi"
+            helper="Tulis satu per satu yang selalu ada di porsi ini, misalnya nasi timbel, sayur asem, lalapan."
+            placeholder="Contoh: Sayur asem"
+            value={field.value ?? []}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            max={MENU_CONTENTS_MAX}
+            error={errors.contents?.message ?? errors.contents?.root?.message ?? firstItemError(errors.contents)}
+          />
         )}
       />
 
-      {!mystery && (
-        <fieldset className="space-y-2">
-          <legend className="mb-2 text-sm font-semibold">Kategori</legend>
-          <Controller
-            control={control}
-            name="category"
-            render={({ field }) => (
-              <div role="radiogroup" aria-label="Kategori menu" className="flex flex-wrap gap-2">
-                {MENU_CATEGORIES.filter((c) => c !== "MYSTERY_BAG").map((c) => {
-                  const active = field.value === c;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => field.onChange(c)}
-                      className={cn(
-                        "inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                        active ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
-                      )}
-                    >
-                      {MENU_CATEGORY_LABELS[c]}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      <Controller
+        control={control}
+        name="lauk_options"
+        render={({ field }) => (
+          <ItemListInput
+            id={id("lauk")}
+            label="Lauk pilihan pembeli"
+            optionalLabel="(opsional)"
+            helper="Pembeli memilih satu lauk dari daftar ini. Kosongkan bila isinya tetap."
+            placeholder="Contoh: Ayam goreng"
+            value={field.value ?? []}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            max={LAUK_OPTIONS_MAX}
+            error={errors.lauk_options?.message ?? errors.lauk_options?.root?.message ?? firstItemError(errors.lauk_options)}
           />
-        </fieldset>
-      )}
+        )}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -274,7 +298,7 @@ export function MenuForm({
         <Textarea
           id={id("desc")}
           rows={2}
-          placeholder={mystery ? "Isi bisa nasi + 2 lauk + sayur, tergantung sisa hari ini." : "Nasi, ayam goreng lengkuas, sambal, lalapan."}
+          placeholder="Nasi timbel hangat dengan lauk pilihan, sambal terasi ulek sendiri."
           className="rounded-2xl bg-card text-base"
           {...register("description")}
         />

@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import { useLocationStore } from "@/stores/location";
 import { LoginCta, TabTitle } from "../bits";
 import { PushOptIn } from "../impact/impact-screen";
+import { HungerAlertStatus } from "../notifications/hunger-alert-banner";
 import { badgeLabel } from "../lib/format";
 
 function initials(name: string): string {
@@ -311,6 +312,7 @@ export function ProfileScreen() {
           <section aria-label="Notifikasi" className="space-y-2">
             <h2 className="px-1 text-sm font-semibold text-muted-foreground">Notifikasi</h2>
             <PushOptIn />
+            <HungerAlertStatus />
           </section>
         )}
 

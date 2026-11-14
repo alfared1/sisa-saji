@@ -45,8 +45,15 @@ export function CustomerAvatar({ name, className }: { name: string; className?: 
   );
 }
 
+/** One line of the ticket: "2× Nasi Timbel, lauk Ayam goreng" (no lauk part when none was chosen). */
+export function itemLine(i: Pick<OrderDetail["items"][number], "quantity" | "menu_name" | "lauk">): string {
+  return i.lauk ? `${i.quantity}× ${i.menu_name}, lauk ${i.lauk}` : `${i.quantity}× ${i.menu_name}`;
+}
+
 export function itemsSummary(order: Pick<OrderDetail, "items">): string {
-  return order.items.map((i) => `${i.quantity}× ${i.menu_name}`).join(", ");
+  // Lines that name a lauk already contain a comma, so they are separated by semicolons.
+  const sep = order.items.some((i) => i.lauk) ? "; " : ", ";
+  return order.items.map(itemLine).join(sep);
 }
 
 export function portionsOf(order: Pick<OrderDetail, "items">): number {
@@ -83,7 +90,7 @@ export function MerchantOrderCard({
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             <span className="font-semibold text-foreground tabular-nums">{formatIdr(order.net_merchant_payout_idr)}</span>
             {waiting ? (
-              <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil" overLabel="Lewat batas" />
+              <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil dalam" overLabel="Lewat batas" />
             ) : order.status === "COMPLETED" && order.picked_up_at ? (
               <span className="inline-flex items-center gap-1">
                 <PackageCheckIcon className="size-3.5 text-primary" aria-hidden /> Diambil {formatClockId(order.picked_up_at)}

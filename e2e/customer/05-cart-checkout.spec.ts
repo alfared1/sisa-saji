@@ -4,7 +4,7 @@ import { nearby, registerCustomer } from "../helpers";
 
 const digits = (s: string | null) => Number((s ?? "").replace(/\D/g, ""));
 
-test("cart: two items, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay → ticket", async ({ page }) => {
+test("cart: two items, pickup options, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay → ticket", async ({ page }) => {
   await registerCustomer(page.request, "Dewi Keranjang");
   const { merchants } = await nearby(page.request);
   // A warung with two live menus whose combined price reaches HEMAT2K's Rp 10.000 minimum.
@@ -35,6 +35,19 @@ test("cart: two items, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay
   await cartBar.click();
   await expect(page).toHaveURL(/\/checkout/);
 
+  // Pickup: self-pickup only; collective delivery is shown but cannot be chosen.
+  const pickup = page.getByRole("radiogroup", { name: "Cara ambil" });
+  await expect(pickup.getByRole("radio", { name: /Ambil sendiri ke warung/ })).toHaveAttribute("aria-checked", "true");
+  const delivery = pickup.getByRole("radio", { name: /Titip Antar Kolektif/ });
+  await expect(delivery).toHaveAttribute("aria-disabled", "true");
+  await expect(delivery).toContainText("Segera hadir");
+
+  // Payment: QRIS Instan first and checked by default; OVO is not offered.
+  const methods = page.getByRole("radiogroup", { name: "Metode pembayaran" });
+  await expect(methods.getByRole("radio").first()).toContainText("QRIS Instan");
+  await expect(methods.getByRole("radio", { name: /QRIS Instan/ })).toHaveAttribute("aria-checked", "true");
+  await expect(methods.getByRole("radio", { name: /OVO/ })).toHaveCount(0);
+
   // Voucher HEMAT2K.
   await page.getByRole("button", { name: /Pakai voucher/ }).click();
   await page.getByRole("button", { name: /HEMAT2K/ }).click();
@@ -55,11 +68,12 @@ test("cart: two items, DiffMerchantDialog guard, voucher HEMAT2K + lunchbox, pay
   expect(digits(await row("Total bayar").textContent())).toBe(subtotal + 1500 - 2000);
 
   const created = page.waitForResponse((r) => r.url().includes("/api/v1/orders/checkout") && r.request().method() === "POST");
-  await page.getByRole("button", { name: "Lanjut Bayar" }).click();
+  await page.getByRole("button", { name: "Kunci Porsi Sekarang" }).click();
   const res = await created;
   expect(res.status()).toBe(201);
   const { order } = ((await res.json()) as { data: CheckoutResponse }).data;
   expect(order.items).toHaveLength(2);
+  expect(order.payment_method).toBe("QRIS");
   expect(order.uses_own_lunchbox).toBe(true);
   expect(order.subtotal_recovery_idr).toBe(subtotal);
   expect(order.platform_commission_idr).toBe(1500);

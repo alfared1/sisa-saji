@@ -25,7 +25,7 @@ function PriceDropExample() {
         {EVENING_TIMELINE.map((step) => (
           <li key={step.when} className="flex items-baseline justify-between gap-4 border-t border-border py-2.5 first:border-t-0">
             <span className={cn("text-sm font-semibold", step.flash && "text-flash dark:text-flash-accent")}>
-              {step.flash ? `${step.when}, Diskon Kilat` : step.when}
+              {step.when}
             </span>
             <span className="shrink-0 tabular-nums">
               <b className="text-lg font-bold">{formatIdr(step.quote.recommendedSellingPriceIdr)}</b>
@@ -39,9 +39,10 @@ function PriceDropExample() {
 }
 
 const POINTS = [
-  "Diskon naik sendiri mendekati jam tutup warung.",
-  "Ambil sendiri di warung dengan tiket QR, tanpa ongkir.",
-  "Setiap porsi yang kamu ambil tercatat sebagai dampakmu.",
+  "Isi menu dan lauk tersisa ditulis jelas",
+  "Kebersihan dan porsi dinilai pembeli lain",
+  "Ambil sendiri, tanpa ongkir",
+  "Setiap porsi yang terjual tidak terbuang",
 ] as const;
 
 /** Auth frame: brand panel on desktop, focused single column on mobile. */
@@ -59,9 +60,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Logo tone="onImpact" />
           </Link>
 
-          <h2 className="mt-10 text-4xl leading-tight font-bold xl:text-[2.75rem] [@media(max-height:760px)]:mt-6 [@media(max-height:760px)]:text-3xl">Porsi terakhir malam ini menunggu untuk diselamatkan.</h2>
+          <h2 className="mt-10 text-4xl leading-tight font-bold xl:text-[2.75rem] [@media(max-height:760px)]:mt-6 [@media(max-height:760px)]:text-3xl">Makan malam kenyang mulai Rp 10.000</h2>
           <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">
-            Warung di sekitarmu menjual porsi yang belum laku menjelang tutup. Makin dekat jam tutup, makin murah.
+            Warung dekat kosmu menjual porsi yang belum laku menjelang tutup. Harganya turun mendekati jam tutup, tapi tidak
+            pernah di bawah harga lantai warung.
           </p>
           <div className="mt-8 [@media(max-height:760px)]:mt-5">
             <PriceDropExample />

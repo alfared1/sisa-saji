@@ -143,7 +143,7 @@ export async function abandonPendingOrder(
 }
 
 /**
- * Pilot "bayar di warung" orders keep their portions reserved until the warung verifies
+ * "Bayar di warung" orders (every warung) keep their portions reserved until the warung verifies
  * the pickup (commitReservation then). Cancelled by the customer or never collected, they
  * move to CANCELLED/EXPIRED here and the portions go back to the shelf. Returns false when
  * the order was not an open pay-at-warung order (idempotent).

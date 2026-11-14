@@ -7,7 +7,7 @@ import { TourView } from "@/components/tour/tour-view";
 export const metadata: Metadata = {
   title: "Tur Aplikasi",
   description:
-    "Kenali Sisa-Saji dalam satu menit: cari porsi surplus di sekitar kampus, bayar QRIS, ambil sendiri di warung. Untuk mitra: publikasikan surplus dalam 60 detik.",
+    "Kenali Sisa-Saji dalam satu menit: cari makan malam hemat dari warung dekat kos, kunci porsi, bayar QRIS atau tunai di warung, lalu ambil sendiri. Untuk mitra: publikasikan surplus dalam 60 detik.",
 };
 
 /** Static shell while the client reads ?peran / ?langkah (useSearchParams needs a Suspense boundary). */

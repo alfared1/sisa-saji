@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
-import { menus, merchants, users } from "@/db/schema";
+import { and, eq, ne } from "drizzle-orm";
+import { menus, merchants, surplusBatches, users } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
-import { MenuCreateBody, MenuUpdateBody, MerchantOnboardingBody, MerchantUpdateBody } from "@/lib/contracts";
+import { MenuCreateBody, MenuUpdateBody, MerchantOnboardingBody, MerchantUpdateBody, PublishBody } from "@/lib/contracts";
 import { ApiError } from "@/server/http";
 import { createMenu, updateMenu } from "@/server/services/merchant/menus";
+import { publishSurplus } from "@/server/services/merchant/surplus";
 import {
   getMerchantMe,
   normalizePhone,
@@ -154,20 +155,124 @@ describe("merchant onboarding", () => {
 });
 
 describe("merchant menus", () => {
-  it("creates a menu with defaults", async () => {
+  const MENU = { menu_name: "Nasi Telur Balado", original_price_idr: 15000, min_recovery_price_idr: 5000 };
+  /** A listed menu of the demo warung (old surprise menus are skipped). */
+  async function ownListedMenu(merchantId: string) {
+    const [own] = await db
+      .select()
+      .from(menus)
+      .where(and(eq(menus.merchantId, merchantId), eq(menus.isMysteryBag, false), ne(menus.category, "MYSTERY_BAG")))
+      .limit(1);
+    return own;
+  }
+
+  it("creates a menu with defaults and normalised contents and lauk", async () => {
     const m = await demoMerchant();
     const menu = await createMenu(
       db,
       m.id,
-      MenuCreateBody.parse({ menu_name: "Nasi Telur Balado", original_price_idr: 15000, min_recovery_price_idr: 5000 }),
+      MenuCreateBody.parse({
+        ...MENU,
+        contents: [" Nasi putih ", "Telur   balado", "Sambal"],
+        lauk_options: ["Tempe orek", "Perkedel"],
+      }),
     );
     expect(menu).toMatchObject({
       menu_name: "Nasi Telur Balado",
       category: "MAKANAN_BERAT",
       portion_weight_grams: 200,
-      is_mystery_bag: false,
+      contents: ["Nasi putih", "Telur balado", "Sambal"],
+      lauk_options: ["Tempe orek", "Perkedel"],
       is_active: true,
     });
+    const [row] = await db.select().from(menus).where(eq(menus.id, menu.id));
+    expect(row.isMysteryBag).toBe(false);
+    // Lauk only (no fixed contents) is a listed menu too.
+    expect(MenuCreateBody.safeParse({ ...MENU, lauk_options: ["Ayam goreng"] }).success).toBe(true);
+  });
+
+  it("requires contents for a new menu and refuses surprise menus and repeats", async () => {
+    const issue = (body: Record<string, unknown>) => {
+      const r = MenuCreateBody.safeParse({ ...MENU, contents: ["Nasi putih"], ...body });
+      expect(r.success).toBe(false);
+      return r.error?.issues[0]?.message;
+    };
+    expect(issue({ contents: [] })).toBe("Tulis minimal satu isi porsi");
+    expect(issue({ category: "MYSTERY_BAG" })).toBe("Paket kejutan tidak tersedia lagi. Tulis isi porsinya.");
+    expect(issue({ is_mystery_bag: true })).toBe("Paket kejutan tidak tersedia lagi. Tulis isi porsinya.");
+    expect(issue({ contents: ["Nasi putih", "nasi PUTIH"] })).toBe("Ada isi yang sama dua kali");
+    expect(issue({ lauk_options: Array.from({ length: 9 }, (_, i) => `Lauk ${i}`) })).toBe("Paling banyak 8 pilihan lauk");
+    expect(issue({ contents: ["x".repeat(41)] })).toBe("Maksimal 40 karakter");
+    expect(MenuUpdateBody.safeParse({ category: "MYSTERY_BAG" }).success).toBe(false);
+    expect(MenuUpdateBody.safeParse({ is_mystery_bag: true }).success).toBe(false);
+  });
+
+  it("an edit may not leave a menu without contents and lauk", async () => {
+    const m = await demoMerchant();
+    const menu = await createMenu(db, m.id, MenuCreateBody.parse({ ...MENU, contents: ["Nasi putih"] }));
+    await expectApiError(updateMenu(db, m.id, menu.id, MenuUpdateBody.parse({ contents: [] })), "VALIDATION_ERROR");
+    const swapped = await updateMenu(db, m.id, menu.id, MenuUpdateBody.parse({ contents: [], lauk_options: ["Ayam goreng"] }));
+    expect(swapped).toMatchObject({ contents: [], lauk_options: ["Ayam goreng"] });
+  });
+
+  it("editing the lauk options keeps tonight's lauk of live batches a subset of them", async () => {
+    const m = await demoMerchant();
+    const menu = await createMenu(
+      db,
+      m.id,
+      MenuCreateBody.parse({ ...MENU, contents: ["Nasi putih"], lauk_options: ["Ayam gorng", "Tempe orek", "Perkedel"] }),
+    );
+    const { batch } = await publishSurplus(
+      db,
+      m.id,
+      PublishBody.parse({
+        menu_id: menu.id,
+        initial_stock: 5,
+        pickup_end_time: new Date(Date.now() + 120 * 60_000).toISOString(),
+        lauk_available: ["Ayam gorng", "Tempe orek"],
+      }),
+    );
+    const tonight = async () =>
+      (await db.select({ lauk: surplusBatches.laukAvailable }).from(surplusBatches).where(eq(surplusBatches.id, batch.id)))[0]
+        .lauk;
+
+    // A fixed typo is a new lauk (available); "Perkedel", switched off tonight, stays off.
+    await updateMenu(db, m.id, menu.id, MenuUpdateBody.parse({ lauk_options: ["Ayam goreng", "Tempe orek", "Perkedel"] }));
+    expect(await tonight()).toEqual(["Ayam goreng", "Tempe orek"]);
+    // Removing every lauk that was left tonight opens the remaining options instead of none.
+    await updateMenu(db, m.id, menu.id, MenuUpdateBody.parse({ lauk_options: ["Perkedel"] }));
+    expect(await tonight()).toEqual(["Perkedel"]);
+    // A fixed menu (no lauk) leaves no lauk to pick.
+    await updateMenu(db, m.id, menu.id, MenuUpdateBody.parse({ lauk_options: [] }));
+    expect(await tonight()).toEqual([]);
+  });
+
+  it("an old surprise menu stays off until it lists its contents in a normal category", async () => {
+    const m = await demoMerchant();
+    const [old] = await db
+      .insert(menus)
+      .values({
+        merchantId: m.id,
+        menuName: "Paket lama",
+        category: "MYSTERY_BAG",
+        isMysteryBag: true,
+        isActive: false,
+        originalPriceIdr: 20000,
+        minRecoveryPriceIdr: 10000,
+      })
+      .returning();
+    await expectApiError(updateMenu(db, m.id, old.id, MenuUpdateBody.parse({ is_active: true })), "VALIDATION_ERROR");
+    const renamed = await updateMenu(db, m.id, old.id, MenuUpdateBody.parse({ menu_name: "Paket Nasi Liwet" }));
+    expect(renamed.is_active).toBe(false);
+    const listed = await updateMenu(
+      db,
+      m.id,
+      old.id,
+      MenuUpdateBody.parse({ category: "MAKANAN_BERAT", contents: ["Nasi liwet", "Ayam suwir"], is_active: true }),
+    );
+    expect(listed).toMatchObject({ category: "MAKANAN_BERAT", is_active: true, contents: ["Nasi liwet", "Ayam suwir"] });
+    const [row] = await db.select().from(menus).where(eq(menus.id, old.id));
+    expect(row.isMysteryBag).toBe(false);
   });
 
   it("rejects a floor above the normal price (create via zod, update via service)", async () => {
@@ -182,7 +287,7 @@ describe("merchant menus", () => {
 
   it("deactivates (no delete) and only touches its own menus", async () => {
     const m = await demoMerchant();
-    const [own] = await db.select().from(menus).where(eq(menus.merchantId, m.id)).limit(1);
+    const own = await ownListedMenu(m.id);
     const off = await updateMenu(db, m.id, own.id, MenuUpdateBody.parse({ is_active: false, menu_name: "Menu Lama" }));
     expect(off.is_active).toBe(false);
     expect(off.menu_name).toBe("Menu Lama");

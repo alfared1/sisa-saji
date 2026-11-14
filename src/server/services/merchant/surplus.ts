@@ -1,6 +1,10 @@
 /**
  * Surplus batches: AI quote, publish, stock edits, cancel / auto-discount toggle,
- * and activation of SCHEDULED batches (job).
+ * tonight's lauk and portion promise, and activation of SCHEDULED batches (job).
+ *
+ * Lauk have no stock of their own: a batch stores which of the menu's lauk_options are
+ * still there tonight (lauk_available), and the batch portion stays the only unit that is
+ * reserved.
  *
  * Stock invariant (see src/server/services/stock.ts):
  *   initial_stock = available_stock + reserved_stock + sold
@@ -22,6 +26,7 @@ import type { Db } from "@/db/client";
 import { discountAdjustmentLogs, menus, merchants, orderItems, orders, surplusBatches, type Menu, type Merchant, type SurplusBatch } from "@/db/schema";
 import type {
   BatchPatchBody,
+  BatchPhotoResponse,
   MerchantBatchView,
   PublishBody,
   PublishResponse,
@@ -29,9 +34,18 @@ import type {
   StockPatchBody,
 } from "@/lib/contracts";
 import { DEFAULT_SEARCH_RADIUS_M, PRICE_ROUNDING_IDR } from "@/lib/constants";
+import { findItem, normalizeItems } from "@/lib/lauk";
 import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
 import { DAY_NAMES_ID, formatClockId, formatIdr, MINUTE_MS, minutesBetween, wibDate } from "@/lib/time";
 import { ApiError } from "@/server/http";
+import {
+  checkPhotoUploadLimits,
+  deleteBatchPhoto,
+  isPhotoBatchLive,
+  photoMetaForBatches,
+  photoUploadsLeft,
+  upsertBatchPhoto,
+} from "@/server/services/batch-photos";
 import { buildEscalationSchedule } from "@/server/services/escalation/schedule";
 import { getPrediction, type Prediction } from "@/server/services/prediction";
 import { estimateSelloutProbability } from "@/server/services/prediction/sellout";
@@ -41,7 +55,8 @@ import { notifyMerchantAudience } from "./notify";
 import { loadMerchant } from "./profile";
 import { toMerchantBatchView } from "./views";
 
-export type PublishInput = z.output<typeof PublishBody>;
+/** full_portion may be omitted by internal callers (demo top-up); it defaults to true. */
+export type PublishInput = Omit<z.output<typeof PublishBody>, "full_portion"> & { full_portion?: boolean };
 export type StockPatchInput = z.output<typeof StockPatchBody>;
 export type BatchPatchInput = z.output<typeof BatchPatchBody>;
 
@@ -258,8 +273,56 @@ export async function batchViews(db: Db, merchant: Merchant, batches: SurplusBat
   const activeUsers = needsUsers
     ? await countActiveUsersNear(db, merchant.latitude, merchant.longitude, DEFAULT_SEARCH_RADIUS_M, now)
     : 0;
+  const photos = await photoMetaForBatches(
+    db,
+    batches.map((b) => b.id),
+    now,
+  );
   const ctx = { now, activeUsersInRadius: activeUsers, historicalConversionRate: Number(merchant.historicalConversionRate) };
-  return batches.map((b) => toMerchantBatchView(b, menuById.get(b.menuId)!, ctx));
+  return batches.map((b) => toMerchantBatchView(b, menuById.get(b.menuId)!, { ...ctx, photo: photos.get(b.id) ?? null }));
+}
+
+/* ------------------------------------------------------------------ */
+/* Menu contents and lauk                                              */
+/* ------------------------------------------------------------------ */
+
+export const MENU_CONTENTS_REQUIRED_MESSAGE = "Lengkapi isi porsi menu ini dulu di halaman Menu.";
+const LAUK_NOT_IN_MENU_MESSAGE = "Lauk harus dipilih dari daftar lauk menu";
+const LAUK_REQUIRED_MESSAGE = "Sisakan minimal satu lauk yang masih ada";
+
+/**
+ * Closed surprise items can no longer be published. Menus created before contents existed
+ * (empty contents and lauk) still publish, so existing warung keep working.
+ */
+function assertPublishableMenu(menu: Menu) {
+  if (menu.isMysteryBag || menu.category === "MYSTERY_BAG") {
+    throw new ApiError("VALIDATION_ERROR", MENU_CONTENTS_REQUIRED_MESSAGE, {
+      reason: "MENU_CONTENTS_REQUIRED",
+      menu_id: menu.id,
+    });
+  }
+}
+
+/**
+ * Tonight's lauk: a subset of the menu's options in the menu's casing and order, with at
+ * least one left when the menu has options. Throws VALIDATION_ERROR otherwise.
+ */
+export function resolveLaukAvailable(laukOptions: readonly string[], requested: readonly string[]): string[] {
+  const picked = normalizeItems(requested);
+  const stored: string[] = [];
+  for (const item of picked) {
+    const match = findItem(laukOptions, item);
+    if (match === null) {
+      throw new ApiError("VALIDATION_ERROR", LAUK_NOT_IN_MENU_MESSAGE, [
+        { path: "lauk_available", message: `${item} tidak ada di daftar lauk menu` },
+      ]);
+    }
+    stored.push(match);
+  }
+  if (laukOptions.length > 0 && stored.length === 0) {
+    throw new ApiError("VALIDATION_ERROR", LAUK_REQUIRED_MESSAGE, [{ path: "lauk_available", message: LAUK_REQUIRED_MESSAGE }]);
+  }
+  return laukOptions.filter((option) => stored.includes(option));
 }
 
 async function batchView(db: Db, merchantId: string, batch: SurplusBatch, now: Date) {
@@ -305,6 +368,9 @@ export async function publishSurplus(
 ): Promise<PublishResponse> {
   const menu = await getOwnedMenu(db, merchantId, body.menu_id);
   if (!menu.isActive) throw new ApiError("VALIDATION_ERROR", "Menu ini sedang nonaktif");
+  assertPublishableMenu(menu);
+  // Omitted = every lauk the menu offers is still there tonight.
+  const laukAvailable = resolveLaukAvailable(menu.laukOptions, body.lauk_available ?? menu.laukOptions);
   const merchant = await loadMerchant(db, merchantId);
   const end = new Date(body.pickup_end_time);
   const requestedStart = body.pickup_start_time ? new Date(body.pickup_start_time) : now;
@@ -336,6 +402,8 @@ export async function publishSurplus(
         currentDiscountPct: quote.recommended_discount_pct,
         currentSellingPriceIdr: quote.recommended_selling_price_idr,
         autoDiscountEnabled: body.auto_discount_enabled,
+        laukAvailable,
+        fullPortion: body.full_portion ?? true,
         predictedSelloutProb: quote.sellout_probability,
         pickupStartTime: start,
         pickupEndTime: end,
@@ -438,12 +506,33 @@ export async function patchBatch(
   body: BatchPatchInput,
   now: Date = new Date(),
 ): Promise<MerchantBatchView> {
-  if (body.status === undefined && body.auto_discount_enabled === undefined) {
-    throw new ApiError("VALIDATION_ERROR", "Isi status atau auto_discount_enabled");
+  if (
+    body.status === undefined &&
+    body.auto_discount_enabled === undefined &&
+    body.lauk_available === undefined &&
+    body.full_portion === undefined
+  ) {
+    throw new ApiError("VALIDATION_ERROR", "Tidak ada yang diubah");
   }
   const updated = await db.transaction(async (tx) => {
     const b = await lockOwnedBatch(tx, merchantId, batchId);
+    // Every change bumps updated_at, so the buyer and merchant streams pick it up.
     const set: Partial<typeof surplusBatches.$inferInsert> = { updatedAt: now };
+    if (body.lauk_available !== undefined || body.full_portion !== undefined) {
+      // Tonight's lauk and the portion promise only change while buyers can still order.
+      if (!isPhotoBatchLive(b.status, b.pickupEndTime, now)) {
+        throw new ApiError("BATCH_CLOSED", "Batch ini sudah ditutup");
+      }
+      if (body.lauk_available !== undefined) {
+        const [menu] = await tx
+          .select({ laukOptions: menus.laukOptions })
+          .from(menus)
+          .where(eq(menus.id, b.menuId))
+          .limit(1);
+        set.laukAvailable = resolveLaukAvailable(menu?.laukOptions ?? [], body.lauk_available);
+      }
+      if (body.full_portion !== undefined) set.fullPortion = body.full_portion;
+    }
     if (body.status === "CANCELLED") {
       if (b.status === "CANCELLED") throw new ApiError("BATCH_CLOSED", "Batch ini sudah dibatalkan");
       if (b.status === "EXPIRED") throw new ApiError("BATCH_CLOSED", "Batch ini sudah ditutup");
@@ -463,9 +552,53 @@ export async function patchBatch(
       set.autoDiscountEnabled = body.auto_discount_enabled;
     }
     const [row] = await tx.update(surplusBatches).set(set).where(eq(surplusBatches.id, b.id)).returning();
+    // A cancelled batch is no longer shown anywhere, so its photo goes right away.
+    if (set.status === "CANCELLED") await deleteBatchPhoto(tx, b.id, now);
     return row;
   });
   return batchView(db, merchantId, updated, now);
+}
+
+/* ------------------------------------------------------------------ */
+/* Batch photo ("Foto etalase malam ini")                              */
+/* ------------------------------------------------------------------ */
+
+function assertPhotoBatchOpen(b: SurplusBatch, now: Date) {
+  if (!isPhotoBatchLive(b.status, b.pickupEndTime, now)) throw new ApiError("BATCH_CLOSED", "Batch sudah berakhir");
+}
+
+/**
+ * Stores tonight's photo of an owned, live batch (replacing any earlier one). Demo-account
+ * uploads are demo_only: shown to demo sessions and the owner for an hour. Limits: see
+ * checkPhotoUploadLimits (429 RATE_LIMITED).
+ */
+export async function uploadBatchPhoto(
+  db: Db,
+  merchantId: string,
+  batchId: string,
+  photo: { bytes: Buffer; contentType: string; demoOnly: boolean },
+  now: Date = new Date(),
+): Promise<BatchPhotoResponse> {
+  return db.transaction(async (tx) => {
+    const b = await lockOwnedBatch(tx, merchantId, batchId);
+    assertPhotoBatchOpen(b, now);
+    await checkPhotoUploadLimits(tx, { batchId: b.id, merchantId, demoOnly: photo.demoOnly, now });
+    return upsertBatchPhoto(tx, { batchId: b.id, merchantId, ...photo, now });
+  });
+}
+
+/** Deletes the photo of an owned batch (any status). Deleting does not give uploads back. */
+export async function removeBatchPhoto(
+  db: Db,
+  merchantId: string,
+  batchId: string,
+  now: Date = new Date(),
+): Promise<BatchPhotoResponse> {
+  return db.transaction(async (tx) => {
+    const b = await lockOwnedBatch(tx, merchantId, batchId);
+    await deleteBatchPhoto(tx, b.id, now);
+    return { photo: null, photo_uploads_left: photoUploadsLeft(b.photoUploadCount) };
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -484,6 +617,7 @@ export async function activateScheduledBatches(db: Db, now: Date = new Date()): 
     .set({ status: "EXPIRED", updatedAt: now })
     .where(and(eq(surplusBatches.status, "SCHEDULED"), lte(surplusBatches.pickupEndTime, now)))
     .returning({ id: surplusBatches.id });
+  for (const b of expired) await deleteBatchPhoto(db, b.id, now);
   const activated = await db
     .update(surplusBatches)
     .set({

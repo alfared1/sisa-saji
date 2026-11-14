@@ -6,7 +6,7 @@
 import { SURPLUS_WINDOW_START } from "@/lib/constants";
 import { calculateOptimalRecoveryPrice } from "./dynamic-discount";
 
-export const EVENING_EXAMPLE = { name: "Nasi Timbel Ayam Goreng", priceIdr: 18000, floorIdr: 5000 } as const;
+export const EVENING_EXAMPLE = { name: "Nasi Timbel + Lauk Pilihan", priceIdr: 22000, floorIdr: 10000 } as const;
 
 function examplePrice(minutesToClose: number, availableStock: number) {
   return calculateOptimalRecoveryPrice({
@@ -28,8 +28,11 @@ export const EVENING_TIMELINE = [
   { when: "1 jam lagi tutup", text: "Masih banyak yang belum laku? Diskon naik sendiri.", quote: examplePrice(60, 6), flash: false },
   {
     when: "30 menit lagi",
-    text: "Diskon Kilat: potongan terbesar, dan pembeli di sekitar warung dapat notifikasi.",
+    text: "Diskon menjelang tutup, tidak pernah di bawah harga lantai warung.",
     quote: examplePrice(30, 5),
     flash: true,
   },
 ] as const;
+
+/** The example card on /welcome: 1 h 15 min before closing, 3 portions left. */
+export const EVENING_CARD_QUOTE = examplePrice(75, 3);

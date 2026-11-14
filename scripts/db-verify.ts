@@ -6,7 +6,7 @@
 import "dotenv/config";
 import { sql } from "drizzle-orm";
 import { createDb } from "../src/db/client";
-import { DEMO_MERCHANT_SLUG } from "../src/db/seed/data";
+import { DEMO_MERCHANT_SLUG, SEED_MERCHANTS } from "../src/db/seed/data";
 import { CAMPUSES, DEFAULT_SEARCH_RADIUS_M } from "../src/lib/constants";
 import { getDatabaseUrl } from "../src/lib/env";
 import { calculateOptimalRecoveryPrice } from "../src/lib/pricing/dynamic-discount";
@@ -17,6 +17,7 @@ async function main() {
   const home = CAMPUSES[0];
   /** IPB-area warung ~3.7 / ~4.7 km from campus: outside 2 km, inside 5 km. */
   const FAR = ["nasi-timbel-ceu-iyah-sindang-barang", "laksa-asinan-bu-nining-loji"];
+  const BOGOR_HUBS = new Set<string>(["ipb", "bogor", "cibinong"]);
   let failures = 0;
   const check = (label: string, ok: boolean, detail = "") => {
     console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
@@ -166,6 +167,89 @@ async function main() {
   const preds = await one<{ n: number }>(sql`
     SELECT COUNT(DISTINCT target_date)::int AS n FROM merchant_surplus_predictions`);
   check("predictions cover 7 days", preds.n === 7);
+
+  // 6. Transparent menus (no surprise items) and lauk. Pilot warung are real data and
+  //    may still have older menus without contents, so they are left out here.
+  const mystery = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM menus
+    WHERE is_active AND (is_mystery_bag OR category = 'MYSTERY_BAG')`);
+  check("no active surprise (mystery) menus", mystery.n === 0, `${mystery.n} found`);
+
+  const noContents = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM menus mn JOIN merchants m ON m.id = mn.merchant_id
+    WHERE NOT m.is_pilot AND cardinality(mn.contents) = 0 AND cardinality(mn.lauk_options) = 0`);
+  check("every seed menu lists its contents or lauk options", noContents.n === 0, `${noContents.n} without`);
+
+  const laukSubset = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM surplus_batches b JOIN menus mn ON mn.id = b.menu_id
+    WHERE NOT (b.lauk_available <@ mn.lauk_options)`);
+  check("every batch's lauk_available is a subset of its menu's lauk options", laukSubset.n === 0);
+
+  const laukChoice = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM order_items oi JOIN surplus_batches b ON b.id = oi.surplus_batch_id
+    WHERE oi.lauk_choice IS NOT NULL AND NOT (oi.lauk_choice = ANY (b.lauk_available))`);
+  check("every ordered lauk was available in its batch", laukChoice.n === 0);
+
+  // 7. Prices: the Rp 10.000 floor, the Bogor price band, and a real discount tonight.
+  const seedPrices = await one<{ floor_over: number; sell_under: number; low_disc: number; min_disc: number | null }>(sql`
+    SELECT
+      (SELECT COUNT(*) FROM menus mn JOIN merchants m ON m.id = mn.merchant_id
+        WHERE NOT m.is_pilot AND mn.min_recovery_price_idr > 10000)::int AS floor_over,
+      (SELECT COUNT(*) FROM surplus_batches b JOIN merchants m ON m.id = b.merchant_id
+        WHERE NOT m.is_pilot AND b.status = 'ACTIVE' AND b.current_selling_price_idr < 10000)::int AS sell_under,
+      (SELECT COUNT(*) FROM surplus_batches b JOIN merchants m ON m.id = b.merchant_id
+        WHERE NOT m.is_pilot AND b.status = 'ACTIVE' AND b.current_discount_pct < 35)::int AS low_disc,
+      (SELECT MIN(b.current_discount_pct) FROM surplus_batches b JOIN merchants m ON m.id = b.merchant_id
+        WHERE NOT m.is_pilot AND b.status = 'ACTIVE')::int AS min_disc`);
+  check("every seed floor price is at most Rp 10.000", seedPrices.floor_over === 0, `${seedPrices.floor_over} above`);
+  check("every active seed selling price is at least Rp 10.000", seedPrices.sell_under === 0, `${seedPrices.sell_under} below`);
+  check(
+    "every active seed batch is discounted at least 35%",
+    seedPrices.low_disc === 0,
+    `min ${seedPrices.min_disc ?? "-"}%, ${seedPrices.low_disc} below 35%`,
+  );
+
+  const bogorSlugs = SEED_MERCHANTS.filter((m) => BOGOR_HUBS.has(m.hub)).map((m) => m.slug);
+  const bogorBand = await one<{ n: number; total: number }>(sql`
+    SELECT COUNT(*) FILTER (WHERE mn.original_price_idr NOT BETWEEN 18000 AND 25000)::int AS n,
+           COUNT(*)::int AS total
+    FROM menus mn JOIN merchants m ON m.id = mn.merchant_id
+    WHERE m.slug IN (${sql.join(bogorSlugs.map((s) => sql`${s}`), sql`, `)})`);
+  check(
+    "Bogor-hub menus cost Rp 18.000 to 25.000",
+    bogorBand.total > 0 && bogorBand.n === 0,
+    `${bogorBand.n} of ${bogorBand.total} outside`,
+  );
+
+  const midPriced = await one<{ n: number }>(sql`
+    SELECT COUNT(*)::int AS n FROM surplus_batches b JOIN merchants m ON m.id = b.merchant_id
+    WHERE b.status = 'ACTIVE' AND b.current_selling_price_idr BETWEEN 11000 AND 12500
+      AND ST_DWithin(m.geom, ST_MakePoint(${home.lng}, ${home.lat})::geography, 5000)`);
+  check(
+    "some active prices within 5 km of IPB are Rp 11.000 to 12.500 (not all at the floor)",
+    midPriced.n >= 1,
+    `${midPriced.n} batches`,
+  );
+
+  // 8. Walking distance: warung with active batches within 500 m / 1 km of IPB Dramaga.
+  const walk = await one<{ m500: number; m1000: number }>(sql`
+    SELECT COUNT(DISTINCT m.id) FILTER (WHERE ST_DWithin(m.geom, ST_MakePoint(${home.lng}, ${home.lat})::geography, 500))::int AS m500,
+           COUNT(DISTINCT m.id)::int AS m1000
+    FROM merchants m JOIN surplus_batches b ON b.merchant_id = m.id AND b.status = 'ACTIVE'
+    WHERE ST_DWithin(m.geom, ST_MakePoint(${home.lng}, ${home.lat})::geography, 1000)`);
+  check(`>= 5 warung with active batches within 500 m of ${home.name}`, walk.m500 >= 5, `${walk.m500}`);
+  check(`>= 8 warung with active batches within 1 km of ${home.name}`, walk.m1000 >= 8, `${walk.m1000}`);
+
+  // 9. Things only real people create: the seed must not invent them.
+  const invented = await one<{ photos: number; interests: number; alerts: number }>(sql`
+    SELECT (SELECT COUNT(*) FROM batch_photos)::int AS photos,
+           (SELECT COUNT(*) FROM delivery_interests)::int AS interests,
+           (SELECT COUNT(*) FROM push_subscriptions WHERE hunger_alert_enabled)::int AS alerts`);
+  check(
+    "no seeded batch photos, delivery interests or hunger alerts",
+    invented.photos === 0 && invented.interests === 0 && invented.alerts === 0,
+    `${invented.photos} / ${invented.interests} / ${invented.alerts}`,
+  );
 
   await pool.end();
   if (failures) {

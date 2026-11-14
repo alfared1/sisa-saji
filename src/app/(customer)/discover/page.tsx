@@ -3,7 +3,8 @@ import { DiscoverScreen } from "@/components/customer/discover/discover-screen";
 
 export const metadata: Metadata = {
   title: "Cari Makanan Surplus",
-  description: "Porsi surplus warung di sekitar kampus dengan diskon hingga 70%. Ambil sendiri malam ini.",
+  description:
+    "Makan malam kenyang mulai Rp 10.000 dari warung terdekat. Isi menu jelas, porsi normal, ambil sendiri sebelum tutup.",
 };
 
 export default function DiscoverPage() {

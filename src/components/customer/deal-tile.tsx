@@ -6,20 +6,27 @@ import { CheckIcon, PlusIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { DiscountBadge } from "@/components/common/discount-badge";
 import { ImpactLine } from "@/components/common/impact-line";
+import { LaukSummary } from "@/components/common/lauk-summary";
+import { PhotoBadge } from "@/components/common/photo-badge";
 import { PriceTag } from "@/components/common/price-tag";
+import { TrustBadges } from "@/components/common/trust-badges";
 import type { BatchCard } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { selectCartQuantityFor, useCartStore, type CartItem, type CartMerchant } from "@/stores/cart";
 import { useStoresHydrated } from "@/stores/hydration";
+import { useDistanceOrigin } from "./bits";
 import { FoodThumb } from "./food-thumb";
 import { usePriceDropFlash } from "./hooks/use-batch-stream";
-import { formatDistance } from "./lib/format";
+import { distanceLine } from "./lib/format";
 import { cartItemFromBatch, cartMerchantFromBatch } from "./lib/queries";
 
 /**
- * Carousel tile for a single surplus batch (discover sections). The body links
- * to the warung, or — with `onOpenDetail` — is a button "Lihat detail <menu>"
- * that opens the menu detail. The add button keeps its own action.
+ * Carousel tile for a single surplus batch (discover sections): tonight's photo (badged with
+ * its upload time) or a placeholder, discount and "Tutup dalam" countdown, the lauk still
+ * available (or the portion contents), the hygiene and portion chips, price and stock. The
+ * body links to the warung, or, with `onOpenDetail`, is a button "Lihat detail <menu>"
+ * that opens the menu detail. The add button keeps its own action and adds the first lauk
+ * still available (changeable in the sheet and at checkout).
  */
 export function DealTile({
   batch,
@@ -36,7 +43,9 @@ export function DealTile({
   const hydrated = useStoresHydrated();
   const inCart = useCartStore(selectCartQuantityFor(batch.batch_id));
   const flash = usePriceDropFlash(batch.batch_id);
+  const origin = useDistanceOrigin();
   const added = hydrated && inCart > 0;
+  const distance = distanceLine(batch.distance_m, origin, "short");
 
   return (
     <article
@@ -64,10 +73,15 @@ export function DealTile({
         <FoodThumb
           category={batch.category}
           imageUrl={batch.image_url}
-          mystery={batch.is_mystery_bag}
+          photo={batch.photo}
           alt={batch.menu_name}
           className="aspect-[4/3] w-full"
           noPhotoLabel
+          photoOverlay={
+            batch.photo && !flash ? (
+              <PhotoBadge photo={batch.photo} variant="overlay" className="absolute top-2 right-2" />
+            ) : null
+          }
         >
           <DiscountBadge
             pct={batch.discount_pct}
@@ -87,16 +101,22 @@ export function DealTile({
         </FoodThumb>
         <div className="space-y-1 p-3 pb-3.5">
           <h3 className="line-clamp-1 text-sm font-semibold">{batch.menu_name}</h3>
-          <p className="line-clamp-1 text-xs text-muted-foreground">
-            {batch.merchant_name}
-            {batch.distance_m !== null && <> · {formatDistance(batch.distance_m)}</>}
-          </p>
+          <p className="line-clamp-1 text-xs text-muted-foreground">{batch.merchant_name}</p>
+          {/* Own line: on a narrow tile a long warung name would clamp the walking distance away. */}
+          {distance && <p className="text-xs text-muted-foreground tabular-nums">{distance}</p>}
+          <LaukSummary batch={batch} lines={1} className="text-[11px]" />
+          <TrustBadges
+            trust={batch.merchant_trust}
+            variant="short"
+            fullPortion={batch.full_portion}
+            className="gap-1 pt-0.5 [&>li]:px-1.5 [&>li]:text-[11px]"
+          />
           {/*
-            Impact runs full width; price + stock sit beside the add button. min-h-12
-            keeps this block at least as tall as the button + ring, so a one-line
+            Impact (secondary) runs full width; price + stock sit beside the add button.
+            min-h-12 keeps this block at least as tall as the button + ring, so a one-line
             impact never sits on top of the button on wide tiles.
           */}
-          <ImpactLine portionWeightGrams={batch.portion_weight_grams} className="text-[10.5px]" />
+          <ImpactLine portionWeightGrams={batch.portion_weight_grams} className="text-[10px] font-medium" />
           <div className="min-h-12 space-y-0.5 pt-0.5 pr-12">
             <PriceTag
               original={batch.original_price_idr}

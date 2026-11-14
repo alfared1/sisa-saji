@@ -66,7 +66,11 @@ export function useAddToCart(): {
     (merchant: CartMerchant, item: CartItem) => {
       const result = addItem(merchant, item);
       if (result === "different_merchant") setPending({ merchant, item });
-      else toast.success(`${item.menu_name} masuk keranjang`, { id: `cart-${item.batch_id}`, duration: 1800 });
+      else
+        toast.success(`${item.menu_name}${item.lauk ? ` (${item.lauk})` : ""} masuk keranjang`, {
+          id: `cart-${item.batch_id}`,
+          duration: 1800,
+        });
       return result;
     },
     [addItem],

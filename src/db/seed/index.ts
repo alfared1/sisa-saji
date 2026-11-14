@@ -7,16 +7,22 @@
  * Wipes all app tables, then creates:
  *  - 1 admin, one owner per warung, 120 customers (mahasiswa) incl. demo accounts,
  *    spread over the 21 campus hubs with ~45% in the three Bogor hubs
- *  - 95 fictional warung around those hubs (Bogor first) with 1–3 menus each
+ *  - 95 fictional warung around those hubs (Bogor first) with 1–3 transparent menus
+ *    each (listed contents, some with a lauk choice; no surprise items)
  *  - 28 days of history: closed surplus batches, completed/expired orders
- *    (bought by customers of the same hub), reviews and discount logs
- *    (training data for the Surplus Prediction Engine)
+ *    (bought by customers of the same hub), reviews with optional hygiene and
+ *    portion answers, and discount logs (training data for the Surplus
+ *    Prediction Engine)
  *  - "Tonight": ACTIVE batches at every warung whose pickup window is relative to
- *    the time the seed runs (closing in 18–150 min), so the demo is always live
- *    and every discount tier (50% → 70%) is visible
+ *    the time the seed runs (closing in 18–150 min), so the demo is always live.
+ *    Prices come from the optimizer; most land on the Rp 10.000 floor, the
+ *    Rp 22.000–25.000 menus at Rp 11.000–12.500
  *  - presence pings (the "active users nearby" demand signal), mostly in Bogor
  *  - 7 days of heuristic predictions (model_version "heuristic-v0")
- *  - derived aggregates (impact totals, wallet balance, ratings, conversion rate)
+ *  - derived aggregates (impact totals, wallet balance, ratings, hygiene and
+ *    portion answers, conversion rate)
+ *  - no batch photos, delivery interests or hunger alerts (those only come from
+ *    real uploads and real devices)
  *
  * Random values come from a seeded PRNG, so the data shape is reproducible;
  * timestamps are relative to "now".
@@ -38,6 +44,7 @@ import {
   REVIEW_COMMENTS,
   REVIEW_TAGS,
   SEED_MERCHANTS,
+  floorPrice,
   type SeedMerchant,
   type SeedMenu,
 } from "./data";
@@ -146,11 +153,6 @@ function nextOrderNumber(date: string) {
   const n = (orderSeqByDay.get(date) ?? 0) + 1;
   orderSeqByDay.set(date, n);
   return `SS-${date.replaceAll("-", "")}-${String(n).padStart(4, "0")}`;
-}
-
-function floorPrice(priceIdr: number) {
-  // HPP floor ≈ 30% of normal price, rounded up to Rp 500.
-  return Math.ceil((priceIdr * 0.3) / 500) * 500;
 }
 
 function quote(
@@ -309,7 +311,7 @@ function buildOrder(spec: OrderSpec, secret: string, now: Date) {
     platformCommissionIdr: totals.platformCommissionIdr,
     totalCustomerPaidIdr: totals.totalCustomerPaidIdr,
     netMerchantPayoutIdr: totals.netMerchantPayoutIdr,
-    paymentMethod: pick(["QRIS", "QRIS", "QRIS", "GOPAY", "DANA", "OVO"] as const),
+    paymentMethod: pick(["QRIS", "QRIS", "QRIS", "GOPAY", "DANA"] as const),
     paymentGatewayRef: paid ? `SIM-${id.slice(0, 8).toUpperCase()}` : null,
     paymentExpiresAt: addMin(spec.createdAt, PAYMENT_TTL_SECONDS / 60),
     paidAt,
@@ -321,6 +323,8 @@ function buildOrder(spec: OrderSpec, secret: string, now: Date) {
     createdAt: spec.createdAt,
     updatedAt: pickedUpAt ?? paidAt ?? spec.createdAt,
   });
+  // The lauk the buyer picked (snapshot), only from what the batch offered that night.
+  const lauk = spec.batch.laukAvailable ?? [];
   rows.items.push({
     orderId: id,
     surplusBatchId: spec.batch.id,
@@ -331,17 +335,27 @@ function buildOrder(spec: OrderSpec, secret: string, now: Date) {
     unitSellingPriceIdr: spec.unitPrice,
     discountPctApplied: spec.discountPct,
     portionWeightGrams: spec.menu.portionWeightGrams ?? 200,
+    laukChoice: lauk.length ? pick(lauk) : null,
   });
 
   if (status === "COMPLETED" && pickedUpAt && pickedUpAt.getTime() <= now.getTime() - 5 * MIN && chance(0.35)) {
     const r = rand();
     const rating = r < 0.55 ? 5 : r < 0.85 ? 4 : r < 0.95 ? 3 : r < 0.99 ? 2 : 1;
+    // Optional questions: not every buyer answers them.
+    const hygieneRating = chance(0.9)
+      ? clamp(rating + pick([0, 0, 0, 1, -1]), rating === 5 ? 4 : 1, 5)
+      : null;
+    const portionFull = chance(0.85) ? (rating >= 4 ? chance(0.95) : chance(0.5)) : null;
+    // "Lauk sesuai pilihan" only makes sense when the buyer picked a lauk.
+    const tagPool = lauk.length ? REVIEW_TAGS : REVIEW_TAGS.filter((t) => t !== "Lauk sesuai pilihan");
     rows.reviews.push({
       orderId: id,
       customerId: spec.customerId,
       merchantId: spec.merchant.id,
       rating,
-      tags: rating >= 4 ? [pick(REVIEW_TAGS), pick(REVIEW_TAGS)].filter((t, i, a) => a.indexOf(t) === i) : [],
+      hygieneRating,
+      portionFull,
+      tags: rating >= 4 ? [pick(tagPool), pick(tagPool)].filter((t, i, a) => a.indexOf(t) === i) : [],
       comment: rating >= 4 ? pick(REVIEW_COMMENTS) : "Agak dingin waktu diambil.",
       createdAt: new Date(Math.min(addMin(pickedUpAt, between(5, 120)).getTime(), now.getTime())),
     });
@@ -495,7 +509,9 @@ function buildAll(now: Date, secret: string) {
       originalPriceIdr: menu.priceIdr,
       minRecoveryPriceIdr: floorPrice(menu.priceIdr),
       portionWeightGrams: menu.portionWeightGrams ?? 200,
-      isMysteryBag: menu.isMysteryBag ?? false,
+      contents: menu.contents,
+      laukOptions: menu.laukOptions ?? [],
+      isMysteryBag: false,
       isActive: true,
     }));
     rows.menus.push(...own);
@@ -515,7 +531,7 @@ function buildAll(now: Date, secret: string) {
       const { start, end } = pickupWindow(m, date);
       for (const menu of menusOf(merchant.id)) {
         const sm = seedMenuOf(m, menu);
-        if (!chance(sm.isMysteryBag ? 0.7 : 0.85)) continue;
+        if (!chance(0.85)) continue;
         const initial = Math.max(1, Math.round(sm.baseSurplus * f.surplus * between(0.7, 1.3)));
         const sellRate = clamp(m.sellRate + f.sell + between(-0.1, 0.1), 0.2, 1);
         const sold = Math.min(initial, Math.round(initial * sellRate));
@@ -540,6 +556,7 @@ function buildAll(now: Date, secret: string) {
           currentSellingPriceIdr: opening.recommendedSellingPriceIdr,
           autoDiscountEnabled: true,
           predictedSelloutProb: roundTo(clamp(conv + between(-0.1, 0.1), 0.05, 0.99), 0.0001),
+          laukAvailable: menu.laukOptions ?? [],
           pickupStartTime: start,
           pickupEndTime: end,
           status: sold === initial ? "SOLD_OUT" : "EXPIRED",
@@ -619,8 +636,9 @@ function buildAll(now: Date, secret: string) {
   }
 
   // --- Tonight: live batches relative to now ---------------------------
-  // Every warung is live. Closing times cycle through 18–150 minutes, so every
-  // hub with a few warung shows the whole ladder (Hemat 50% → Diskon Kilat 70%).
+  // Every warung is live. Closing times cycle through 18–150 minutes (relative to
+  // the seed run, so a daytime demo still shows live batches), and the optimizer
+  // prices each batch for its remaining time.
   const closeInMinutes = [150, 120, 95, 75, 55, 40, 28, 18, 140, 110, 85, 65, 45, 130, 100];
   const fToday = surplusFactors(today);
   SEED_MERCHANTS.forEach((m, idx) => {
@@ -649,6 +667,12 @@ function buildAll(now: Date, secret: string) {
       const activeUsers = demand();
       const q = quote(menu, available, minutesToClose, m.sellRate, activeUsers);
       const batchId = randomUUID();
+      // Tonight's lauk: sometimes one option already ran out ("Habis: …"); the demo
+      // batch keeps all of them. A few warung say tonight's portion is smaller.
+      const options = menu.laukOptions ?? [];
+      const soldOutLauk = !isDemoBatch && options.length >= 3 && chance(0.4) ? pick(options) : null;
+      const laukAvailable = options.filter((o) => o !== soldOutLauk);
+      const fullPortion = idx === 0 || !chance(0.05);
       const batch: BatchRow = {
         id: batchId,
         merchantId: merchant.id,
@@ -662,6 +686,8 @@ function buildAll(now: Date, secret: string) {
         currentSellingPriceIdr: q.recommendedSellingPriceIdr,
         autoDiscountEnabled: true,
         predictedSelloutProb: roundTo(clamp(m.sellRate + between(-0.08, 0.08), 0.05, 0.99), 0.0001),
+        laukAvailable,
+        fullPortion,
         pickupStartTime: start,
         pickupEndTime: end,
         status: "ACTIVE",
@@ -702,7 +728,7 @@ function buildAll(now: Date, secret: string) {
     });
   });
 
-  // --- Subscriptions (favorites + AI prediction alerts) ----------------
+  // --- Subscriptions (favorites + surplus forecast alerts) -------------
   const subs = new Set<string>();
   const addSub = (userId: string, merchantId: string) => {
     const key = `${userId}:${merchantId}`;
@@ -874,9 +900,22 @@ async function recomputeAggregates(db: DbOrTx) {
           FROM orders WHERE status = 'COMPLETED' GROUP BY merchant_id) agg
     WHERE m.id = agg.merchant_id`);
 
+  // Same aggregates as reviewOrder: hygiene_avg stays NULL until someone answered.
   await db.execute(sql`
-    UPDATE merchants m SET rating_avg = ROUND(agg.avg_rating, 2), total_reviews = agg.n
-    FROM (SELECT merchant_id, AVG(rating)::numeric AS avg_rating, COUNT(*)::int AS n
+    UPDATE merchants m SET
+      rating_avg = ROUND(agg.avg_rating, 2),
+      total_reviews = agg.n,
+      hygiene_avg = ROUND(agg.avg_hygiene, 2),
+      hygiene_count = agg.hygiene_n,
+      portion_full_count = agg.portion_full_n,
+      portion_answer_count = agg.portion_n
+    FROM (SELECT merchant_id,
+                 AVG(rating)::numeric AS avg_rating,
+                 COUNT(*)::int AS n,
+                 AVG(hygiene_rating)::numeric AS avg_hygiene,
+                 COUNT(hygiene_rating)::int AS hygiene_n,
+                 (COUNT(*) FILTER (WHERE portion_full))::int AS portion_full_n,
+                 COUNT(portion_full)::int AS portion_n
           FROM reviews GROUP BY merchant_id) agg
     WHERE m.id = agg.merchant_id`);
 
@@ -949,6 +988,7 @@ export async function seedDatabase(db: Db, opts: SeedOptions): Promise<SeedSumma
     await tx.execute(sql`
       TRUNCATE reviews, order_items, orders, discount_adjustment_logs,
                merchant_surplus_predictions, leftover_reports, customer_merchant_subscriptions,
+               batch_photos, batch_photo_uploads, delivery_interests,
                surplus_batches, menus, merchants, otp_codes, customer_presence,
                push_subscriptions, users
       RESTART IDENTITY CASCADE`);

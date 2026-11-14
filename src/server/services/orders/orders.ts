@@ -3,7 +3,7 @@
  * cancel, simulated payment, review.
  */
 import "server-only";
-import { and, avg, count, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { merchants, orders, reviews } from "@/db/schema";
@@ -89,7 +89,7 @@ export async function cancelOrder(db: Db, orderId: string, userId: string, now: 
   // A lapsed order expires first, so it counts as not collected rather than cancelled.
   await expireStaleFor(db, { orderId }, now);
   const o = await ownedOrder(db, orderId, userId);
-  // Pilot tickets are paid at the warung, so they stay cancellable until the pickup.
+  // "Bayar di warung" tickets are paid at the counter, so they stay cancellable until the pickup.
   const payAtWarung = o.status === "READY_FOR_PICKUP" && o.paymentMethod === "BAYAR_DI_WARUNG" && !o.paidAt;
   if (o.status !== "PENDING_PAYMENT" && !payAtWarung) {
     throw new ApiError(
@@ -149,6 +149,10 @@ export async function reviewOrder(
     throw new ApiError("ORDER_STATE_CONFLICT", "Ulasan hanya bisa diberikan setelah pesanan diambil");
   }
   await db.transaction(async (tx) => {
+    // Reviews of one warung run one after another, so each aggregate below sees every review
+    // committed before it (otherwise two at once could each write totals missing the other).
+    // NO KEY UPDATE still lets checkouts insert rows that reference the warung.
+    await tx.select({ id: merchants.id }).from(merchants).where(eq(merchants.id, o.merchantId)).for("no key update");
     const inserted = await tx
       .insert(reviews)
       .values({
@@ -158,21 +162,37 @@ export async function reviewOrder(
         rating: args.input.rating,
         tags: args.input.tags,
         comment: args.input.comment || null,
+        hygieneRating: args.input.hygiene_rating ?? null,
+        portionFull: args.input.portion_full ?? null,
         createdAt: now,
       })
       .onConflictDoNothing({ target: reviews.orderId })
       .returning({ id: reviews.id });
     if (inserted.length === 0) throw new ApiError("CONFLICT", "Pesanan ini sudah diulas");
 
+    // One pass over the warung's reviews. The trust signals count answers, not buyers, and
+    // stay NULL / 0 until someone answers (never a default score).
     const [agg] = await tx
-      .select({ avg: avg(reviews.rating), n: count() })
+      .select({
+        ratingAvg: sql<string | null>`avg(${reviews.rating})`,
+        n: sql<number>`count(*)::int`,
+        hygieneAvg: sql<string | null>`avg(${reviews.hygieneRating})`,
+        hygieneCount: sql<number>`count(${reviews.hygieneRating})::int`,
+        portionFullCount: sql<number>`(count(*) FILTER (WHERE ${reviews.portionFull}))::int`,
+        portionAnswerCount: sql<number>`count(${reviews.portionFull})::int`,
+      })
       .from(reviews)
       .where(eq(reviews.merchantId, o.merchantId));
+    const round2 = (v: string | null) => Math.round(Number(v) * 100) / 100;
     await tx
       .update(merchants)
       .set({
-        ratingAvg: Math.round(Number(agg.avg ?? 5) * 100) / 100,
+        ratingAvg: round2(agg.ratingAvg ?? "5"),
         totalReviews: agg.n,
+        hygieneAvg: agg.hygieneCount > 0 ? round2(agg.hygieneAvg) : null,
+        hygieneCount: agg.hygieneCount,
+        portionFullCount: agg.portionFullCount,
+        portionAnswerCount: agg.portionAnswerCount,
         updatedAt: now,
       })
       .where(eq(merchants.id, o.merchantId));

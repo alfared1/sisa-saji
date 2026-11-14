@@ -1,16 +1,29 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, asc, eq } from "drizzle-orm";
-import { discountAdjustmentLogs, menus, merchants, orders, surplusBatches, users, type Menu, type Merchant } from "@/db/schema";
+import { and, asc, eq, ne } from "drizzle-orm";
+import {
+  batchPhotos,
+  discountAdjustmentLogs,
+  menus,
+  merchants,
+  orders,
+  surplusBatches,
+  users,
+  type Menu,
+  type Merchant,
+} from "@/db/schema";
 import { BatchPatchBody, CheckoutBody, PublishBody, StockPatchBody, type MerchantBatchView } from "@/lib/contracts";
 import { ApiError } from "@/server/http";
 import { checkout } from "@/server/services/orders/checkout";
 import { simulatePayment } from "@/server/services/orders/orders";
+import { pollMerchantEvents } from "@/server/services/merchant/stream";
 import {
+  activateScheduledBatches,
   patchBatch,
   patchBatchStock,
   priceForDiscount,
   publishSurplus,
   quoteSurplus,
+  uploadBatchPhoto,
 } from "@/server/services/merchant/surplus";
 import { reseed, testDb } from "../helpers/db";
 import { TEST_PAYMENT_WEBHOOK_SECRET, TEST_PICKUP_QR_SECRET } from "../setup/constants";
@@ -63,7 +76,14 @@ beforeAll(async () => {
   [menu] = await db
     .select()
     .from(menus)
-    .where(and(eq(menus.merchantId, merchant.id), eq(menus.isActive, true), eq(menus.isMysteryBag, false)))
+    .where(
+      and(
+        eq(menus.merchantId, merchant.id),
+        eq(menus.isActive, true),
+        eq(menus.isMysteryBag, false),
+        ne(menus.category, "MYSTERY_BAG"),
+      ),
+    )
     .orderBy(asc(menus.createdAt))
     .limit(1);
   const [c] = await db.select().from(users).where(eq(users.email, "demo.pembeli@sisasaji.test"));
@@ -257,6 +277,168 @@ describe("PATCH /merchant/surplus/:id (cancel / auto discount)", () => {
     expect(off.next_escalation).toBeNull();
     const on = await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ auto_discount_enabled: true }));
     expect(on.auto_discount_enabled).toBe(true);
-    await expectApiError(patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({})), "VALIDATION_ERROR");
+    // An empty patch is refused by the body schema and, for direct callers, by the service.
+    expect(BatchPatchBody.safeParse({}).success).toBe(false);
+    await expectApiError(patchBatch(db, merchant.id, batch.id, {}), "VALIDATION_ERROR");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Menu contents, lauk and the portion promise                         */
+/* ------------------------------------------------------------------ */
+
+const LAUK = ["Ayam goreng", "Pepes ikan mas", "Tahu tempe bacem"];
+
+async function insertMenu(values: Partial<typeof menus.$inferInsert>) {
+  const [row] = await db
+    .insert(menus)
+    .values({
+      merchantId: merchant.id,
+      menuName: "Nasi Timbel + Lauk Pilihan (tes)",
+      category: "MAKANAN_BERAT",
+      originalPriceIdr: 18000,
+      minRecoveryPriceIdr: 10000,
+      ...values,
+    })
+    .returning();
+  return row;
+}
+
+async function publishMenu(m: Menu, extra: Record<string, unknown> = {}, endInMin = 120, now = new Date()) {
+  return publishSurplus(
+    db,
+    merchant.id,
+    PublishBody.parse({ menu_id: m.id, initial_stock: 4, pickup_end_time: inMin(now, endInMin), ...extra }),
+    now,
+  );
+}
+
+/** A tiny JPEG header (SOI, SOF0 frame of 640 × 480, SOS, EOI); enough for the server checks. */
+function jpeg(): Buffer {
+  const frame = [0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0xe0, 0x02, 0x80, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
+  const sos = [0xff, 0xda, 0x00, 0x0c, 0x03, 1, 0, 2, 0x11, 3, 0x11, 0x00, 0x3f, 0x00, 0x12, 0x34, 0xff, 0xd9];
+  return Buffer.from([0xff, 0xd8, ...frame, ...sos]);
+}
+
+describe("publish: menu contents and lauk", () => {
+  let laukMenu: Menu;
+  beforeAll(async () => {
+    laukMenu = await insertMenu({ contents: ["Nasi timbel", "Sayur asem", "Lalapan", "Sambal terasi"], laukOptions: LAUK });
+  });
+
+  it("defaults tonight's lauk to every option and the portion promise to normal", async () => {
+    const { batch } = await publishMenu(laukMenu);
+    expect(batch.contents).toEqual(["Nasi timbel", "Sayur asem", "Lalapan", "Sambal terasi"]);
+    expect(batch.lauk_options).toEqual(LAUK);
+    expect(batch.lauk_available).toEqual(LAUK);
+    expect(batch.full_portion).toBe(true);
+    expect(batch.photo).toBeNull();
+    expect(batch.photo_uploads_left).toBe(5);
+  });
+
+  it("stores a subset in the menu's casing and order, and full_portion false", async () => {
+    const { batch } = await publishMenu(laukMenu, { lauk_available: ["tahu tempe BACEM", "Ayam  goreng"], full_portion: false });
+    expect(batch.lauk_available).toEqual(["Ayam goreng", "Tahu tempe bacem"]);
+    expect(batch.full_portion).toBe(false);
+    const row = await batchRow(batch.id);
+    expect(row.laukAvailable).toEqual(["Ayam goreng", "Tahu tempe bacem"]);
+    expect(row.fullPortion).toBe(false);
+  });
+
+  it("refuses lauk outside the menu, and no lauk at all when the menu has options", async () => {
+    const outside = await expectApiError(publishMenu(laukMenu, { lauk_available: ["Rendang"] }), "VALIDATION_ERROR");
+    expect(outside.message).toBe("Lauk harus dipilih dari daftar lauk menu");
+    await expectApiError(publishMenu(laukMenu, { lauk_available: [] }), "VALIDATION_ERROR");
+  });
+
+  it("refuses an old surprise menu but still publishes a menu created before contents existed", async () => {
+    const mystery = await insertMenu({ menuName: "Paket lama (tes)", category: "MYSTERY_BAG", isMysteryBag: true });
+    const err = await expectApiError(publishMenu(mystery), "VALIDATION_ERROR");
+    expect(err.details).toMatchObject({ reason: "MENU_CONTENTS_REQUIRED", menu_id: mystery.id });
+
+    const legacy = await insertMenu({ menuName: "Menu lama tanpa isi (tes)" });
+    const { batch } = await publishMenu(legacy);
+    expect(batch.status).toBe("ACTIVE");
+    expect(batch.contents).toEqual([]);
+    expect(batch.lauk_available).toEqual([]);
+    // A fixed menu has no lauk to pick from.
+    await expectApiError(publishMenu(legacy, { lauk_available: ["Ayam goreng"] }), "VALIDATION_ERROR");
+  });
+
+  it("still accepts the old body without lauk_available or full_portion (demo top-up)", async () => {
+    const now = new Date();
+    const { batch } = await publishSurplus(
+      db,
+      merchant.id,
+      { menu_id: laukMenu.id, initial_stock: 3, pickup_end_time: inMin(now, 90), auto_discount_enabled: true },
+      now,
+    );
+    expect(batch.lauk_available).toEqual(LAUK);
+    expect(batch.full_portion).toBe(true);
+  });
+});
+
+describe("PATCH /merchant/surplus/:id (lauk, portion, photo on cancel)", () => {
+  let laukMenu: Menu;
+  beforeAll(async () => {
+    laukMenu = await insertMenu({ menuName: "Nasi Rames (tes)", contents: ["Nasi putih", "Sayur asem"], laukOptions: LAUK });
+  });
+
+  it("updates tonight's lauk and portion, bumps updated_at and streams lauk_available", async () => {
+    const t0 = new Date(Date.now() - 5 * MIN);
+    const { batch } = await publishMenu(laukMenu, {}, 120, t0);
+    const before = await batchRow(batch.id);
+    const now = new Date();
+    const v = await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ lauk_available: ["pepes ikan mas"] }), now);
+    expect(v.lauk_available).toEqual(["Pepes ikan mas"]);
+    const after = await batchRow(batch.id);
+    expect(after.updatedAt.getTime()).toBeGreaterThan(before.updatedAt.getTime());
+
+    const events = await pollMerchantEvents(db, merchant.id, new Date(now.getTime() - 1000));
+    const ev = events.find((e) => e.event.type === "batch.updated" && e.event.batch_id === batch.id);
+    expect(ev?.event).toMatchObject({ type: "batch.updated", lauk_available: ["Pepes ikan mas"] });
+
+    const p = await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ full_portion: false }));
+    expect(p.full_portion).toBe(false);
+    expect(p.lauk_available).toEqual(["Pepes ikan mas"]);
+
+    await expectApiError(
+      patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ lauk_available: [] })),
+      "VALIDATION_ERROR",
+    );
+    await expectApiError(
+      patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ lauk_available: ["Rendang"] })),
+      "VALIDATION_ERROR",
+    );
+  });
+
+  it("refuses lauk and portion edits once the batch is closed", async () => {
+    const { batch } = await publishMenu(laukMenu);
+    await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ status: "CANCELLED" }));
+    await expectApiError(
+      patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ lauk_available: ["Ayam goreng"] })),
+      "BATCH_CLOSED",
+    );
+    await expectApiError(patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ full_portion: false })), "BATCH_CLOSED");
+  });
+
+  it("deletes the batch photo when the batch is cancelled", async () => {
+    const { batch } = await publishMenu(laukMenu);
+    const up = await uploadBatchPhoto(db, merchant.id, batch.id, { bytes: jpeg(), contentType: "image/jpeg", demoOnly: false });
+    expect(up.photo).not.toBeNull();
+    expect((await db.select().from(batchPhotos).where(eq(batchPhotos.surplusBatchId, batch.id))).length).toBe(1);
+    const v = await patchBatch(db, merchant.id, batch.id, BatchPatchBody.parse({ status: "CANCELLED" }));
+    expect(v.photo).toBeNull();
+    expect((await db.select().from(batchPhotos).where(eq(batchPhotos.surplusBatchId, batch.id))).length).toBe(0);
+  });
+
+  it("deletes the photo of a scheduled batch that expired before it went live", async () => {
+    const t0 = new Date(Date.now() - 60 * MIN);
+    const { batch } = await publishMenu(laukMenu, { pickup_start_time: inMin(t0, 30) }, 45, t0);
+    expect(batch.status).toBe("SCHEDULED");
+    await uploadBatchPhoto(db, merchant.id, batch.id, { bytes: jpeg(), contentType: "image/jpeg", demoOnly: false }, t0);
+    await activateScheduledBatches(db, new Date(t0.getTime() + 50 * MIN));
+    expect((await batchRow(batch.id)).status).toBe("EXPIRED");
+    expect((await db.select().from(batchPhotos).where(eq(batchPhotos.surplusBatchId, batch.id))).length).toBe(0);
   });
 });

@@ -42,6 +42,61 @@ test.describe("discovery", () => {
     await expect(page.getByText("Laksa & Asinan Bu Nining").first()).toBeVisible();
   });
 
+  test("quick filters: walking distance and the ceban price narrow the menus; no surprise category", async ({ page }) => {
+    const first = page.waitForResponse((r) => r.url().includes("/api/v1/discover/nearby") && r.ok());
+    await page.goto("/discover");
+    await first;
+    await expect(liveLine(page)).toContainText("2 km");
+    const all = await liveMenuCount(page);
+
+    // Closed surprise items are gone from the category filter.
+    const categories = page.getByRole("radiogroup", { name: "Kategori" });
+    await expect(categories.getByRole("radio", { name: "Semua" })).toBeVisible();
+    await expect(categories.getByRole("radio", { name: "Paket Kejutan" })).toHaveCount(0);
+
+    const quick = page.getByRole("group", { name: "Filter cepat" });
+    const near = quick.getByRole("button", { name: "< 500 m" });
+    const mid = quick.getByRole("button", { name: "< 1 km" });
+
+    // "< 500 m": the live line counts within 500 m, every matching card is a walk away.
+    await near.click();
+    await expect(near).toHaveAttribute("aria-pressed", "true");
+    await expect(liveLine(page)).toContainText("500 m");
+    expect(await liveMenuCount(page)).toBeLessThanOrEqual(all);
+    const matches = page.getByRole("region", { name: "Menu yang Cocok" });
+    await expect(matches).toBeVisible();
+    const distances = await matches.locator("article").evaluateAll((els) =>
+      els.map((e) => Number(/(\d+) m · jalan kaki/.exec(e.textContent ?? "")?.[1] ?? NaN)),
+    );
+    expect(distances.length).toBeGreaterThan(0);
+    for (const d of distances) expect(d).toBeLessThan(500);
+
+    // The distance chips are one choice.
+    await mid.click();
+    await expect(mid).toHaveAttribute("aria-pressed", "true");
+    await expect(near).toHaveAttribute("aria-pressed", "false");
+    await expect(liveLine(page)).toContainText("1 km");
+    await mid.click();
+    await expect(liveLine(page)).toContainText("2 km");
+
+    // "Harga ≤ Rp 12.000": every matching card sells at most Rp 12.000.
+    const cheap = quick.getByRole("button", { name: "Harga ≤ Rp 12.000" });
+    await cheap.click();
+    await expect(cheap).toHaveAttribute("aria-pressed", "true");
+    await expect(matches).toBeVisible();
+    // The selling price is the lowest "Rp" amount on a card (the struck-through one is higher).
+    const prices = await matches.locator("article").evaluateAll((els) =>
+      els.map((e) => {
+        const amounts = [...(e.textContent ?? "").matchAll(/Rp\s?([\d.]+)/g)].map((m) => Number(m[1].replace(/\./g, "")));
+        return Math.min(...amounts);
+      }),
+    );
+    expect(prices.length).toBeGreaterThan(0);
+    for (const p of prices) expect(p).toBeLessThanOrEqual(12000);
+    await cheap.click();
+    await expect(page.getByRole("heading", { name: "Hampir Habis & Diskon Tertinggi" })).toBeVisible();
+  });
+
   test("map shows pins and opens the warung bottom sheet", async ({ page }) => {
     await page.goto("/map");
     // /map opens on all of Indonesia; re-picking the stored campus (IPB Dramaga)

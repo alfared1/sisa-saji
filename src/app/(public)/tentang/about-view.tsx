@@ -12,7 +12,9 @@ import {
   DEFAULT_PORTION_WEIGHT_GRAMS,
   DEFAULT_SEARCH_RADIUS_M,
   DISCOUNT_BASELINE_PCT,
+  HUNGER_ALERT_RADIUS_M,
   MERCHANT_PREMIUM_PRICE_IDR,
+  PAY_AT_WARUNG_HOLD_MINUTES,
   PLATFORM_COMMISSION_DEFAULT_IDR,
 } from "@/lib/constants";
 import { CO2E_SOURCE } from "@/lib/impact";
@@ -30,15 +32,15 @@ const decimal = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits
 const STEPS = [
   {
     title: "Warung memasang porsi surplus",
-    body: "Menjelang tutup, warung memasang menu yang belum laku dalam kurang dari satu menit, lengkap dengan harga terendah yang masih mau ia terima.",
+    body: "Menjelang tutup, warung memasang menu yang belum laku dalam kurang dari satu menit, lengkap dengan isi porsi, lauk yang tersisa, dan harga terendah yang masih mau ia terima.",
   },
   {
     title: "Harga menyesuaikan sendiri",
-    body: `Mulai dari diskon ${DISCOUNT_BASELINE_PCT}%, lalu naik mendekati jam tutup sampai Diskon Kilat. Pembeli dalam radius ${KM} km melihatnya dan mendapat notifikasi.`,
+    body: `Mulai dari diskon ${DISCOUNT_BASELINE_PCT}%, lalu naik mendekati jam tutup sampai harga terendah warung. Pembeli dalam radius ${KM} km melihatnya, dan yang menyalakan Notifikasi Jam Lapar dikabari sekali semalam saat warung dalam ${HUNGER_ALERT_RADIUS_M} m dari kosnya buka diskon malam.`,
   },
   {
-    title: "Pembeli pesan dan ambil sendiri",
-    body: "Porsi dikunci saat dibayar. Pembeli datang ke warung dan menunjukkan QR atau kode. Tidak ada kurir, jadi tidak ada ongkir.",
+    title: "Pembeli kunci porsi dan ambil sendiri",
+    body: `Porsi dikunci selama pembeli membayar QRIS, atau ditahan ${PAY_AT_WARUNG_HOLD_MINUTES} menit kalau ia memilih bayar tunai di warung. Pembeli datang ke warung dan menunjukkan QR atau kode. Tidak ada kurir, jadi tidak ada ongkir.`,
   },
   {
     title: "Sisa terakhir tetap dicatat",
@@ -69,8 +71,47 @@ const TECH = [
   },
 ] as const;
 
+/**
+ * Results of the team's own survey, exactly as the owner reported them. No month or year is
+ * known, so none is stated. Do not add numbers that are not here.
+ */
+const RESEARCH = [
+  {
+    title: "Ingin memilih sendiri",
+    body: "60% ragu karena makanan sisa belum tentu cocok dengan selera, dan 48% lebih suka memilih menu sendiri daripada paket acak.",
+  },
+  {
+    title: "Foto asli dan kebersihan",
+    body: "Fitur yang paling dicari adalah foto asli makanan yang tersedia (58%) dan nilai kebersihan dari pembeli lain (58%).",
+  },
+  {
+    title: "Diskon yang terasa",
+    body: "78% menginginkan diskon di atas 20%, paling pas 30 sampai 50%. Untuk porsi normal Rp 20.000, 62% menilai Rp 8.000 sampai Rp 12.000 wajar menjelang tutup.",
+  },
+  {
+    title: "Porsi tetap kenyang",
+    body: "Porsi yang mengenyangkan jadi prioritas kedua (60%) setelah harga (78%), dan 34% khawatir porsinya lebih kecil.",
+  },
+  {
+    title: "Dekat dan malam hari",
+    body: "74% hanya mau ambil sendiri dalam 1 km (46% ingin di bawah 500 m), dan 48% enggan keluar malam. 78% mencari makan malam antara pukul 20.00 dan 23.00.",
+  },
+  {
+    title: "Kepastian sebelum berangkat",
+    body: "52% ingin hitung mundur sampai warung tutup, 42% ingin bisa memesan atau menahan porsi (26% takut kehabisan sebelum sampai), dan 56% ingin notifikasi saat ada diskon di dekatnya.",
+  },
+  {
+    title: "Cara bayar",
+    body: "QRIS dipilih 86% responden, tunai saat ambil 76%, GoPay 38%, dan DANA 30%.",
+  },
+  {
+    title: "Alasan utama",
+    body: "Hemat dan pasti kenyang. Mengurangi sampah pangan jadi nilai tambah, bukan alasan utama.",
+  },
+] as const;
+
 const BUSINESS = [
-  { value: formatIdr(PLATFORM_COMMISSION_DEFAULT_IDR), label: "biaya layanan per pesanan, dibayar pembeli" },
+  { value: formatIdr(PLATFORM_COMMISSION_DEFAULT_IDR), label: "biaya layanan per pesanan online, dibayar pembeli (tunai di warung tanpa biaya layanan)" },
   { value: "100%", label: "harga pemulihan diterima warung, tanpa potongan komisi" },
   { value: formatIdr(MERCHANT_PREMIUM_PRICE_IDR), label: "per bulan untuk Mitra Terverifikasi: badge dan urutan teratas" },
   { value: formatIdr(0), label: "ongkir, karena pembeli selalu mengambil sendiri" },
@@ -152,6 +193,21 @@ export function AboutView() {
             </>
           }
         />
+
+        <Section
+          id="riset"
+          title="Riset pengguna"
+          lead="Survei tim Sisa-Saji terhadap 50 mahasiswa di Kabupaten dan Kota Bogor. Angka di bawah adalah persentase responden. Hasilnya membentuk aplikasi ini: isi menu ditulis jelas, kebersihan dan porsi dinilai pembeli lain, jarak ke warung ditulis dalam meter dengan filter jalan kaki, dan porsi bisa dikunci sebelum berangkat."
+        >
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {RESEARCH.map((r) => (
+              <li key={r.title} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+                <p className="font-semibold">{r.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{r.body}</p>
+              </li>
+            ))}
+          </ul>
+        </Section>
 
         <Section id="cara-kerja" title="Cara kerjanya">
           <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2">

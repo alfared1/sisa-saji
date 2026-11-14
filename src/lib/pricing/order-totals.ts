@@ -7,7 +7,16 @@
  *   platform keeps = platform fee − voucher
  */
 import { PLATFORM_COMMISSION_DEFAULT_IDR } from "@/lib/constants";
+import type { PaymentMethod } from "@/lib/contracts";
 import { co2GramsFromFoodGrams } from "@/lib/impact";
+
+/**
+ * Service fee for a payment method. "Bayar di warung" (cash at pickup, any warung) pays no
+ * fee: the platform cannot collect it from cash. Those tickets also take no voucher.
+ */
+export function serviceFeeFor(method: PaymentMethod): number {
+  return method === "BAYAR_DI_WARUNG" ? 0 : PLATFORM_COMMISSION_DEFAULT_IDR;
+}
 
 export interface OrderLineInput {
   quantity: number;

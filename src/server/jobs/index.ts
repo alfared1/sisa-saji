@@ -4,10 +4,11 @@
  *   every 1 min   runMinuteJobs        expire unpaid checkouts, close unclaimed paid orders and lapsed "bayar di warung" tickets
  *                                       (no-show), activate due SCHEDULED batches, close
  *                                       ended batches, end lapsed premium, prune presence,
- *                                       merchant "publish tonight?" reminders
+ *                                       purge ended batch photos, merchant "publish tonight?" reminders
  *   every 5 min   runEscalationJobs    time-decay discount escalation (+ Diskon Kilat push)
  *   daily 00:15   runPredictionRefresh heuristic-v0 predictions for today..+6
- *   daily 17:30   runProactiveNotifications  AI-prediction push to subscribers
+ *   daily 17:30   runProactiveNotifications  surplus forecast push to subscribers
+ *   daily 20:00   runHungerDigest      "Jam Lapar" digest (until 21:30, once per device per night)
  *   Sun 02:00     weekly ML training (ml/train_predict.py → lgbm-v1)
  *
  * Every job takes (db, now) so tests can drive time. Daily/weekly jobs are
@@ -19,9 +20,11 @@ import "server-only";
 import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { merchants, merchantSurplusPredictions } from "@/db/schema";
-import { ESCALATION_INTERVAL_MINUTES } from "@/lib/constants";
+import { ESCALATION_INTERVAL_MINUTES, HUNGER_ALERT_HOUR, HUNGER_DIGEST_UNTIL } from "@/lib/constants";
 import { DAY_MS, wibDate, wibDayOfWeek, wibTime } from "@/lib/time";
+import { purgeEndedBatchPhotos } from "@/server/services/batch-photos";
 import { runEscalation, type EscalationSummary } from "@/server/services/escalation";
+import { runHungerDigest } from "@/server/services/hunger-alert";
 import { subscriberIds } from "@/server/services/merchant/notify";
 import { expireSubscriptions } from "@/server/services/merchant/profile";
 import { activateScheduledBatches } from "@/server/services/merchant/surplus";
@@ -54,6 +57,8 @@ export interface MinuteSummary {
   liveNotifiedDevices: number;
   /** customer_presence rows older than PRESENCE_RETENTION_HOURS deleted. */
   prunedPresence: number;
+  /** Batch photos hard deleted because their batch ended or a demo photo's TTL passed. */
+  purgedBatchPhotos: number;
 }
 
 export async function runMinuteJobs(db: Db, now: Date = new Date()): Promise<MinuteSummary> {
@@ -65,6 +70,7 @@ export async function runMinuteJobs(db: Db, now: Date = new Date()): Promise<Min
   const closedBatches = await closeEndedBatches(db, now);
   const expiredSubscriptions = await expireSubscriptions(db, now);
   const prunedPresence = await prunePresence(db, now);
+  const purgedBatchPhotos = await purgeEndedBatchPhotos(db, now);
   return {
     expiredOrders,
     unclaimedOrders,
@@ -74,6 +80,7 @@ export async function runMinuteJobs(db: Db, now: Date = new Date()): Promise<Min
     expiredSubscriptions,
     liveNotifiedDevices: activation.notifiedDevices,
     prunedPresence,
+    purgedBatchPhotos,
   };
 }
 
@@ -94,7 +101,7 @@ export function runPredictionRefresh(db: Db, now: Date = new Date()): Promise<Re
 }
 
 /* ------------------------------------------------------------------ */
-/* Daily 17:30: proactive AI-prediction notifications                  */
+/* Daily 17:30: proactive surplus forecast notifications               */
 /* ------------------------------------------------------------------ */
 
 export interface ProactiveSummary {
@@ -141,7 +148,7 @@ export async function runProactiveNotifications(db: Db, now: Date = new Date()):
     try {
       const ids = await subscriberIds(db, m.id, "notify_on_ai_prediction");
       summary.notifiedDevices += await sendPushToUsers(db, ids, {
-        title: `Prediksi AI: ${m.name} malam ini`,
+        title: `Perkiraan malam ini: ${m.name}`,
         body: `Diperkirakan ada ~${Math.round(Number(c.portions))} porsi surplus mulai pukul ${c.peak.slice(0, 5).replace(":", ".")}. Pantau diskonnya di Sisa-Saji!`,
         url: `/warung/${m.slug}`,
         tag: `prediction-${m.id}-${today}`,
@@ -200,7 +207,7 @@ export async function runMerchantReminders(
     try {
       summary.notifiedDevices += await sendPushToUsers(db, [m.ownerUserId], {
         title: "Siap publikasikan porsi surplus malam ini?",
-        body: `Jam surplus Anda mulai pukul ${m.start.slice(0, 5).replace(":", ".")}. Cek prediksi AI lalu publikasikan dalam 1 menit.`,
+        body: `Jam surplus Anda mulai pukul ${m.start.slice(0, 5).replace(":", ".")}. Cek perkiraan porsi lalu publikasikan dalam 1 menit.`,
         url: "/merchant/surplus/new",
         tag: `merchant-reminder-${today}`,
       });
@@ -296,8 +303,9 @@ export function createScheduler(opts: SchedulerOptions) {
 
   const calendar: CalendarJob[] = [
     { name: "prediction-refresh", at: "00:15", run: (now) => runPredictionRefresh(db, now) },
-    // After ~20:30 the evening's surplus is already live, an AI "heads-up" is pointless.
+    // After ~20:30 the evening's surplus is already live, a forecast "heads-up" is pointless.
     { name: "proactive-notifications", at: "17:30", until: "20:30", run: (now) => runProactiveNotifications(db, now) },
+    { name: "hunger-hour", at: HUNGER_ALERT_HOUR, until: HUNGER_DIGEST_UNTIL, run: (now) => runHungerDigest(db, now) },
   ];
   if (opts.runMl) {
     const runMl = opts.runMl;

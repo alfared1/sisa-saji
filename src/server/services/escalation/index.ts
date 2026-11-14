@@ -16,7 +16,7 @@
  * with unchanged prices is written so the push is still sent only once.
  */
 import "server-only";
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, ne, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { discountAdjustmentLogs, menus, merchants, surplusBatches } from "@/db/schema";
 import { calculateOptimalRecoveryPrice } from "@/lib/pricing/dynamic-discount";
@@ -51,6 +51,9 @@ export async function runEscalation(db: Db, now: Date = new Date()): Promise<Esc
         eq(surplusBatches.autoDiscountEnabled, true),
         gt(surplusBatches.availableStock, 0),
         gt(surplusBatches.pickupEndTime, now),
+        // Surprise menus are closed: no price drop or Diskon Kilat push for their leftovers.
+        eq(menus.isMysteryBag, false),
+        ne(menus.category, "MYSTERY_BAG"),
       ),
     );
   const summary: EscalationSummary = { checked: rows.length, raised: 0, flashRescues: 0, notifiedDevices: 0 };

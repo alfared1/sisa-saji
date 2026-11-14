@@ -7,7 +7,7 @@ import { randomInt } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/client";
-import { merchants, surplusBatches, users } from "@/db/schema";
+import { menus, merchants, surplusBatches, users } from "@/db/schema";
 import { DEMO_MERCHANT_SLUG } from "@/db/seed/data";
 import { CAMPUSES } from "@/lib/constants";
 import { DiscoverQuery, SubscribeBody, type MerchantSummary } from "@/lib/contracts";
@@ -102,6 +102,80 @@ describe("GET /discover/nearby", () => {
     }
   });
 
+  it("cards say what is in the portion, tonight's lauk and the portion promise", async () => {
+    const r = await nearby({ radius_m: 5000 });
+    const cards = r.merchants.flatMap((m) => m.batches);
+    expect(cards.length).toBeGreaterThan(0);
+    for (const b of cards) {
+      expect(b).not.toHaveProperty("is_mystery_bag");
+      expect(Array.isArray(b.contents)).toBe(true);
+      expect(Array.isArray(b.lauk_options)).toBe(true);
+      expect(Array.isArray(b.lauk_available)).toBe(true);
+      // Tonight's lauk are always from the menu's list (case-insensitive).
+      const options = b.lauk_options.map((x) => x.toLowerCase());
+      for (const l of b.lauk_available) expect(options).toContain(l.toLowerCase());
+      expect(typeof b.full_portion).toBe("boolean");
+      expect(b.photo).toBeNull(); // seed has no photos
+      expect(b.merchant_trust).toHaveProperty("hygiene");
+      expect(b.merchant_trust).toHaveProperty("portion_full");
+      // Seed warung are not pilot warung: no menu photo is passed on to buyers.
+      if (!b.merchant_is_pilot) expect(b.image_url).toBeNull();
+    }
+    for (const m of r.merchants) expect(m.trust).toEqual(m.batches[0].merchant_trust);
+  });
+
+  it("never lists a legacy closed surprise menu", async () => {
+    const target = (await nearby()).merchants[0].batches[0];
+    await db.update(menus).set({ isMysteryBag: true }).where(eq(menus.id, target.menu_id));
+    try {
+      const ids = (await nearby()).merchants.flatMap((m) => m.batches.map((b) => b.batch_id));
+      expect(ids).not.toContain(target.batch_id);
+    } finally {
+      await db.update(menus).set({ isMysteryBag: false }).where(eq(menus.id, target.menu_id));
+    }
+    const [{ category }] = await db.select({ category: menus.category }).from(menus).where(eq(menus.id, target.menu_id));
+    await db.update(menus).set({ category: "MYSTERY_BAG" }).where(eq(menus.id, target.menu_id));
+    try {
+      const ids = (await nearby()).merchants.flatMap((m) => m.batches.map((b) => b.batch_id));
+      expect(ids).not.toContain(target.batch_id);
+    } finally {
+      await db.update(menus).set({ category }).where(eq(menus.id, target.menu_id));
+    }
+  });
+
+  it("trust signals stay null below 10 answers and show the real share from 10", async () => {
+    const m = (await nearby()).merchants[0];
+    const [before] = await db.select().from(merchants).where(eq(merchants.id, m.id));
+    const trustOf = async () => (await nearby()).merchants.find((x) => x.id === m.id)!;
+    try {
+      await db
+        .update(merchants)
+        .set({ hygieneAvg: 4.86, hygieneCount: 9, portionFullCount: 9, portionAnswerCount: 9 })
+        .where(eq(merchants.id, m.id));
+      let x = await trustOf();
+      expect(x.trust).toEqual({ hygiene: null, portion_full: null });
+      expect(x.batches[0].merchant_trust).toEqual({ hygiene: null, portion_full: null });
+
+      await db
+        .update(merchants)
+        .set({ hygieneAvg: 4.86, hygieneCount: 12, portionFullCount: 11, portionAnswerCount: 12 })
+        .where(eq(merchants.id, m.id));
+      x = await trustOf();
+      expect(x.trust).toEqual({ hygiene: { avg: 4.9, count: 12 }, portion_full: { pct: 92, count: 12 } });
+      expect(x.batches[0].merchant_trust).toEqual(x.trust);
+    } finally {
+      await db
+        .update(merchants)
+        .set({
+          hygieneAvg: before.hygieneAvg,
+          hygieneCount: before.hygieneCount,
+          portionFullCount: before.portionFullCount,
+          portionAnswerCount: before.portionAnswerCount,
+        })
+        .where(eq(merchants.id, m.id));
+    }
+  });
+
   it("filters by menu category, max price and text query", async () => {
     const all = await nearby({ radius_m: 5000 });
     const cats = new Set(all.merchants.flatMap((m) => m.batches.map((b) => b.category)));
@@ -189,7 +263,13 @@ describe("GET /merchants/:slugOrId and subscribe", () => {
     expect(d.subscription).toBeNull();
     expect(d.reviews.length).toBeGreaterThan(0);
     expect(d.reviews.length).toBeLessThanOrEqual(10);
-    for (const r of d.reviews) expect(r.customer_name).toMatch(/^\S+( [A-Z]\.)?$/);
+    for (const r of d.reviews) {
+      expect(r.customer_name).toMatch(/^\S+( [A-Z]\.)?$/);
+      expect(r).toHaveProperty("hygiene_rating");
+      expect(r).toHaveProperty("portion_full");
+      if (r.hygiene_rating !== null) expect(r.hygiene_rating).toBeGreaterThanOrEqual(1);
+    }
+    expect(d.trust).toHaveProperty("hygiene");
     expectSorted(d.reviews, (a, b) => b.created_at.localeCompare(a.created_at));
   });
 
@@ -247,6 +327,7 @@ describe("SSE change feed query", () => {
       merchant_id: near.merchant_id,
       available_stock: near.available_stock - 1,
       status: "ACTIVE",
+      lauk_available: near.lauk_available,
     });
     expect(changes.cursor).not.toBe(cursor);
     // Advancing the cursor drains the feed.
