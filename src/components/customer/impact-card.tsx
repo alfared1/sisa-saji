@@ -35,7 +35,7 @@ export function useGlobalStats(enabled = true) {
   });
 }
 
-/** Personal ImpactCard (logged in) — "Kamu telah menyelamatkan …". */
+/** Personal ImpactCard (logged in): "Kamu sudah hemat … sambil menyelamatkan …". */
 export function ImpactCard({ name }: { name: string }) {
   const q = useImpactSummary(true);
   if (q.isPending) return <Skeleton className="h-[8.5rem] w-full rounded-3xl" />;
@@ -54,22 +54,23 @@ export function ImpactCard({ name }: { name: string }) {
         </p>
         <ChevronRightIcon className="size-4 opacity-80 transition-transform group-hover:translate-x-0.5" />
       </div>
+      {/* Money first: the student survey found saving money and eating your fill drive orders; food saved is the bonus. */}
       {fresh ? (
         <p className="relative mt-2 text-[15px] leading-snug font-semibold">
-          Selamatkan porsi pertamamu malam ini. Tiap porsi mencegah ±0,5 kg emisi CO₂e.
+          Makan malam pertamamu mulai {formatIdr(10_000)}, sekaligus menyelamatkan porsi dari dibuang.
         </p>
       ) : (
         <p className="relative mt-2 text-[15px] leading-snug font-semibold">
-          Kamu telah menyelamatkan <span className="whitespace-nowrap">{formatKg(d.total_food_saved_grams)}</span> makanan
-          & mencegah <span className="whitespace-nowrap">{formatKg(d.total_co2_avoided_grams)}</span> emisi CO₂e
+          Kamu sudah hemat <span className="whitespace-nowrap">{formatIdr(d.total_money_saved_idr)}</span> dari harga normal,
+          sambil menyelamatkan <span className="whitespace-nowrap">{formatKg(d.total_food_saved_grams)}</span> makanan
         </p>
       )}
       {/* Equal thirds on phones; in the 300–320 px desktop rail each tile takes its value's width, so "Rp 826,5 rb" fits. */}
       <div className="relative mt-3 grid grid-cols-3 gap-2 text-center lg:flex">
         {[
+          { icon: WalletIcon, value: formatIdrCompact(d.total_money_saved_idr), full: formatIdr(d.total_money_saved_idr), label: "dihemat" },
           { icon: LeafIcon, value: formatKg(d.total_food_saved_grams), label: "pangan" },
           { icon: CloudIcon, value: formatKg(d.total_co2_avoided_grams), label: "CO₂e" },
-          { icon: WalletIcon, value: formatIdrCompact(d.total_money_saved_idr), full: formatIdr(d.total_money_saved_idr), label: "dihemat" },
         ].map((s) => (
           <div key={s.label} className="min-w-0 rounded-2xl bg-white/12 px-1.5 py-2 ring-1 ring-white/15 lg:flex-auto lg:px-1">
             <s.icon className="mx-auto size-4 opacity-90" aria-hidden />

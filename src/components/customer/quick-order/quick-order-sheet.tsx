@@ -453,14 +453,14 @@ function QuickOrderBody({
                 <span className="text-muted-foreground">
                   Bayar di warung saat ambil <span className="text-xs">(tanpa biaya layanan)</span>
                 </span>
-                <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
+                <span className="shrink-0 font-extrabold whitespace-nowrap tabular-nums">{formatIdr(totals.total_idr)}</span>
               </p>
             ) : (
               <p className="flex items-baseline justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">
                   Total bayar <span className="text-xs">(termasuk biaya layanan {formatIdr(totals.service_fee_idr)})</span>
                 </span>
-                <span className="font-extrabold tabular-nums">{formatIdr(totals.total_idr)}</span>
+                <span className="shrink-0 font-extrabold whitespace-nowrap tabular-nums">{formatIdr(totals.total_idr)}</span>
               </p>
             )}
             <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
