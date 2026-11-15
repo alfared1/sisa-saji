@@ -69,6 +69,44 @@ export const MERCHANT_TICKET_CANCEL_REASONS = {
 export type MerchantTicketCancelReason = keyof typeof MERCHANT_TICKET_CANCEL_REASONS;
 
 /**
+ * A paid online order (QRIS or e-wallet) that ends cancelled is refunded in full. The stored
+ * cancel_reason says who ended it; `buyer` is the sentence on the buyer's order.
+ */
+export const PAID_ORDER_CANCEL_REASONS = {
+  OUT_OF_STOCK: {
+    reason: "Warung membatalkan pesanan karena stoknya habis.",
+    buyer: "Stok warung habis, jadi pesananmu dibatalkan. Pembayaranmu dikembalikan penuh.",
+  },
+  BUYER_APPROVED: {
+    reason: "Dibatalkan atas permintaan pembeli, disetujui warung.",
+    buyer: "Warung menyetujui permintaan batalmu. Pembayaranmu dikembalikan penuh.",
+  },
+  BUYER_UNANSWERED: {
+    reason: "Dibatalkan atas permintaan pembeli. Warung tidak menanggapi sebelum batas ambil.",
+    buyer: "Warung belum menanggapi permintaan batalmu sampai batas ambil, jadi pesananmu dibatalkan. Pembayaranmu dikembalikan penuh.",
+  },
+} as const;
+
+/** Cancel reasons the warung chose because the food ran out: never counted against the buyer. */
+export const WARUNG_OUT_OF_STOCK_REASONS: readonly string[] = [
+  MERCHANT_TICKET_CANCEL_REASONS.OUT_OF_STOCK.reason,
+  PAID_ORDER_CANCEL_REASONS.OUT_OF_STOCK.reason,
+];
+
+/**
+ * Why a buyer asks to cancel an order they already paid online. The warung must confirm
+ * (it may have set the portions aside); "Alasan lain" needs a note.
+ */
+export const CANCEL_REQUEST_REASONS = {
+  CANNOT_COME: "Tidak sempat datang",
+  WRONG_ORDER: "Salah pesan",
+  CHANGED_MIND: "Berubah pikiran",
+  OTHER: "Alasan lain",
+} as const;
+export type CancelRequestReasonCode = keyof typeof CANCEL_REQUEST_REASONS;
+export const CANCEL_REQUEST_NOTE_MAX = 200;
+
+/**
  * "Tidak datang" is only true near the end of the hold: the buyer was promised the portions
  * until the hold end, and the cancel counts towards their no-show limit. It opens in the last
  * PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES, and never before half of the hold has passed.
@@ -81,9 +119,12 @@ export function noShowCancelOpensAt(createdAt: string | Date, holdEnd: string | 
   return new Date(Math.max(end - PAY_AT_WARUNG_NO_SHOW_LAST_MINUTES * 60_000, start + (end - start) / 2));
 }
 
-/** True when the warung cancelled the order (one of MERCHANT_TICKET_CANCEL_REASONS). */
+/** True when the warung cancelled the order on its own (a ticket reason, or a paid order out of stock). */
 export function isCancelledByWarung(cancelReason: string | null | undefined): boolean {
-  return Object.values(MERCHANT_TICKET_CANCEL_REASONS).some((r) => r.reason === cancelReason);
+  return (
+    Object.values(MERCHANT_TICKET_CANCEL_REASONS).some((r) => r.reason === cancelReason) ||
+    cancelReason === PAID_ORDER_CANCEL_REASONS.OUT_OF_STOCK.reason
+  );
 }
 
 /** The stored cancel_reason as the buyer's own ticket says it (unchanged when not a ticket reason). */
@@ -92,8 +133,30 @@ export function buyerCancelText(cancelReason: string | null | undefined): string
   if (cancelReason === PAY_AT_WARUNG_EXPIRED_REASON) {
     return "Tiketmu tidak diambil sebelum batas waktu, jadi porsinya dikembalikan ke warung. Ini dihitung sebagai tiket tidak diambil.";
   }
-  return Object.values(MERCHANT_TICKET_CANCEL_REASONS).find((r) => r.reason === cancelReason)?.buyer ?? cancelReason;
+  return (
+    [...Object.values(MERCHANT_TICKET_CANCEL_REASONS), ...Object.values(PAID_ORDER_CANCEL_REASONS)].find(
+      (r) => r.reason === cancelReason,
+    )?.buyer ?? cancelReason
+  );
 }
+
+/**
+ * Chat between the buyer and the warung about one order. Open while the order waits to be
+ * collected (paid, or a "bayar di warung" ticket); read-only afterwards. Quick replies cover
+ * the usual pickup messages so nobody has to type at the counter.
+ */
+export const ORDER_CHAT_MAX_LENGTH = 500;
+export const ORDER_CHAT_RATE_LIMIT = 20;
+export const ORDER_CHAT_RATE_WINDOW_MINUTES = 10;
+export const ORDER_CHAT_QUICK_REPLIES = {
+  CUSTOMER: ["Saya sedang di jalan", "Sudah sampai di warung", "Bisa tunggu sebentar?"],
+  MERCHANT: ["Pesanan sudah siap", "Ditunggu ya", "Warung tutup sebentar lagi"],
+} as const;
+
+/** Smallest wallet payout ("Cairkan saldo"). */
+export const PAYOUT_MIN_IDR = 10_000;
+/** Cashier accounts per warung (scan + pickup queue + buyer chat only). */
+export const MAX_CASHIERS_PER_WARUNG = 5;
 
 /** Distance copy: "bisa jalan kaki" up to WALKABLE_DISTANCE_M, "N mnt jalan kaki" up to WALK_MINUTES_COPY_MAX_M. */
 export const WALKABLE_DISTANCE_M = 500;

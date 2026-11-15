@@ -21,6 +21,7 @@ import {
   MERCHANT_MENU_CATEGORIES,
   type MenuCategory,
   type MenuCreateBody,
+  type MenuResponse,
   type MenuUpdateBody,
   type MenuView,
   type MerchantMeResponse,
@@ -32,10 +33,10 @@ import { menuPatch, stripEmpty } from "../lib/logic";
 import { MERCHANT_ME_QUERY_KEY, merchantKeys, useMerchantMe } from "../lib/queries";
 import { MerchantPage, MerchantPageHeader } from "../ui";
 import { EMPTY_MENU, MenuForm, menuToFormValues } from "./menu-form";
+import { MenuPhotoField } from "./menu-photo-field";
 
 export { menuPatch };
 
-type MenuResponse = { menu: MenuView };
 type Editing = { mode: "create" } | { mode: "edit"; menu: MenuView } | null;
 
 function upsertMenu(old: MerchantMeResponse | undefined, menu: MenuView): MerchantMeResponse | undefined {
@@ -273,6 +274,19 @@ export function MerchantMenusView() {
           </SheetHeader>
           {/* Only the form scrolls, so the title and the close button stay in view. */}
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+            {editing?.mode === "edit" && (
+              <MenuPhotoField
+                menu={editing.menu}
+                isPilot={me.data?.merchant.is_pilot ?? false}
+                onChanged={(menu) => {
+                  afterChange(menu);
+                  setEditing({ mode: "edit", menu });
+                }}
+              />
+            )}
+            {editing?.mode === "create" && (
+              <p className="mt-4 text-xs text-muted-foreground">Foto menu bisa ditambahkan setelah menu disimpan.</p>
+            )}
             {editing && (
               <MenuForm
                 key={editing.mode === "edit" ? editing.menu.id : "new"}

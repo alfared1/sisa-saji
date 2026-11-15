@@ -7,9 +7,9 @@
  * demo deployment can be told apart from a real self-registered one.
  */
 import "server-only";
-import { inArray, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { DbOrTx } from "@/db/client";
-import { merchants, orderItems, orders, reviews, users } from "@/db/schema";
+import { merchants, orderItems, orderMessages, orders, reviews, users } from "@/db/schema";
 import type { OrderDetail } from "@/lib/contracts";
 import { isDemoData } from "@/lib/env";
 
@@ -32,6 +32,18 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
   const items = await db.select().from(orderItems).where(inArray(orderItems.orderId, orderIds));
   const demoData = isDemoData();
   const revs = await db.select().from(reviews).where(inArray(reviews.orderId, orderIds));
+  const unread = await db
+    .select({ orderId: orderMessages.orderId, n: sql<number>`count(*)::int` })
+    .from(orderMessages)
+    .where(
+      and(
+        inArray(orderMessages.orderId, orderIds),
+        ne(orderMessages.sender, viewer === "customer" ? "CUSTOMER" : "MERCHANT"),
+        isNull(orderMessages.readAt),
+      ),
+    )
+    .groupBy(orderMessages.orderId);
+  const unreadByOrder = new Map(unread.map((u) => [u.orderId, u.n]));
 
   const itemsByOrder = new Map<string, (typeof items)[number][]>();
   for (const it of items) {
@@ -99,6 +111,21 @@ export async function loadOrderDetails(db: DbOrTx, orderIds: string[], viewer: O
       food_saved_grams: o.status === "COMPLETED" ? o.totalFoodSavedGrams : foodGrams,
       co2_avoided_grams: o.status === "COMPLETED" ? o.totalCo2AvoidedGrams : Math.round(foodGrams * 2.5),
       cancel_reason: o.cancelReason,
+      cancel_request:
+        o.cancelRequestStatus && o.cancelRequestReason && o.cancelRequestedAt
+          ? {
+              status: o.cancelRequestStatus,
+              reason: o.cancelRequestReason,
+              requested_at: o.cancelRequestedAt.toISOString(),
+              responded_at: iso(o.cancelRequestRespondedAt),
+              response: o.cancelRequestResponse,
+            }
+          : null,
+      refund:
+        o.refundedAt && o.refundRef
+          ? { amount_idr: o.refundAmountIdr, refunded_at: o.refundedAt.toISOString(), ref: o.refundRef }
+          : null,
+      unread_messages: unreadByOrder.get(o.id) ?? 0,
       review: rev
         ? {
             rating: rev.rating,

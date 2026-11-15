@@ -23,8 +23,31 @@ function tsconfigPathFor(dir: string): string | undefined {
   return file;
 }
 
+/**
+ * Security headers on every response. The CSP only sets directives that cannot break the app
+ * (no framing, no plugins, forms and <base> stay on this origin); scripts and styles are not
+ * restricted because Next's inline bootstrap and Leaflet's inline styles need them.
+ * Permissions-Policy allows only what the app uses: the camera (pickup QR scanner) and
+ * location (nearby search), both on this origin.
+ */
+const SECURITY_HEADERS = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()",
+  },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" },
+];
+
 const nextConfig: NextConfig = {
   distDir,
+  async headers() {
+    return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
+  },
   typescript: { tsconfigPath: tsconfigPathFor(distDir) },
   // Per-build id for the service worker URL (/sw.js?v=…): each deploy installs
   // a new worker, shows the update prompt and purges old static caches.

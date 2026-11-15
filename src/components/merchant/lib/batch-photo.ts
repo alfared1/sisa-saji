@@ -12,10 +12,15 @@ import { formatClockId } from "@/lib/time";
 import { merchantKeys } from "./queries";
 
 /** POST /merchant/surplus/:id/photo with the compressed JPEG. Throws ApiClientError like `api`. */
-export async function uploadBatchPhoto(batchId: string, jpeg: Blob): Promise<BatchPhotoResponse> {
+export function uploadBatchPhoto(batchId: string, jpeg: Blob): Promise<BatchPhotoResponse> {
+  return postJpeg<BatchPhotoResponse>(`/merchant/surplus/${batchId}/photo`, jpeg);
+}
+
+/** POSTs a compressed JPEG as the raw body to an API path. Throws ApiClientError like `api`. */
+export async function postJpeg<T>(path: string, jpeg: Blob): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(api.url(`/merchant/surplus/${batchId}/photo`), {
+    res = await fetch(api.url(path), {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "image/jpeg" },
@@ -24,9 +29,9 @@ export async function uploadBatchPhoto(batchId: string, jpeg: Blob): Promise<Bat
   } catch {
     throw new ApiClientError("NETWORK_ERROR", "Tidak dapat terhubung ke server. Periksa koneksi internet.", 0);
   }
-  let json: ApiResponse<BatchPhotoResponse> | null = null;
+  let json: ApiResponse<T> | null = null;
   try {
-    json = (await res.json()) as ApiResponse<BatchPhotoResponse>;
+    json = (await res.json()) as ApiResponse<T>;
   } catch {
     /* non-JSON response (e.g. a proxy refusing the body) */
   }

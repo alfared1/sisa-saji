@@ -3,6 +3,13 @@
  */
 export const MERCHANT_ONBOARDING_PATH = "/merchant/onboarding";
 export const MERCHANT_HOME_PATH = "/merchant/dashboard";
+/** A cashier works the counter only: the pickup queue and the scanner. */
+export const CASHIER_HOME_PATH = "/merchant/orders";
+export const CASHIER_PATHS = ["/merchant/orders", "/merchant/orders/scan"] as const;
+
+export function isCashierPath(pathname: string): boolean {
+  return (CASHIER_PATHS as readonly string[]).includes(pathname);
+}
 
 export const CUSTOMER_TAB_HREFS = ["/discover", "/map", "/orders", "/impact", "/profile"] as const;
 
@@ -70,13 +77,17 @@ export function merchantGuardDecision(args: {
   pathname: string;
   isLoading: boolean;
   isError: boolean;
-  user: { merchant_id: string | null } | null;
+  user: { merchant_id: string | null; cashier_of?: { merchant_id: string } | null } | null;
 }): MerchantGuardDecision {
   const { pathname, isLoading, isError, user } = args;
   if (isLoading) return { kind: "loading" };
   if (isError) return { kind: "error" };
   const onOnboarding = isOnboardingPath(pathname);
   if (!user) return { kind: "redirect", to: `/auth/login?role=MERCHANT&next=${encodeURIComponent(pathname)}` };
+  // Cashier (no warung of their own): only the counter pages.
+  if (!user.merchant_id && user.cashier_of) {
+    return isCashierPath(pathname) ? { kind: "shell" } : { kind: "redirect", to: CASHIER_HOME_PATH };
+  }
   if (!user.merchant_id) return onOnboarding ? { kind: "onboarding" } : { kind: "redirect", to: MERCHANT_ONBOARDING_PATH };
   if (onOnboarding) return { kind: "redirect", to: MERCHANT_HOME_PATH };
   return { kind: "shell" };

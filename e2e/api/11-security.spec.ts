@@ -22,8 +22,15 @@ test.describe("security smoke", () => {
     const res = await bob.get(`/api/v1/orders/${order.id}`);
     expect(res.status()).toBe(404);
     expect(await errorCode(res)).toBe("NOT_FOUND");
-    // Nor act on it.
+    // Nor act on it, read its chat, write in it or ask to cancel it.
     expect((await bob.post(`/api/v1/orders/${order.id}/cancel`)).status()).toBe(404);
+    expect((await bob.get(`/api/v1/orders/${order.id}/messages`)).status()).toBe(404);
+    expect((await bob.post(`/api/v1/orders/${order.id}/messages`, { data: { body: "Halo" } })).status()).toBe(404);
+    expect(
+      (await bob.post(`/api/v1/orders/${order.id}/cancel-request`, { data: { reason: "WRONG_ORDER" } })).status(),
+    ).toBe(404);
+    // The owner's chat works.
+    expect((await alice.post(`/api/v1/orders/${order.id}/messages`, { data: { body: "Saya sedang di jalan" } })).status()).toBe(201);
     await Promise.all([alice.dispose(), bob.dispose()]);
   });
 
@@ -33,10 +40,23 @@ test.describe("security smoke", () => {
     for (const res of [
       await customer.get("/api/v1/merchant/dashboard"),
       await customer.post("/api/v1/orders/lookup-pickup", { data: { pickup_code_or_qr_token: "1234" } }),
+      await customer.post(`/api/v1/merchant/orders/${randomUUID()}/cancel-request`, { data: { decision: "APPROVE" } }),
     ]) {
       expect(res.status(), res.url()).toBe(403);
     }
     await customer.dispose();
+  });
+
+  test("pages and API responses carry the security headers", async ({ request }) => {
+    for (const path of ["/welcome", "/api/v1/health"]) {
+      const res = await request.get(path);
+      const h = res.headers();
+      expect(h["x-content-type-options"], path).toBe("nosniff");
+      expect(h["x-frame-options"], path).toBe("DENY");
+      expect(h["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+      expect(h["content-security-policy"], path).toContain("frame-ancestors 'none'");
+      expect(h["permissions-policy"], path).toContain("camera=(self)");
+    }
   });
 
   test("anonymous requests to protected endpoints are 401", async ({ request }) => {

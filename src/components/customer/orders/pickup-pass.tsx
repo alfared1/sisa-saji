@@ -24,6 +24,7 @@ import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr, wibTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { payAtWarungAudience } from "../lib/order-status";
+import { CancelRequestCard, canRequestCancel } from "./cancel-request-card";
 import { customerKeys } from "../lib/queries";
 import { DirectionsAndWhatsAppButtons, OrderItemsCard, pickupCodeLabel } from "./order-bits";
 
@@ -261,6 +262,7 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
         <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} payAtWarung={payAtWarung} />
         <DigitalPickupPass order={order} savedOffline={savedOffline} />
         {payAtWarung && <PayAtWarungCard order={order} />}
+        {canRequestCancel(order) && <CancelRequestCard order={order} />}
       </div>
       {/* lg+: sticky details column. */}
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">

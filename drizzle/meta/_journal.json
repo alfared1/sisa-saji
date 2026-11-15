@@ -71,6 +71,34 @@
       "when": 1794629393529,
       "tag": "0009_research_update",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794751847526,
+      "tag": "0010_cancel_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794752566401,
+      "tag": "0011_order_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794755950916,
+      "tag": "0012_payouts_reviews_staff",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794759231145,
+      "tag": "0013_menu_photos",
+      "breakpoints": true
     }
   ]
 }

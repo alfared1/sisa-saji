@@ -30,6 +30,8 @@ test("quick order reaches QRIS within 3 screens, then pays to a pickup ticket", 
 
   // Demo payment → pickup ticket.
   await page.getByRole("button", { name: /Simulasi Bayar/ }).click();
+  // The simulated payment app asks to confirm.
+  await page.getByRole("dialog").getByRole("button", { name: "Bayar", exact: true }).click();
   await expect(page.getByText(/^SJ-\d{4}$/)).toBeVisible();
   await expect(page.getByText("Kode pengambilan", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: /QR/ }).first()).toBeVisible();

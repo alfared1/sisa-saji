@@ -64,6 +64,8 @@ export const PUBLISH_MIN_LEAD_MINUTES = 10;
 export const PUBLISH_MAX_WINDOW_HOURS = 12;
 export const SURPLUS_LIVE_RADIUS_M = DEFAULT_SEARCH_RADIUS_M;
 export const REASON_INITIAL_PUBLISH = "INITIAL_PUBLISH";
+/** The warung set the discount of a live batch by hand. */
+export const REASON_MANUAL_OVERRIDE = "MANUAL_OVERRIDE";
 
 const PAID_STATES = ["PAID", "READY_FOR_PICKUP", "COMPLETED"] as const;
 
@@ -510,7 +512,8 @@ export async function patchBatch(
     body.status === undefined &&
     body.auto_discount_enabled === undefined &&
     body.lauk_available === undefined &&
-    body.full_portion === undefined
+    body.full_portion === undefined &&
+    body.discount_pct === undefined
   ) {
     throw new ApiError("VALIDATION_ERROR", "Tidak ada yang diubah");
   }
@@ -551,7 +554,38 @@ export async function patchBatch(
       }
       set.autoDiscountEnabled = body.auto_discount_enabled;
     }
+    let manualLog: typeof discountAdjustmentLogs.$inferInsert | null = null;
+    if (body.discount_pct !== undefined) {
+      if (body.status === "CANCELLED" || !isPhotoBatchLive(b.status, b.pickupEndTime, now)) {
+        throw new ApiError("BATCH_CLOSED", "Batch ini sudah ditutup");
+      }
+      const [menu] = await tx
+        .select({ minRecoveryPriceIdr: menus.minRecoveryPriceIdr })
+        .from(menus)
+        .where(eq(menus.id, b.menuId))
+        .limit(1);
+      // Same rounding and floor as the optimizer: never below the menu's minimum price.
+      const p = priceForDiscount(b.originalPriceIdr, menu?.minRecoveryPriceIdr ?? b.originalPriceIdr, body.discount_pct);
+      set.currentDiscountPct = p.discountPct;
+      set.currentSellingPriceIdr = p.sellingPriceIdr;
+      set.lastPriceUpdatedAt = now;
+      // The warung takes over; the escalation worker would otherwise move the price again.
+      if (body.auto_discount_enabled === undefined) set.autoDiscountEnabled = false;
+      manualLog = {
+        surplusBatchId: b.id,
+        previousDiscountPct: b.currentDiscountPct,
+        newDiscountPct: p.discountPct,
+        previousPriceIdr: b.currentSellingPriceIdr,
+        newPriceIdr: p.sellingPriceIdr,
+        remainingStock: b.availableStock,
+        minutesToClosing: Math.max(0, minutesBetween(now, b.pickupEndTime)),
+        activeUsersInRadius: 0,
+        triggerReason: REASON_MANUAL_OVERRIDE,
+        createdAt: now,
+      };
+    }
     const [row] = await tx.update(surplusBatches).set(set).where(eq(surplusBatches.id, b.id)).returning();
+    if (manualLog) await tx.insert(discountAdjustmentLogs).values(manualLog);
     // A cancelled batch is no longer shown anywhere, so its photo goes right away.
     if (set.status === "CANCELLED") await deleteBatchPhoto(tx, b.id, now);
     return row;

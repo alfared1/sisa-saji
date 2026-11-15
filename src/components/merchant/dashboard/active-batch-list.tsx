@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MegaphoneIcon, MinusIcon, PackageOpenIcon, PlusIcon, Trash2Icon, TrendingUpIcon, XCircleIcon, ZapIcon } from "lucide-react";
+import { ChevronDownIcon, MegaphoneIcon, MinusIcon, PackageOpenIcon, PlusIcon, Trash2Icon, TrendingUpIcon, XCircleIcon, ZapIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { EmptyState } from "@/components/common/empty-state";
@@ -18,6 +18,7 @@ import { DEMO_MAX_BATCH_STOCK } from "@/lib/demo-accounts";
 import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { LaukToggles } from "../common/lauk-toggles";
+import { BatchDiscountDialog } from "./batch-discount-dialog";
 import { PhotoFileButton, photoAudienceText } from "../common/photo-file-button";
 import { photoVisibilityText, useBatchPhotoMutations } from "../lib/batch-photo";
 import { applyStockDelta, escalationLabel, percent, stockSegments, STOCK_MAX } from "../lib/logic";
@@ -63,9 +64,23 @@ function useBatchMutations() {
     },
     onSuccess: (res) => {
       qc.setQueryData<MerchantDashboard>(merchantKeys.dashboard, (old) => patchBatchInCache(old, res.batch.id, () => res.batch));
-      toast.success(res.batch.auto_discount_enabled ? "Auto-diskon diaktifkan" : "Auto-diskon dimatikan", { id: `auto-${res.batch.id}` });
+      toast.success(res.batch.auto_discount_enabled ? "Diskon otomatis dinyalakan" : "Diskon otomatis dimatikan", { id: `auto-${res.batch.id}` });
     },
-    onError: (err) => toast.error(errorMessage(err, "Gagal mengubah auto-diskon.")),
+    onError: (err) => toast.error(errorMessage(err, "Gagal mengubah diskon otomatis.")),
+    onSettled: () => void qc.invalidateQueries({ queryKey: merchantKeys.dashboard }),
+  });
+
+  const setDiscount = useMutation({
+    mutationFn: ({ id, pct }: { id: string; pct: number }) =>
+      api.patch<BatchResponse>(`/merchant/surplus/${id}`, { discount_pct: pct } satisfies BatchPatchBody),
+    onSuccess: (res) => {
+      qc.setQueryData<MerchantDashboard>(merchantKeys.dashboard, (old) => patchBatchInCache(old, res.batch.id, () => res.batch));
+      toast.success(`Diskon jadi ${res.batch.current_discount_pct}%`, {
+        id: `discount-${res.batch.id}`,
+        description: "Harga otomatis dimatikan untuk menu ini.",
+      });
+    },
+    onError: (err) => toast.error(errorMessage(err, "Gagal mengubah diskon.")),
     onSettled: () => void qc.invalidateQueries({ queryKey: merchantKeys.dashboard }),
   });
 
@@ -107,7 +122,7 @@ function useBatchMutations() {
     onSettled: () => void qc.invalidateQueries({ queryKey: merchantKeys.dashboard }),
   });
 
-  return { stock, toggleAuto, cancel, tonight };
+  return { stock, toggleAuto, setDiscount, cancel, tonight };
 }
 
 function StatusPill({ status, startIso }: { status: MerchantBatchView["status"]; startIso: string }) {
@@ -181,7 +196,7 @@ function BatchThumb({ batch }: { batch: MerchantBatchView }) {
 }
 
 /** "Tambah foto" / "Ganti foto" / "Hapus foto", with who sees it and the uploads left. */
-function BatchPhotoControls({ batch, isDemo, isPilot }: { batch: MerchantBatchView; isDemo: boolean; isPilot: boolean }) {
+function BatchPhotoControls({ batch }: { batch: MerchantBatchView; isDemo: boolean; isPilot: boolean }) {
   const { upload, remove } = useBatchPhotoMutations();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const left = batch.photo_uploads_left;
@@ -215,7 +230,7 @@ function BatchPhotoControls({ batch, isDemo, isPilot }: { batch: MerchantBatchVi
         )}
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-        {batch.photo ? photoVisibilityText(batch.photo) : photoAudienceText({ isDemo, isPilot })}{" "}
+        {batch.photo ? `${photoVisibilityText(batch.photo)} ` : ""}
         {left <= 0 ? "Batas ganti foto untuk batch ini sudah habis." : `Sisa ${left} kali unggah untuk batch ini.`}
       </p>
       <ConfirmDialog
@@ -252,8 +267,32 @@ function BatchTonight({
   isPilot: boolean;
 }) {
   const laukHeading = `lauk-${batch.id}`;
+  const panelId = `tonight-${batch.id}`;
+  const [open, setOpen] = useState(false);
+  const summary = [
+    batch.lauk_options.length > 0 ? `${batch.lauk_available.length}/${batch.lauk_options.length} lauk` : null,
+    batch.full_portion ? "porsi normal" : "porsi lebih kecil",
+    batch.photo ? "ada foto" : "belum ada foto",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div className="mt-4 space-y-4 border-t border-border pt-4">
+    <div className="mt-3 border-t border-border pt-1">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold">Lauk, porsi & foto</span>
+          <span className="block truncate text-[11px] text-muted-foreground">{summary}</span>
+        </span>
+        <ChevronDownIcon className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open && (
+    <div id={panelId} className="mt-2 space-y-4 pb-1">
       {batch.lauk_options.length > 0 && (
         <div>
           <h4 id={laukHeading} className="mb-2 text-xs font-semibold">
@@ -283,6 +322,8 @@ function BatchTonight({
       </label>
       <BatchPhotoControls batch={batch} isDemo={isDemo} isPilot={isPilot} />
     </div>
+      )}
+    </div>
   );
 }
 
@@ -298,6 +339,7 @@ function BatchCard({
   isPilot: boolean;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
   const closed = batch.status === "EXPIRED" || batch.status === "CANCELLED";
   const esc = batch.auto_discount_enabled ? escalationLabel(batch.next_escalation) : null;
   // The shared demo warung keeps each batch within DEMO_MAX_BATCH_STOCK portions (server rule).
@@ -380,10 +422,17 @@ function BatchCard({
               <Switch
                 checked={batch.auto_discount_enabled}
                 onCheckedChange={(v) => m.toggleAuto.mutate({ id: batch.id, enabled: v })}
-                aria-label="Auto-diskon"
+                aria-label="Diskon otomatis"
               />
-              Auto-diskon
+              Diskon otomatis
             </label>
+            <button
+              type="button"
+              onClick={() => setDiscountOpen(true)}
+              className="inline-flex h-11 items-center rounded-2xl px-3 text-xs font-semibold text-deal outline-none hover:bg-deal-soft focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              Ubah diskon
+            </button>
             <button
               type="button"
               onClick={() => setConfirm(true)}
@@ -396,6 +445,17 @@ function BatchCard({
       )}
 
       {!closed && <BatchTonight batch={batch} m={m} isDemo={isDemo} isPilot={isPilot} />}
+
+      {!closed && (
+        <BatchDiscountDialog
+          key={`${batch.id}-${batch.current_discount_pct}`}
+          batch={batch}
+          open={discountOpen}
+          onOpenChange={setDiscountOpen}
+          saving={m.setDiscount.isPending}
+          onSave={(pct) => m.setDiscount.mutate({ id: batch.id, pct }, { onSuccess: () => setDiscountOpen(false) })}
+        />
+      )}
 
       <ConfirmDialog
         open={confirm}
@@ -439,6 +499,9 @@ export function ActiveSurplusBatchList({ batches, isPilot = false }: { batches: 
           <PlusIcon className="size-4" /> Tambah
         </Link>
       </div>
+      {sorted.some((b) => b.status !== "EXPIRED" && b.status !== "CANCELLED") && (
+        <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Foto etalase: {photoAudienceText({ isDemo, isPilot })}</p>
+      )}
       {sorted.length === 0 ? (
         <div className="rounded-3xl bg-card ring-1 ring-border">
           <EmptyState

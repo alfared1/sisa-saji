@@ -236,7 +236,7 @@ export function MerchantAnalyticsView() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:gap-6">
             <RevenueRecoveredCard a={a} />
             <div className="grid grid-cols-2 gap-3">
-              <StatTile icon={TargetIcon} label="Sell-through" value={percent(a.sell_through_rate)} hint={`${a.portions_sold} dari ${a.portions_published} porsi`} />
+              <StatTile icon={TargetIcon} label="Porsi terjual" value={percent(a.sell_through_rate)} hint={`${a.portions_sold} dari ${a.portions_published} porsi`} />
               <StatTile icon={Trash2Icon} label="Porsi terbuang" value={a.portions_wasted} hint="tidak laku sampai tutup" tint="urgent" />
               <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(a.food_saved_grams)} hint="dari pesanan selesai" tint="brand" />
               <StatTile icon={CloudIcon} label="CO₂e dicegah" value={formatKg(a.co2_avoided_grams)} hint="faktor FAO 2,5×" tint="brand" />
@@ -257,7 +257,7 @@ export function MerchantAnalyticsView() {
       <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:mt-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0 space-y-4 lg:space-y-6">
           <SectionCard
-            title="Peta panas surplus mingguan"
+            title="Hari paling banyak sisa"
             icon={CalendarRangeIcon}
             description="Rata-rata porsi berlebih per hari & menu, 4 minggu terakhir."
           >

@@ -17,9 +17,13 @@ import {
   LayoutDashboardIcon,
   LogOutIcon,
   MegaphoneIcon,
+  MessageSquareTextIcon,
   ScanLineIcon,
+  SettingsIcon,
+  ShoppingBagIcon,
   StoreIcon,
   UtensilsCrossedIcon,
+  WalletIcon,
   type LucideIcon,
 } from "lucide-react";
 import { Logo, LogoMark } from "@/components/common/logo";
@@ -37,7 +41,7 @@ import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
 import type { MerchantMeResponse, SessionUser } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
-import { activeNavHref } from "./nav-logic";
+import { activeNavHref, CASHIER_PATHS } from "./nav-logic";
 
 export type MerchantNavItem = { href: string; label: string; icon: LucideIcon; emphasis?: boolean };
 
@@ -50,13 +54,28 @@ export const MERCHANT_NAV: readonly MerchantNavItem[] = [
   { href: "/merchant/analytics", label: "Analitik", icon: BarChart3Icon },
 ];
 
+/** Owner pages outside the main nav: in the desktop sidebar and the account menu. */
+export const MERCHANT_MORE_NAV: readonly MerchantNavItem[] = [
+  { href: "/merchant/saldo", label: "Saldo", icon: WalletIcon },
+  { href: "/merchant/ulasan", label: "Ulasan", icon: MessageSquareTextIcon },
+  { href: "/merchant/settings", label: "Pengaturan", icon: SettingsIcon },
+];
+
 export const MERCHANT_ME_QUERY_KEY = ["merchant", "me"] as const;
 
 export function activeMerchantHref(pathname: string): string | null {
   return activeNavHref(
     pathname,
-    MERCHANT_NAV.map((i) => i.href),
+    [...MERCHANT_NAV, ...MERCHANT_MORE_NAV].map((i) => i.href),
   );
+}
+
+/** A cashier only sees the counter: Scan and Pesanan. */
+function navFor(user: SessionUser | null): readonly MerchantNavItem[] {
+  if (user && !user.merchant_id && user.cashier_of) {
+    return MERCHANT_NAV.filter((i) => (CASHIER_PATHS as readonly string[]).includes(i.href));
+  }
+  return MERCHANT_NAV;
 }
 
 function useMerchantMe(enabled: boolean) {
@@ -108,10 +127,25 @@ function AccountMenu({ user, children }: { user: SessionUser; children: ReactNod
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.merchant_id &&
+          MERCHANT_MORE_NAV.map(({ href, label, icon: Icon }) => (
+            <DropdownMenuItem key={href} asChild>
+              <Link href={href}>
+                <Icon /> {label}
+              </Link>
+            </DropdownMenuItem>
+          ))}
         {user.merchant_slug && (
           <DropdownMenuItem asChild>
             <Link href={`/warung/${user.merchant_slug}`}>
               <StoreIcon /> Lihat halaman warung
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {!user.merchant_id && user.cashier_of && (
+          <DropdownMenuItem asChild>
+            <Link href="/discover">
+              <ShoppingBagIcon /> Mode pembeli
             </Link>
           </DropdownMenuItem>
         )}
@@ -147,7 +181,10 @@ export function MerchantShell({
   // Only once /auth/me confirms a warung (no 401/403 while the guard decides).
   const me = useMerchantMe(Boolean(user?.merchant_id));
   const merchant = me.data?.merchant;
-  const storeName = merchant?.merchant_name ?? (me.isLoading ? "Memuat warung…" : "Warung kamu");
+  const cashierOf = user && !user.merchant_id ? user.cashier_of : null;
+  const nav = navFor(user);
+  const storeName =
+    cashierOf?.merchant_name ?? merchant?.merchant_name ?? (me.isLoading ? "Memuat warung…" : "Warung kamu");
   const initials = (user?.full_name ?? "")
     .split(/\s+/)
     .slice(0, 2)
@@ -174,13 +211,17 @@ export function MerchantShell({
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{storeName}</p>
-              <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
+              {cashierOf ? (
+                <span className="mt-0.5 block text-[11px] font-semibold text-muted-foreground">Kasir</span>
+              ) : (
+                <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
+              )}
             </div>
           </div>
           {merchant?.merchant_verified && <VerifiedBadge className="mt-2" />}
         </div>
         <nav aria-label="Menu mitra" className="flex-1 space-y-1 overflow-y-auto px-3">
-          {MERCHANT_NAV.map(({ href, label, icon: Icon, emphasis }) => {
+          {nav.map(({ href, label, icon: Icon, emphasis }) => {
             const isActive = active === href;
             return (
               <Link
@@ -204,6 +245,29 @@ export function MerchantShell({
               </Link>
             );
           })}
+          {user?.merchant_id && (
+            <div className="mt-3 space-y-1 border-t border-sidebar-border pt-3">
+              {MERCHANT_MORE_NAV.map(({ href, label, icon: Icon }) => {
+                const isActive = active === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                    )}
+                  >
+                    <Icon className={cn("size-5", isActive && "text-primary")} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </nav>
         <div className="border-t border-sidebar-border p-3">
           {user ? (
@@ -217,7 +281,7 @@ export function MerchantShell({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{user.full_name}</span>
-                  <span className="block text-xs text-muted-foreground">Pemilik warung</span>
+                  <span className="block text-xs text-muted-foreground">{cashierOf ? "Kasir" : "Pemilik warung"}</span>
                 </span>
               </button>
             </AccountMenu>
@@ -236,7 +300,11 @@ export function MerchantShell({
           <LogoMark className="size-8" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm leading-tight font-semibold">{storeName}</p>
-            <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
+            {cashierOf ? (
+              <span className="mt-0.5 block text-[11px] font-semibold text-muted-foreground">Kasir</span>
+            ) : (
+              <StoreStatusBadge isOpen={merchant?.is_open} loading={me.isLoading} className="mt-0.5" />
+            )}
           </div>
           <ThemeToggle className="-mr-1 size-10" />
           {user ? (
@@ -265,8 +333,8 @@ export function MerchantShell({
         aria-label="Menu mitra"
         className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 backdrop-blur-xl lg:hidden"
       >
-        <ul className="mx-auto grid max-w-2xl grid-cols-6">
-          {MERCHANT_NAV.map(({ href, label, icon: Icon, emphasis }) => {
+        <ul className="mx-auto grid max-w-2xl" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
+          {nav.map(({ href, label, icon: Icon, emphasis }) => {
             const isActive = active === href;
             return (
               <li key={href}>

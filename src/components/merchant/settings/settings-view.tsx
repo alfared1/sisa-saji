@@ -29,6 +29,7 @@ import { useSession } from "@/hooks/use-session";
 import { MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { isSoundEnabled, playAlert, setSoundEnabled } from "../lib/alert-sound";
 import { useMerchantMe, useUpdateMerchant } from "../lib/queries";
 import { ZOD_ID_OPTIONS } from "../lib/zod-id";
 import {
@@ -42,7 +43,31 @@ import {
   type ProfileOutput,
 } from "../profile/profile-fields";
 import { MerchantPage, MerchantPageHeader, SectionCard } from "../ui";
+import { HelpSection } from "./help-section";
 import { PilotSection } from "./pilot-section";
+import { StaffSection } from "./staff-section";
+
+/** Alert tone + vibration for new orders, cancel requests and chat (per device). */
+function SoundToggle() {
+  const [on, setOn] = useState(() => isSoundEnabled());
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3">
+      <span>
+        <span className="block text-sm font-semibold">Bunyi pesanan masuk</span>
+        <span className="block text-xs text-muted-foreground">Bunyi dan getar saat ada pesanan, permintaan batal, atau chat.</span>
+      </span>
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => {
+          setOn(v);
+          setSoundEnabled(v);
+          if (v) playAlert("order");
+        }}
+        aria-label="Bunyi pesanan masuk"
+      />
+    </label>
+  );
+}
 
 /** `locked`: the shared demo warung, whose profile the API refuses to change (fields stay readable). */
 function SettingsForm({ merchant, locked }: { merchant: MerchantProfile; locked: boolean }) {
@@ -161,28 +186,39 @@ export function MerchantSettingsView() {
                 <span className="text-sm font-semibold">Paket</span>
                 {m.merchant_verified ? <VerifiedBadge /> : <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold">Reguler</span>}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Saldo warung <b className="text-foreground tabular-nums">{formatIdr(m.wallet_balance_idr)}</b> ·{" "}
-                {m.total_reviews > 0
-                  ? `Rating ${m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} (${m.total_reviews} ulasan)`
-                  : "Belum ada ulasan"}
-              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/merchant/saldo" className="rounded-xl bg-surface p-3 ring-1 ring-border hover:bg-muted">
+                  <span className="block text-xs text-muted-foreground">Saldo</span>
+                  <span className="block text-sm font-extrabold tabular-nums">{formatIdr(m.wallet_balance_idr)}</span>
+                </Link>
+                <Link href="/merchant/ulasan" className="rounded-xl bg-surface p-3 ring-1 ring-border hover:bg-muted">
+                  <span className="block text-xs text-muted-foreground">Ulasan</span>
+                  <span className="block text-sm font-extrabold tabular-nums">
+                    {m.total_reviews > 0
+                      ? `${m.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} · ${m.total_reviews}`
+                      : "Belum ada"}
+                  </span>
+                </Link>
+              </div>
               <Link href="/merchant/analytics#premium" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-deal-soft text-sm font-semibold text-deal">
                 {m.subscription_tier === "PREMIUM" ? "Kelola Premium" : "Upgrade ke Premium"}
               </Link>
               <Link href={`/warung/${m.slug}`} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
                 <ExternalLinkIcon className="size-4" /> Lihat halaman warung
               </Link>
-              <Link href="/tour?peran=mitra" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
-                Lihat tur mitra
-              </Link>
             </section>
+
+            <StaffSection locked={demoLocked} />
+            <HelpSection />
 
             {/* Outside SettingsForm on purpose: a device setting that applies on tap, never part of the save bar.
                 No description: the switcher's helper line says what the choice does (as in Akun).
                 max-w-md: below lg the aside is full width, where three ~220px segments look stretched. */}
             <SectionCard title="Tampilan" icon={SunMoonIcon}>
               <ThemeSwitcher className="max-w-md" />
+              <div className="mt-4 border-t border-border pt-4">
+                <SoundToggle />
+              </div>
             </SectionCard>
 
             <Button variant="outline" className="h-12 w-full rounded-xl border-urgent/30 text-urgent hover:bg-urgent-soft hover:text-urgent" onClick={() => setConfirmLogout(true)}>

@@ -1,12 +1,17 @@
 "use client";
 
-import { MessageCircleIcon, NavigationIcon, RecycleIcon } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { NavigationIcon, RecycleIcon } from "lucide-react";
 import { Money } from "@/components/common/money";
+import { OrderChatButton, OrderChatSheet } from "@/components/common/order-chat";
+import { useSearchParam } from "@/hooks/use-search-param";
 import { Button } from "@/components/ui/button";
-import type { OrderDetail } from "@/lib/contracts";
+import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { PICKUP_CODE_PREFIX } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { mapsDirectionsUrl, whatsappUrl } from "../lib/format";
+import { customerKeys } from "../lib/queries";
 
 export function pickupCodeLabel(order: Pick<OrderDetail, "pickup_code">): string {
   return order.pickup_code ? `${PICKUP_CODE_PREFIX}${order.pickup_code}` : "-";
@@ -77,22 +82,58 @@ export function OrderItemsCard({ order, className }: { order: OrderDetail; class
 }
 
 /** "Petunjuk Arah (Google Maps)" + "Hubungi Warung (WhatsApp)". */
+/**
+ * Directions + in-app chat with the warung (unread count on the button; a push opens the chat
+ * via ?chat=1). WhatsApp stays as a fallback link with the order already written out.
+ */
 export function DirectionsAndWhatsAppButtons({ order }: { order: OrderDetail }) {
+  const qc = useQueryClient();
+  const [chatOpen, setChatOpen] = useState(false);
+  // A chat push opens /orders/<id>?chat=1; once closed, the link does not reopen it.
+  const [linkClosed, setLinkClosed] = useState(false);
+  const linked = useSearchParam("chat") === "1" && !linkClosed;
+  const onChatOpenChange = (o: boolean) => {
+    setChatOpen(o);
+    if (!o) setLinkClosed(true);
+  };
+  const markSeen = useCallback(() => {
+    qc.setQueryData<OrderResponse>(customerKeys.order(order.id), (old) =>
+      old && old.order.unread_messages ? { order: { ...old.order, unread_messages: 0 } } : old,
+    );
+  }, [qc, order.id]);
   const text = `Halo ${order.merchant.name}, saya ${order.customer.full_name} mau ambil pesanan ${order.order_number}${
     order.pickup_code ? ` (kode ${pickupCodeLabel(order)})` : ""
   } dari Sisa-Saji.`;
   return (
-    <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-      <Button asChild className="h-12 rounded-xl font-semibold">
-        <a href={mapsDirectionsUrl(order.merchant.lat, order.merchant.lng)} target="_blank" rel="noreferrer">
-          <NavigationIcon className="size-4" /> Petunjuk Arah
+    <div>
+      <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+        <Button asChild className="h-12 rounded-xl font-semibold">
+          <a href={mapsDirectionsUrl(order.merchant.lat, order.merchant.lng)} target="_blank" rel="noreferrer">
+            <NavigationIcon className="size-4" /> Petunjuk Arah
+          </a>
+        </Button>
+        <OrderChatButton label="Chat Warung" unread={order.unread_messages ?? 0} onClick={() => setChatOpen(true)} />
+      </div>
+      <p className="mt-2 text-center text-xs text-muted-foreground">
+        Tidak dibalas?{" "}
+        <a
+          href={whatsappUrl(order.merchant.whatsapp_number, text)}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-primary underline-offset-2 hover:underline"
+        >
+          Hubungi lewat WhatsApp
         </a>
-      </Button>
-      <Button asChild variant="outline" className="h-12 rounded-xl font-semibold">
-        <a href={whatsappUrl(order.merchant.whatsapp_number, text)} target="_blank" rel="noreferrer">
-          <MessageCircleIcon className="size-4 text-primary" aria-hidden /> Hubungi Warung
-        </a>
-      </Button>
+      </p>
+      <OrderChatSheet
+        orderId={order.id}
+        as="customer"
+        open={chatOpen || linked}
+        onOpenChange={onChatOpenChange}
+        title={order.merchant.name}
+        description={`Chat soal pesanan ${order.order_number}`}
+        onSeen={markSeen}
+      />
     </div>
   );
 }

@@ -106,6 +106,7 @@ export function toMerchantBatchView(
     reserved_stock: b.reservedStock,
     sold: b.initialStock - b.availableStock - b.reservedStock,
     original_price_idr: b.originalPriceIdr,
+    min_recovery_price_idr: Math.min(menu.minRecoveryPriceIdr, b.originalPriceIdr),
     current_discount_pct: b.currentDiscountPct,
     current_selling_price_idr: b.currentSellingPriceIdr,
     auto_discount_enabled: b.autoDiscountEnabled,

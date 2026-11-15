@@ -109,6 +109,23 @@ export async function requireMerchant(): Promise<{ user: SessionUser; merchantId
 }
 
 /**
+ * The warung whose pickup counter the current user may work: its owner, or a cashier the owner
+ * added. Only for the counter (pickup queue, scan + verify, buyer chat, live feed); everything
+ * else stays requireMerchant() (owner only).
+ */
+export async function requirePickupAccess(): Promise<{ user: SessionUser; merchantId: string; as: "OWNER" | "CASHIER" }> {
+  const user = await requireUser();
+  if (user.merchant_id) return { user, merchantId: user.merchant_id, as: "OWNER" };
+  if (user.cashier_of) return { user, merchantId: user.cashier_of.merchant_id, as: "CASHIER" };
+  throw new ApiError("MERCHANT_REQUIRED", "Akun ini belum terdaftar sebagai mitra warung");
+}
+
+/** The warung this user may act for at the counter (owner or cashier), or null. */
+export function pickupMerchantId(user: Pick<SessionUser, "merchant_id" | "cashier_of">): string | null {
+  return user.merchant_id ?? user.cashier_of?.merchant_id ?? null;
+}
+
+/**
  * Refuses changes that would alter a shared demo account for every other visitor: its name,
  * the demo warung's profile, payout details, menus, opening state and pilot status.
  * The demo flow itself (publishing surplus, orders, pickups, reviews) stays open.

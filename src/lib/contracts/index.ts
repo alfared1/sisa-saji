@@ -237,6 +237,11 @@ export type SessionUser = {
   merchant_id: string | null;
   merchant_slug: string | null;
   /**
+   * Cashier ("kasir") of a warung, added by its owner: may see its pickup queue, scan tickets and
+   * chat with buyers, nothing else. merchant_id stays null for a cashier (it means owner).
+   */
+  cashier_of: { merchant_id: string; merchant_name: string; merchant_slug: string } | null;
+  /**
    * One of the shared demo accounts anyone can open with one tap. Changes to its identity,
    * warung profile, payout details, menus, opening state and pilot status are refused
    * (403 FORBIDDEN, details.reason = "DEMO_LOCKED"), so the demo stays tidy for everybody.
@@ -642,6 +647,8 @@ export type ReviewItem = {
   /** First name + initial, e.g. "Raka P." */
   customer_name: string;
   created_at: string;
+  /** The warung's reply under the review. Optional for cached responses from before replies. */
+  merchant_reply?: string | null;
 };
 
 /** GET /api/v1/merchants/:slugOrId?lat&lng — public. */
@@ -794,6 +801,23 @@ export type OrderDetail = {
   food_saved_grams: number;
   co2_avoided_grams: number;
   cancel_reason: string | null;
+  /**
+   * Buyer's request to cancel this paid online order; the warung approves or rejects it.
+   * Optional only because tickets cached offline before this field existed lack it.
+   */
+  cancel_request?: {
+    status: CancelRequestStatus;
+    /** The buyer's reason as one sentence ("Salah pesan. …"). */
+    reason: string;
+    requested_at: string;
+    responded_at: string | null;
+    /** The warung's note when it rejected the request. */
+    response: string | null;
+  } | null;
+  /** Full refund of a cancelled paid order (simulated). Optional for the same reason. */
+  refund?: { amount_idr: number; refunded_at: string; ref: string } | null;
+  /** Chat messages from the other side the viewer has not opened yet. */
+  unread_messages?: number;
   review: {
     rating: number;
     tags: string[];
@@ -815,6 +839,61 @@ export type OrdersResponse = { orders: OrderDetail[] };
 export type OrderResponse = { order: OrderDetail };
 
 /** POST /api/v1/orders/:id/cancel — customer: PENDING_PAYMENT, or an open "bayar di warung" ticket. → OrderResponse */
+
+/* ------------------------------ Order chat ------------------------------ */
+
+export type MessageSender = "CUSTOMER" | "MERCHANT";
+export type OrderMessage = {
+  id: string;
+  sender: MessageSender;
+  body: string;
+  created_at: string;
+  /** When the other side opened the chat after this message. */
+  read_at: string | null;
+  /** Written by the viewer. */
+  mine: boolean;
+};
+/**
+ * GET /api/v1/orders/:id/messages — the order's buyer or warung (`?as=merchant` when the viewer
+ * is both). Oldest first; opening marks the other side's messages read. → OrderMessagesResponse
+ */
+export const OrderMessagesQuery = z.object({ as: z.enum(["customer", "merchant"]).optional() });
+export type OrderMessagesResponse = { messages: OrderMessage[]; can_send: boolean; viewer: MessageSender };
+/**
+ * POST /api/v1/orders/:id/messages — sends one message while the order waits to be collected
+ * (409 otherwise, 429 RATE_LIMITED past the per-order limit). → OrderMessageResponse
+ */
+export const SendOrderMessageBody = z.object({
+  body: z.string().trim().min(1, "Tulis pesannya dulu").max(500),
+  as: z.enum(["customer", "merchant"]).optional(),
+});
+export type SendOrderMessageBody = z.input<typeof SendOrderMessageBody>;
+export type OrderMessageResponse = { message: OrderMessage };
+
+export const CANCEL_REQUEST_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+export type CancelRequestStatus = (typeof CANCEL_REQUEST_STATUSES)[number];
+
+/**
+ * POST /api/v1/orders/:id/cancel-request — customer: asks the warung to cancel a paid online
+ * order (PAID / READY_FOR_PICKUP, before the pickup deadline, once per order). "OTHER" needs a
+ * note. → OrderResponse (409 ORDER_STATE_CONFLICT when not possible).
+ */
+export const CancelRequestBody = z.object({
+  reason: z.enum(["CANNOT_COME", "WRONG_ORDER", "CHANGED_MIND", "OTHER"]),
+  note: z.string().trim().max(200).optional(),
+});
+export type CancelRequestBody = z.input<typeof CancelRequestBody>;
+
+/**
+ * POST /api/v1/merchant/orders/:id/cancel-request — the warung answers a pending request:
+ * APPROVE (cancel + full refund, portions back on the shelf) or REJECT (note required, shown to
+ * the buyer). → OrderResponse
+ */
+export const CancelRequestDecisionBody = z.object({
+  decision: z.enum(["APPROVE", "REJECT"]),
+  note: z.string().trim().max(200).optional(),
+});
+export type CancelRequestDecisionBody = z.input<typeof CancelRequestDecisionBody>;
 
 /**
  * POST /api/v1/orders/:id/simulate-payment — customer, demo only
@@ -861,8 +940,9 @@ export type VerifyPickupBody = z.input<typeof VerifyPickupBody>;
 
 /**
  * POST /api/v1/merchant/orders/:id/cancel — merchant. Cancels an open, unpaid "bayar di
- * warung" ticket (pilot warung): NO_SHOW = "Tidak datang", OUT_OF_STOCK = "Stok habis".
- * The portions go back to the batch and the buyer sees the reason. → OrderResponse
+ * warung" ticket: NO_SHOW = "Tidak datang", OUT_OF_STOCK = "Stok habis"; the portions go back
+ * to the batch. A paid online order can only be cancelled with OUT_OF_STOCK: full refund, the
+ * menu's remaining stock becomes 0. The buyer sees the reason. → OrderResponse
  */
 export const MerchantTicketCancelBody = z.object({ reason: z.enum(["NO_SHOW", "OUT_OF_STOCK"]) });
 export type MerchantTicketCancelBody = z.input<typeof MerchantTicketCancelBody>;
@@ -940,6 +1020,11 @@ export type MerchantProfile = {
 /** GET /api/v1/merchant/me → MerchantMeResponse (404 MERCHANT_REQUIRED if no warung yet). */
 export type MerchantMeResponse = { merchant: MerchantProfile; menus: MenuView[] };
 
+/**
+ * POST /api/v1/merchant/menus/:id/photo — owner, raw JPEG (Content-Type: image/jpeg) → MenuResponse
+ * (201) with image_url set to the stored photo; DELETE removes it. 403 DEMO_LOCKED on the demo warung.
+ */
+export type MenuResponse = { menu: MenuView };
 export type MenuView = {
   id: string;
   menu_name: string;
@@ -1092,6 +1177,8 @@ export type MerchantBatchView = {
   reserved_stock: number;
   sold: number;
   original_price_idr: number;
+  /** Floor price: a manual discount never goes below it. */
+  min_recovery_price_idr: number;
   current_discount_pct: number;
   current_selling_price_idr: number;
   auto_discount_enabled: boolean;
@@ -1116,8 +1203,8 @@ export const StockPatchBody = z
   });
 export type StockPatchBody = z.input<typeof StockPatchBody>;
 /**
- * PATCH /api/v1/merchant/surplus/:batchId — cancel a batch, toggle auto discount, or update
- * tonight's lauk (subset of the menu's options, at least one when it has options) and the
+ * PATCH /api/v1/merchant/surplus/:batchId — cancel a batch, toggle auto discount, set the
+ * discount by hand, or update tonight's lauk (subset of the menu's options, at least one when it has options) and the
  * portion promise while the batch is live. At least one field.
  */
 export const BatchPatchBody = z
@@ -1126,6 +1213,12 @@ export const BatchPatchBody = z
     auto_discount_enabled: z.boolean().optional(),
     lauk_available: z.array(menuItem).max(8).optional(),
     full_portion: z.boolean().optional(),
+    /**
+     * Manual discount while the batch is live: the price is recomputed (rounded up to Rp 500,
+     * never below the menu's floor), logged as MANUAL_OVERRIDE, and auto discount turns off
+     * unless auto_discount_enabled: true is sent with it.
+     */
+    discount_pct: z.number().int().min(0).max(90).optional(),
   })
   .refine((b) => Object.values(b).some((v) => v !== undefined), { message: "Tidak ada yang diubah" });
 export type BatchPatchBody = z.input<typeof BatchPatchBody>;
@@ -1225,6 +1318,8 @@ export type UpgradeResponse = { merchant: MerchantProfile };
 export type MerchantStreamEvent =
   | { type: "order.paid"; order_id: string; order_number: string; at: string }
   | { type: "order.completed"; order_id: string; order_number: string; at: string }
+  | { type: "order.cancel_requested"; order_id: string; order_number: string; reason: string; at: string }
+  | { type: "order.message"; order_id: string; order_number: string; message_id: string; preview: string; at: string }
   | {
       type: "batch.updated";
       batch_id: string;
@@ -1234,3 +1329,119 @@ export type MerchantStreamEvent =
       lauk_available: string[];
       at: string;
     };
+
+/* ================================================================== */
+/* Merchant: wallet & payouts, reviews, cashiers, repeat publish        */
+/* ================================================================== */
+
+export type PayoutStatus = "PROCESSING" | "PAID" | "FAILED";
+export type PayoutView = {
+  id: string;
+  amount_idr: number;
+  status: PayoutStatus;
+  bank_code: string;
+  account_masked: string;
+  ref: string;
+  /** Paid by the simulator (demo data): no money really moved. */
+  simulated: boolean;
+  requested_at: string;
+  paid_at: string | null;
+};
+/** One line of the wallet history: money in from an order, or out to a payout. */
+export type WalletEntry = {
+  kind: "ORDER" | "UNCLAIMED" | "PAYOUT";
+  /** Positive = in, negative = out. */
+  amount_idr: number;
+  at: string;
+  label: string;
+  order_number: string | null;
+  payout_status: PayoutStatus | null;
+};
+/**
+ * GET /api/v1/merchant/wallet — owner. Balance, payout destination, the last 30 days of money
+ * in (collected online orders, uncollected paid orders) and out (payouts), newest first.
+ */
+export type WalletResponse = {
+  balance_idr: number;
+  min_payout_idr: number;
+  destination: { bank_code: string; account_masked: string; holder: string | null } | null;
+  /** Why "Cairkan" is not possible right now; null when it is. */
+  payout_blocked_reason: string | null;
+  /** Payouts run through the simulator (demo data). */
+  simulated: boolean;
+  entries: WalletEntry[];
+  payouts: PayoutView[];
+};
+/** POST /api/v1/merchant/wallet/payouts — owner. → { payout, balance_idr } (201). */
+export const PayoutRequestBody = z.object({ amount_idr: z.number().int().min(1).max(100_000_000) });
+export type PayoutRequestBody = z.input<typeof PayoutRequestBody>;
+export type PayoutResponse = { payout: PayoutView; balance_idr: number };
+
+export type MerchantReviewView = {
+  id: string;
+  rating: number;
+  tags: string[];
+  comment: string | null;
+  hygiene_rating: number | null;
+  portion_full: boolean | null;
+  /** First name only. */
+  customer_name: string;
+  menu_names: string[];
+  order_number: string;
+  created_at: string;
+  reply: string | null;
+  replied_at: string | null;
+};
+/** GET /api/v1/merchant/reviews?filter=all|unreplied|low — owner, newest first. */
+export const MerchantReviewsQuery = z.object({
+  filter: z.enum(["all", "unreplied", "low"]).default("all"),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export type MerchantReviewsResponse = {
+  summary: {
+    count: number;
+    rating_avg: number | null;
+    hygiene_avg: number | null;
+    hygiene_count: number;
+    /** Share of "porsi normal" answers (0..1), null without answers. */
+    portion_full_share: number | null;
+    portion_answers: number;
+    unreplied: number;
+  };
+  reviews: MerchantReviewView[];
+};
+/**
+ * PUT /api/v1/merchant/reviews/:id/reply — owner; { reply } (empty removes it). Shown under the
+ * review on the warung page. 403 DEMO_LOCKED for the shared demo warung. → { review }
+ */
+export const ReviewReplyBody = z.object({ reply: z.string().trim().max(300) });
+export type ReviewReplyBody = z.input<typeof ReviewReplyBody>;
+export type ReviewReplyResponse = { review: MerchantReviewView };
+
+export type CashierView = { user_id: string; full_name: string; phone_number: string | null; added_at: string };
+/** GET /api/v1/merchant/staff — owner. */
+export type StaffResponse = { cashiers: CashierView[]; max: number };
+/**
+ * POST /api/v1/merchant/staff — owner adds a cashier by phone number (an account is created
+ * when the number has none; the cashier logs in with it by OTP). DELETE /merchant/staff/:userId
+ * removes one. 403 DEMO_LOCKED for the shared demo warung. → StaffResponse
+ */
+export const AddCashierBody = z.object({
+  phone_number: phoneNumberSchema,
+  full_name: z.string().trim().min(2).max(60).optional(),
+});
+export type AddCashierBody = z.input<typeof AddCashierBody>;
+
+export type RepeatCandidate = {
+  menu_id: string;
+  menu_name: string;
+  initial_stock: number;
+  /** Today's pickup end at yesterday's time of day (WIB). */
+  pickup_end_time: string;
+};
+/**
+ * GET /api/v1/merchant/surplus/repeat — owner: yesterday's menus that can be put up again now
+ * (not live today, pickup end still ahead). POST publishes all of them with the suggested price.
+ */
+export type RepeatPreviewResponse = { candidates: RepeatCandidate[] };
+export type RepeatPublishResponse = { published: number; skipped: { menu_name: string; reason: string }[] };

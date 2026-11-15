@@ -1,11 +1,17 @@
 "use client";
 
+import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Clock3Icon, LeafIcon, PackageCheckIcon, RecycleIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
-import { ORDER_STATUS_LABELS, type OrderDetail, type OrderStatus } from "@/lib/contracts";
+import { OrderChatButton, OrderChatSheet } from "@/components/common/order-chat";
+import { useSearchParam } from "@/hooks/use-search-param";
+import { ORDER_STATUS_LABELS, type OrderDetail, type OrdersResponse, type OrderStatus } from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { merchantKeys, useIsCashier } from "../lib/queries";
 import { CancelTicketButton, isCancellableTicket } from "./cancel-ticket";
+import { CancelRequestPanel, isPaidOnlineOpen, OutOfStockCancelButton } from "./paid-order-actions";
 
 const STATUS_CLS: Record<OrderStatus, string> = {
   PENDING_PAYMENT: "bg-warning-soft text-amber-800 dark:text-amber-200",
@@ -62,7 +68,8 @@ export function portionsOf(order: Pick<OrderDetail, "items">): number {
 
 /**
  * Merchant-side order card (no pickup codes — the customer shows theirs). With `actions`,
- * an open "bayar di warung" ticket gets a "Batalkan tiket" button.
+ * an open "bayar di warung" ticket gets a "Batalkan tiket" button, and a paid online order gets
+ * "Stok habis" or, when the buyer asked to cancel, Setujui / Tolak.
  */
 export function MerchantOrderCard({
   order,
@@ -74,6 +81,27 @@ export function MerchantOrderCard({
   actions?: boolean;
 }) {
   const waiting = order.status === "PAID" || order.status === "READY_FOR_PICKUP";
+  const qc = useQueryClient();
+  const [chatOpen, setChatOpen] = useState(false);
+  // A chat push opens /merchant/orders?chat=<order id>; once closed, the link does not reopen it.
+  const [linkClosed, setLinkClosed] = useState(false);
+  const chatParam = useSearchParam("chat");
+  const linked = actions && chatParam === order.id && !linkClosed;
+  const onChatOpenChange = (o: boolean) => {
+    setChatOpen(o);
+    if (!o) setLinkClosed(true);
+  };
+  const markSeen = useCallback(() => {
+    qc.setQueriesData<OrdersResponse>({ queryKey: merchantKeys.ordersAll }, (old) =>
+      old
+        ? { ...old, orders: old.orders.map((o) => (o.id === order.id && o.unread_messages ? { ...o, unread_messages: 0 } : o)) }
+        : old,
+    );
+  }, [qc, order.id]);
+  const chat = actions && (waiting || (order.unread_messages ?? 0) > 0);
+  // Cancelling and refunds are the owner's decisions; a cashier only serves and chats.
+  const isCashier = useIsCashier();
+  const ownerActions = actions && !isCashier;
   return (
     <article className={cn("rounded-2xl bg-card ring-1 ring-border", compact ? "p-3" : "p-4")}>
       <div className="flex items-start gap-3">
@@ -119,7 +147,44 @@ export function MerchantOrderCard({
           {(order.status === "CANCELLED" || order.status === "EXPIRED") && order.cancel_reason && (
             <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{order.cancel_reason}</p>
           )}
-          {actions && isCancellableTicket(order) && (
+          {order.cancel_request?.status === "REJECTED" && waiting && (
+            <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
+              Permintaan batal ditolak: {order.cancel_request.response}
+            </p>
+          )}
+          {order.refund && (
+            <p className="mt-1 text-xs leading-snug font-semibold text-foreground/80">
+              {formatIdr(order.refund.amount_idr)} dikembalikan ke pembeli
+            </p>
+          )}
+          {chat && (
+            <div className="mt-2">
+              <OrderChatButton
+                label="Chat pembeli"
+                variant="ghost"
+                unread={order.unread_messages ?? 0}
+                onClick={() => setChatOpen(true)}
+                className="-ml-3 h-10 px-3 text-sm"
+              />
+              <OrderChatSheet
+                orderId={order.id}
+                as="merchant"
+                open={chatOpen || linked}
+                onOpenChange={onChatOpenChange}
+                title={order.customer.full_name}
+                description={`Chat soal pesanan ${order.order_number}`}
+                onSeen={markSeen}
+              />
+            </div>
+          )}
+          {ownerActions && isPaidOnlineOpen(order) && order.cancel_request?.status === "PENDING" && <CancelRequestPanel order={order} />}
+          {ownerActions && isPaidOnlineOpen(order) && order.cancel_request?.status !== "PENDING" && (
+            <div className="mt-2 -mb-1 flex items-center justify-between gap-3 border-t border-border pt-2">
+              <p className="text-xs text-muted-foreground">Menu habis sebelum diambil?</p>
+              <OutOfStockCancelButton order={order} className="-mr-2" />
+            </div>
+          )}
+          {ownerActions && isCancellableTicket(order) && (
             <div className="mt-2 -mb-1 flex flex-col items-start gap-1 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <p className="text-xs text-muted-foreground">
                 Batal otomatis jam {formatClockId(order.pickup_deadline_at)} bila tidak diambil.

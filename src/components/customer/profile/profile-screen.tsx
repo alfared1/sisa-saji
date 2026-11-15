@@ -324,6 +324,13 @@ export function ProfileScreen() {
             <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & perkiraan porsi sisa" />
             {user?.merchant_id ? (
               <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" />
+            ) : user?.cashier_of ? (
+              <LinkRow
+                href="/merchant/orders"
+                icon={StoreIcon}
+                label={`Kasir ${user.cashier_of.merchant_name}`}
+                hint="Antrean ambil dan scan tiket pembeli"
+              />
             ) : (
               <LinkRow
                 href={user && !user.is_demo ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}

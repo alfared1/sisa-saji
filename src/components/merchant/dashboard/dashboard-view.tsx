@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { BanknoteIcon, ClockIcon, LeafIcon, UtensilsIcon } from "lucide-react";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,10 +11,12 @@ import { formatKg } from "@/lib/impact";
 import { formatIdr, wibTime } from "@/lib/time";
 import { useMerchantDashboard } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
+import { cn } from "@/lib/utils";
 import { MerchantPage, StatTile } from "../ui";
 import { ActiveSurplusBatchList } from "./active-batch-list";
 import { AiPredictionAlertCard } from "./ai-prediction-card";
 import { LeftoverReportCard } from "./leftover-report-card";
+import { RepeatYesterdayCard } from "./repeat-yesterday-card";
 import { IncomingPickupQueue } from "./pickup-queue";
 import { StoreStatusHeader, greetingFor } from "./store-status-header";
 
@@ -86,15 +89,34 @@ export function MerchantDashboardView() {
           />
           <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(t.food_saved_grams)} hint={`${formatKg(t.co2_avoided_grams)} CO₂e dicegah`} tint="brand" />
         </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:hidden">
+          <Link href="/merchant/saldo" className="rounded-2xl bg-card p-3.5 ring-1 ring-border hover:bg-muted">
+            <span className="block text-xs font-semibold text-muted-foreground">Saldo</span>
+            <span className="block text-base font-extrabold tabular-nums">{formatIdr(d.merchant.wallet_balance_idr)}</span>
+          </Link>
+          <Link href="/merchant/ulasan" className="rounded-2xl bg-card p-3.5 ring-1 ring-border hover:bg-muted">
+            <span className="block text-xs font-semibold text-muted-foreground">Ulasan</span>
+            <span className="block text-base font-extrabold tabular-nums">
+              {d.merchant.total_reviews > 0
+                ? `${d.merchant.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} · ${d.merchant.total_reviews}`
+                : "Belum ada"}
+            </span>
+          </Link>
+        </div>
       </section>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
         <div className="min-w-0 space-y-4 lg:space-y-6">
+          <RepeatYesterdayCard />
           <AiPredictionAlertCard prediction={d.ai_prediction} publishedMenuIds={publishedMenuIds} />
           <ActiveSurplusBatchList batches={d.active_batches} isPilot={d.merchant.is_pilot} />
           <LeftoverReportCard />
         </div>
-        <IncomingPickupQueue orders={d.pending_pickups} className="lg:sticky lg:top-6" />
+        {/* Phones: when buyers are waiting, the queue and Scan come first (one column). */}
+        <IncomingPickupQueue
+          orders={d.pending_pickups}
+          className={cn("lg:sticky lg:top-6", d.pending_pickups.length > 0 && "order-first lg:order-none")}
+        />
       </div>
     </MerchantPage>
   );

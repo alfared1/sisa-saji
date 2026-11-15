@@ -15,6 +15,7 @@ import { ApiError } from "@/server/http";
 import { loadOrderDetails } from "@/server/mappers/order";
 import { abandonPayAtWarungOrder, commitReservation } from "@/server/services/stock";
 import { expireLapsedHolds, isHoldOver, OPEN_PAY_AT_WARUNG } from "./hold";
+import { settleUnansweredRequest } from "./cancel-request";
 
 const LAPSED_TICKET_MESSAGE = "Tiket ini sudah lewat batas waktu dan batal otomatis. Porsinya sudah kembali ke stok.";
 
@@ -225,6 +226,10 @@ async function completePickup(
         pickupProofImageUrl: args.proofImageUrl ?? null,
         totalFoodSavedGrams: foodGrams,
         totalCo2AvoidedGrams: co2Grams,
+        // The buyer came after all: a cancel request still waiting is closed, not left pending.
+        cancelRequestStatus: sql`CASE WHEN ${orders.cancelRequestStatus} = 'PENDING' THEN 'REJECTED'::cancel_request_status ELSE ${orders.cancelRequestStatus} END`,
+        cancelRequestResponse: sql`CASE WHEN ${orders.cancelRequestStatus} = 'PENDING' THEN 'Pesanan sudah diambil.' ELSE ${orders.cancelRequestResponse} END`,
+        cancelRequestRespondedAt: sql`CASE WHEN ${orders.cancelRequestStatus} = 'PENDING' THEN ${now} ELSE ${orders.cancelRequestRespondedAt} END`,
         updatedAt: now,
       })
       .where(and(eq(orders.id, o.id), inArray(orders.status, [...PICKABLE])))
@@ -270,6 +275,9 @@ export const UNCLAIMED_ORDER_REASON = "Tidak diambil sebelum batas waktu";
  * become EXPIRED ("Tidak diambil sebelum batas waktu"). That frees their 4-digit
  * code and drops them from the pending-pickup queues.
  *
+ * A paid order whose buyer asked to cancel and got no answer is cancelled and refunded
+ * instead (settleUnansweredRequest in cancel-request.ts).
+ *
  * Money policy (no-show): the portions were sold and set aside, and self-pickup is
  * the customer's duty, so the warung is still credited net_merchant_payout_idr
  * (exactly once, in the same transaction as the status change). The customer gets
@@ -300,6 +308,8 @@ export async function closeUnclaimedOrders(db: Db, now: Date = new Date()): Prom
       continue;
     }
     const done = await db.transaction(async (tx) => {
+      // A cancel request the warung never answered is approved instead (refund, no payout).
+      if (await settleUnansweredRequest(tx, id, now)) return true;
       const [o] = await tx
         .update(orders)
         .set({ status: "EXPIRED", cancelReason: UNCLAIMED_ORDER_REASON, updatedAt: now })

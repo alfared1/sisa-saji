@@ -4,17 +4,28 @@
  */
 import "server-only";
 import { eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Db } from "@/db/client";
-import { merchants, users } from "@/db/schema";
+import { merchants, merchantStaff, users } from "@/db/schema";
 import type { SessionUser } from "@/lib/contracts";
 import { isDemoAccount } from "@/lib/demo-accounts";
 import type { DbOrTx } from "@/server/services/stock";
 
 export async function sessionUserView(db: Db | DbOrTx, userId: string): Promise<SessionUser | null> {
+  const staffOf = alias(merchants, "staff_of");
   const [row] = await db
-    .select({ user: users, merchantId: merchants.id, merchantSlug: merchants.slug })
+    .select({
+      user: users,
+      merchantId: merchants.id,
+      merchantSlug: merchants.slug,
+      cashierMerchantId: staffOf.id,
+      cashierMerchantName: staffOf.merchantName,
+      cashierMerchantSlug: staffOf.slug,
+    })
     .from(users)
     .leftJoin(merchants, eq(merchants.ownerUserId, users.id))
+    .leftJoin(merchantStaff, eq(merchantStaff.userId, users.id))
+    .leftJoin(staffOf, eq(staffOf.id, merchantStaff.merchantId))
     .where(eq(users.id, userId))
     .limit(1);
   if (!row) return null;
@@ -32,6 +43,11 @@ export async function sessionUserView(db: Db | DbOrTx, userId: string): Promise<
     loyalty_points: u.loyaltyPoints,
     merchant_id: row.merchantId,
     merchant_slug: row.merchantSlug,
+    // An owner is never also a cashier (staff.ts refuses it); owning wins if data says both.
+    cashier_of:
+      !row.merchantId && row.cashierMerchantId && row.cashierMerchantName && row.cashierMerchantSlug
+        ? { merchant_id: row.cashierMerchantId, merchant_name: row.cashierMerchantName, merchant_slug: row.cashierMerchantSlug }
+        : null,
     is_demo: isDemoAccount(u),
   };
 }

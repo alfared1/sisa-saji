@@ -456,6 +456,7 @@ export async function getMerchantDetail(
     portion_full: r.portionFull ?? null,
     customer_name: abbreviateName(name),
     created_at: r.createdAt.toISOString(),
+    merchant_reply: r.merchantReply,
   }));
 
   let subscription: MerchantDetail["subscription"] = null;

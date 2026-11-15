@@ -70,11 +70,73 @@ async function downloadQrPng(container: HTMLElement | null, fileName: string) {
   }
 }
 
+/**
+ * Demo only: stands in for the buyer's payment app after scanning the QRIS. "Bayar" sends the
+ * same signed webhook a real gateway would, so the order moves on exactly as in production.
+ */
+function SimulatedWalletDialog({
+  open,
+  onOpenChange,
+  order,
+  methodName,
+  paying,
+  onPay,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  order: OrderDetail;
+  methodName: string;
+  paying: boolean;
+  onPay: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[calc(100%-2rem)] rounded-3xl p-0 sm:max-w-sm" showCloseButton={!paying}>
+        <div className="rounded-t-3xl bg-warning-soft px-5 py-2 text-center text-xs font-semibold text-amber-900 dark:text-amber-100">
+          Simulasi aplikasi pembayaran · tanpa uang sungguhan
+        </div>
+        <div className="px-6 pt-4 pb-6">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg font-bold">Bayar dengan {methodName}</DialogTitle>
+            <DialogDescription className="text-sm">
+              Ke Sisa-Saji · {order.merchant.name}
+            </DialogDescription>
+          </DialogHeader>
+          <dl className="mt-4 space-y-2 rounded-2xl bg-surface p-4 text-sm ring-1 ring-border">
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Pesanan</dt>
+              <dd className="font-semibold tabular-nums">{order.order_number}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">Total</dt>
+              <dd className="text-xl font-extrabold tabular-nums">
+                <Money value={order.total_customer_paid_idr} />
+              </dd>
+            </div>
+          </dl>
+          <Button className="mt-4 h-12 w-full rounded-xl text-base font-semibold" onClick={onPay} disabled={paying}>
+            {paying ? (
+              <>
+                <Loader2Icon className="size-5 animate-spin" aria-hidden /> Memproses…
+              </>
+            ) : (
+              <>
+                <ShieldCheckIcon className="size-5" aria-hidden /> Bayar
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PaymentView({ order }: { order: OrderDetail }) {
   const qc = useQueryClient();
   const c = useCountdown(order.payment_expires_at, 3);
   const qrRef = useRef<HTMLDivElement>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
   const [timesUpDismissed, setTimesUpDismissed] = useState(false);
   const key = customerKeys.order(order.id);
 
@@ -203,7 +265,7 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           ))}
         </div>
         <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground">
-          <Loader2Icon className="size-3.5 animate-spin text-primary" /> Menunggu pembayaran… cek otomatis tiap 3 detik
+          <Loader2Icon className="size-3.5 animate-spin text-primary" aria-hidden /> Menunggu pembayaran…
         </p>
         <Button
           variant="outline"
@@ -224,21 +286,26 @@ export function PaymentView({ order }: { order: OrderDetail }) {
       <div className="contents lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
       {/* Demo simulator */}
       <section className="rounded-3xl border-2 border-dashed border-amber-300 bg-warning-soft p-4 dark:border-amber-800">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-100">
-          Mode demo
-        </p>
+        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Mode demo</p>
         <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-100/85">
-          Tidak perlu uang sungguhan. Tombol ini mengirim webhook pembayaran bertanda tangan seperti payment gateway asli.
+          Tidak perlu uang sungguhan. Coba alur bayarnya di sini.
         </p>
         <Button
           className="mt-3 h-12 w-full rounded-xl bg-foreground text-base font-semibold text-background hover:bg-foreground/90"
-          onClick={() => pay.mutate()}
+          onClick={() => setSimOpen(true)}
           disabled={pay.isPending || timesUp}
         >
-          {pay.isPending ? <Loader2Icon className="size-5 animate-spin" /> : <ShieldCheckIcon className="size-5" />}
-          Simulasi Bayar (Demo)
+          Simulasi Bayar
         </Button>
       </section>
+      <SimulatedWalletDialog
+        open={simOpen && !timesUp}
+        onOpenChange={(o) => !pay.isPending && setSimOpen(o)}
+        order={order}
+        methodName={walletName ?? "QRIS"}
+        paying={pay.isPending}
+        onPay={() => pay.mutate()}
+      />
 
       <OrderItemsCard order={order} />
 

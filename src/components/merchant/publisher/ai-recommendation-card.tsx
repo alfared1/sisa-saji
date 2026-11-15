@@ -51,7 +51,7 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
   const anchorFirst = curveLabelStride(steps.length) > 1;
   return (
     <figure>
-      <figcaption className="mb-2 text-xs font-semibold text-muted-foreground">Kurva harga otomatis</figcaption>
+      <figcaption className="mb-2 text-xs font-semibold text-muted-foreground">Harga sampai tutup</figcaption>
       <ol className="flex items-end gap-1.5" aria-label="Jadwal diskon">
         {steps.map((s, i) => {
           // Same Hemat / Diskon Kilat colours as the customer-facing badge.

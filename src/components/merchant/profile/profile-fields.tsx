@@ -141,7 +141,7 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
         {e.whatsapp_number ? (
           <FieldError>{e.whatsapp_number.message}</FieldError>
         ) : (
-          <p className="text-xs text-muted-foreground">Dipakai tombol “Hubungi Warung” di tiket pembeli.</p>
+          <p className="text-xs text-muted-foreground">Dipakai tautan WhatsApp di tiket pembeli, cadangan bila chat tidak dibalas.</p>
         )}
       </div>
 

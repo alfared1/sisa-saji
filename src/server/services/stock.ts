@@ -122,6 +122,27 @@ export async function releaseReservation(tx: Tx, orderId: string, now: Date = ne
 }
 
 /**
+ * A paid order was cancelled while its food is still there (the buyer's cancel request was
+ * approved): the sold portions go back on the shelf (available += q). A batch that sold out
+ * is selling again if its pickup window is still open. Call after moving the order out of
+ * the paid states, so the invariant holds: sold = initial − available − reserved.
+ */
+export async function returnSoldPortions(tx: Tx, orderId: string, now: Date = new Date()) {
+  const items = await itemsOf(tx, orderId);
+  for (const it of items) {
+    await tx
+      .update(surplusBatches)
+      .set({
+        availableStock: sql`${surplusBatches.availableStock} + ${it.quantity}`,
+        status: sql`CASE WHEN ${surplusBatches.status} = 'SOLD_OUT' AND ${surplusBatches.pickupEndTime} > ${now}
+                         THEN 'ACTIVE'::batch_status ELSE ${surplusBatches.status} END`,
+        updatedAt: now,
+      })
+      .where(eq(surplusBatches.id, it.batchId));
+  }
+}
+
+/**
  * Moves a PENDING_PAYMENT order to CANCELLED/EXPIRED and releases its stock.
  * Returns false when the order was no longer pending (idempotent).
  */

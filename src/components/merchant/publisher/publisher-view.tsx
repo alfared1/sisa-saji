@@ -171,7 +171,7 @@ function PublishSuccess({
         {!b.full_portion && <p className="mt-1 text-sm text-muted-foreground">Pembeli melihat: porsi lebih kecil dari biasa.</p>}
         {b.auto_discount_enabled && b.next_escalation && (
           <p className="mt-3 flex items-center gap-2 rounded-xl bg-deal-soft/70 px-3 py-2 text-xs font-semibold text-deal">
-            <TrendingUpIcon className="size-4" aria-hidden /> Auto-diskon: naik ke {b.next_escalation.discount_pct}% pukul {formatClockId(b.next_escalation.at)}
+            <TrendingUpIcon className="size-4" aria-hidden /> Diskon otomatis: naik ke {b.next_escalation.discount_pct}% pukul {formatClockId(b.next_escalation.at)}
           </p>
         )}
         {photo && <PublishedPhoto photo={photo.pending} upload={photo.upload} onRetry={photo.onRetry} />}
@@ -558,12 +558,12 @@ export function SurplusPublisherView() {
               <TrendingUpIcon className="size-5" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">Aktifkan Auto-Escalation Diskon</span>
+              <span className="block text-sm font-semibold">Diskon naik otomatis menjelang tutup</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
                 Diskon naik otomatis hingga 70% bila 30 menit sebelum tutup masih tersisa ≥ 5 porsi. Tidak pernah di bawah harga minimum.
               </span>
             </span>
-            <Switch checked={autoEscalation} onCheckedChange={setAutoEscalation} aria-label="Aktifkan Auto-Escalation Diskon" className="mt-1" />
+            <Switch checked={autoEscalation} onCheckedChange={setAutoEscalation} aria-label="Diskon naik otomatis menjelang tutup" className="mt-1" />
           </label>
 
           <div className="hidden lg:block">{publishButton}</div>

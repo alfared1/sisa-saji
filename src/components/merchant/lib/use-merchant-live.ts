@@ -1,9 +1,12 @@
 "use client";
 
 /**
- * Merchant live updates over SSE (/api/v1/stream/merchant):
+ * Merchant live updates over SSE (/api/v1/stream/merchant), with an alert tone and vibration for
+ * new paid orders, cancel requests and chat messages (alert-sound.ts):
  *  - order.paid       → toast "Pesanan baru dibayar: SS-…" + refresh dashboard/orders
  *  - order.completed  → refresh
+ *  - order.cancel_requested → toast "Pembeli minta batal: SS-…" + refresh
+ *  - order.message    → toast "Pesan dari pembeli · SS-…" + refresh (unread badge)
  *  - batch.updated    → patch the batch (stock, price, status, lauk) in the dashboard cache, then refresh
  */
 import { useCallback, useEffect, useRef } from "react";
@@ -13,7 +16,8 @@ import { toast } from "sonner";
 import { useEventSource, type EventSourceStatus } from "@/hooks/use-event-source";
 import { api } from "@/lib/api/client";
 import type { MerchantDashboard, MerchantStreamEvent } from "@/lib/contracts";
-import { merchantKeys, useMerchantReady } from "./queries";
+import { installSoundUnlock, playAlert } from "./alert-sound";
+import { merchantKeys, useCounterReady } from "./queries";
 
 const REFRESH_DEBOUNCE_MS = 400;
 
@@ -21,6 +25,8 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
   const qc = useQueryClient();
   const router = useRouter();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => installSoundUnlock(), []);
 
   useEffect(
     () => () => {
@@ -41,6 +47,7 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
     (ev: MerchantStreamEvent) => {
       switch (ev.type) {
         case "order.paid":
+          playAlert("order");
           if (toastOnPaid) {
             toast.success(`Pesanan baru dibayar: ${ev.order_number}`, {
               id: `paid-${ev.order_id}`,
@@ -70,6 +77,24 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
               : old,
           );
           break;
+        case "order.cancel_requested":
+          playAlert("attention");
+          toast.warning(`Pembeli minta batal: ${ev.order_number}`, {
+            id: `cancelreq-${ev.order_id}`,
+            description: ev.reason,
+            duration: 10000,
+            action: { label: "Lihat antrean", onClick: () => router.push("/merchant/orders") },
+          });
+          break;
+        case "order.message":
+          playAlert("message");
+          toast(`Pesan dari pembeli · ${ev.order_number}`, {
+            id: `msg-${ev.order_id}`,
+            description: ev.preview,
+            duration: 8000,
+            action: { label: "Buka chat", onClick: () => router.push(`/merchant/orders?chat=${ev.order_id}`) },
+          });
+          break;
         case "order.completed":
           break;
       }
@@ -80,7 +105,7 @@ export function useMerchantLive({ toastOnPaid = true }: { toastOnPaid?: boolean 
 
   // No stream until /auth/me confirms a warung (avoids a 401/403 loop while
   // MerchantGuard decides); after a drop, refetch what the gap may have hidden.
-  const enabled = useMerchantReady();
+  const enabled = useCounterReady();
   return useEventSource<MerchantStreamEvent>(api.url("/stream/merchant"), "merchant", onEvent, {
     enabled,
     onReconnect: refresh,

@@ -83,5 +83,7 @@ test("cart: two items, pickup options, DiffMerchantDialog guard, voucher HEMAT2K
 
   await expect(page).toHaveURL(new RegExp(`/orders/${order.id}$`));
   await page.getByRole("button", { name: /Simulasi Bayar/ }).click();
+  // The simulated payment app asks to confirm.
+  await page.getByRole("dialog").getByRole("button", { name: "Bayar", exact: true }).click();
   await expect(page.getByText(/^SJ-\d{4}$/)).toBeVisible();
 });

@@ -565,7 +565,7 @@ function EskalasiMock() {
     <div className="space-y-3">
       {/* The curve first (with its time axis and the 22.30 closing mark), the push it triggers below. */}
       <div className={cn(CARD, "mt-1 p-3 shadow-soft")}>
-        <p className="text-[12px] font-semibold text-muted-foreground">Kurva harga otomatis</p>
+        <p className="text-[12px] font-semibold text-muted-foreground">Harga sampai tutup</p>
         {/* Top margin = room for the callout above the last column. */}
         <ol className="mt-[calc(58px/var(--z))] flex items-end gap-1.5">
           {ESCALATION.map((s, i) => {

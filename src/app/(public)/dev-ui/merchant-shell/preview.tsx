@@ -17,6 +17,7 @@ const DEMO_USER: SessionUser = {
   loyalty_points: 0,
   merchant_id: null,
   merchant_slug: null,
+  cashier_of: null,
   is_demo: true,
 };
 

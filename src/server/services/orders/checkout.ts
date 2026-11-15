@@ -19,7 +19,7 @@
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull, like, ne, not, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, like, not, notInArray, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db } from "@/db/client";
 import { menus, merchants, orderItems, orders, surplusBatches, users } from "@/db/schema";
@@ -31,6 +31,7 @@ import {
   PAY_AT_WARUNG_NO_SHOW_LIMIT,
   PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS,
   PAYMENT_TTL_SECONDS,
+  WARUNG_OUT_OF_STOCK_REASONS,
 } from "@/lib/constants";
 import type { CheckoutBody, OrderDetail } from "@/lib/contracts";
 import { isDemoAccount } from "@/lib/demo-accounts";
@@ -220,8 +221,8 @@ async function enforceFairUse(tx: Tx, args: FairUseArgs): Promise<string | null>
         eq(orders.customerId, userId),
         inArray(orders.status, ["CANCELLED", "EXPIRED"]),
         gt(orders.updatedAt, windowStart),
-        // A ticket the warung cancelled because the food ran out is not the buyer's doing.
-        or(isNull(orders.cancelReason), ne(orders.cancelReason, MERCHANT_TICKET_CANCEL_REASONS.OUT_OF_STOCK.reason)),
+        // An order the warung cancelled because the food ran out is not the buyer's doing.
+        or(isNull(orders.cancelReason), notInArray(orders.cancelReason, [...WARUNG_OUT_OF_STOCK_REASONS])),
         demoBuyer ? not(LAPSED_CASH_TICKET) : undefined,
       ),
     );

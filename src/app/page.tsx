@@ -2,7 +2,7 @@
 
 /**
  * "/" — role/visitor router:
- *  merchant session → /merchant/dashboard · returning visitor or logged-in
+ *  merchant session → /merchant/dashboard · cashier → /merchant/orders · returning visitor or logged-in
  *  customer → /discover · first-time guest → /tour (product walkthrough) ·
  *  guest who already finished or skipped the tour → /welcome
  *  offline with a saved pickup ticket → /offline (shows the ticket at once)
@@ -28,6 +28,8 @@ export default function RootRedirectPage() {
     if (isLoading) return;
     if (!isError && user && (user.role === "MERCHANT" || user.merchant_id)) {
       router.replace("/merchant/dashboard");
+    } else if (!isError && user?.cashier_of) {
+      router.replace("/merchant/orders");
     } else if (user || hasVisited()) {
       router.replace("/discover");
     } else {

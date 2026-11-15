@@ -29,6 +29,11 @@ export const merchantKeys = {
   insights: ["merchant", "insights"] as const,
   leftoversAll: ["merchant", "leftovers"] as const,
   leftovers: (date?: string) => ["merchant", "leftovers", date ?? ""] as const,
+  wallet: ["merchant", "wallet"] as const,
+  reviews: (filter: string) => ["merchant", "reviews", filter] as const,
+  reviewsAll: ["merchant", "reviews"] as const,
+  staff: ["merchant", "staff"] as const,
+  repeat: ["merchant", "repeat"] as const,
 };
 
 /**
@@ -40,6 +45,18 @@ export const merchantKeys = {
 export function useMerchantReady(): boolean {
   const { user } = useSession();
   return Boolean(user?.merchant_id);
+}
+
+/** Like useMerchantReady, but also true for a cashier: for the counter (orders, scan, live feed). */
+export function useCounterReady(): boolean {
+  const { user } = useSession();
+  return Boolean(user?.merchant_id || user?.cashier_of);
+}
+
+/** The signed-in user is a cashier (counter only, no money or settings). */
+export function useIsCashier(): boolean {
+  const { user } = useSession();
+  return Boolean(user && !user.merchant_id && user.cashier_of);
 }
 
 export function useMerchantMe() {

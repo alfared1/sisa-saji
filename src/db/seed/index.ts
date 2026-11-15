@@ -986,7 +986,7 @@ export async function seedDatabase(db: Db, opts: SeedOptions): Promise<SeedSumma
     }
     log("[seed] wiping tables …");
     await tx.execute(sql`
-      TRUNCATE reviews, order_items, orders, discount_adjustment_logs,
+      TRUNCATE reviews, order_messages, merchant_payouts, merchant_staff, menu_photos, order_items, orders, discount_adjustment_logs,
                merchant_surplus_predictions, leftover_reports, customer_merchant_subscriptions,
                batch_photos, batch_photo_uploads, delivery_interests,
                surplus_batches, menus, merchants, otp_codes, customer_presence,

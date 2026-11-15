@@ -89,6 +89,12 @@ export const orderStatus = pgEnum("order_status", [
   "CANCELLED",
   "EXPIRED",
 ]);
+/** Who wrote an order chat message: the order's buyer or its warung. */
+export const messageSender = pgEnum("message_sender", ["CUSTOMER", "MERCHANT"]);
+/** Withdrawal of the warung's wallet to its bank / e-wallet account. */
+export const payoutStatus = pgEnum("payout_status", ["PROCESSING", "PAID", "FAILED"]);
+/** A buyer's request to cancel an order they already paid online; the warung decides. */
+export const cancelRequestStatus = pgEnum("cancel_request_status", ["PENDING", "APPROVED", "REJECTED"]);
 export const paymentMethodType = pgEnum("payment_method_type", [
   "QRIS",
   "GOPAY",
@@ -356,6 +362,21 @@ export const orders = pgTable(
     pickedUpAt: timestamp({ withTimezone: true }),
     pickupProofImageUrl: text(),
     cancelReason: text(),
+    /**
+     * Buyer's cancel request on a paid online order (one per order). PENDING until the warung
+     * approves (refund, portions back on the shelf) or rejects it with a note; a request still
+     * pending when the order would expire is approved (see cancel-request.ts).
+     */
+    cancelRequestStatus: cancelRequestStatus(),
+    cancelRequestReason: text(),
+    cancelRequestedAt: timestamp({ withTimezone: true }),
+    cancelRequestRespondedAt: timestamp({ withTimezone: true }),
+    /** The warung's note when it rejects the request. */
+    cancelRequestResponse: text(),
+    /** Full refund of a cancelled paid order (simulated by the payment simulator). */
+    refundAmountIdr: integer().notNull().default(0),
+    refundedAt: timestamp({ withTimezone: true }),
+    refundRef: varchar({ length: 120 }),
     totalFoodSavedGrams: integer().notNull().default(0),
     totalCo2AvoidedGrams: integer().notNull().default(0),
     ...timestamps,
@@ -409,6 +430,85 @@ export const orderItems = pgTable(
     index("idx_order_items_batch").on(t.surplusBatchId),
     check("order_items_quantity_positive", sql`${t.quantity} > 0`),
   ],
+);
+
+/* ------------------------------------------------------------------ */
+/* 7b. order_messages: chat between the buyer and the warung per order */
+/* ------------------------------------------------------------------ */
+
+export const orderMessages = pgTable(
+  "order_messages",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    orderId: uuid()
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    sender: messageSender().notNull(),
+    senderUserId: uuid()
+      .notNull()
+      .references(() => users.id),
+    body: varchar({ length: 500 }).notNull(),
+    /** When the other side opened the chat after this message arrived. */
+    readAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_order_messages_order").on(t.orderId, t.createdAt),
+    check("order_messages_body_nonempty", sql`char_length(${t.body}) > 0`),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* 7c. merchant_payouts: wallet withdrawals ("Cairkan saldo")          */
+/* ------------------------------------------------------------------ */
+
+export const merchantPayouts = pgTable(
+  "merchant_payouts",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    amountIdr: bigint({ mode: "number" }).notNull(),
+    status: payoutStatus().notNull().default("PROCESSING"),
+    /** Destination as it was when requested (the account number is stored masked). */
+    bankCode: varchar({ length: 30 }).notNull(),
+    accountMasked: varchar({ length: 50 }).notNull(),
+    accountHolder: varchar({ length: 120 }),
+    /** Transfer reference ("PO-…"). */
+    ref: varchar({ length: 40 }).notNull().unique(),
+    /** Paid by the payout simulator (demo data), not by a real transfer. */
+    simulated: boolean().notNull().default(false),
+    requestedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    paidAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [
+    index("idx_merchant_payouts_merchant").on(t.merchantId, t.requestedAt.desc()),
+    check("merchant_payouts_amount_positive", sql`${t.amountIdr} > 0`),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* 7d. merchant_staff: cashier accounts of a warung                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A cashier ("kasir") added by the owner by phone number. A cashier sees the warung's pickup
+ * queue, scans tickets and chats with buyers; nothing else (no money, menus or settings).
+ * One warung per cashier.
+ */
+export const merchantStaff = pgTable(
+  "merchant_staff",
+  {
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    addedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.merchantId, t.userId] }), uniqueIndex("uq_merchant_staff_user").on(t.userId)],
 );
 
 /* ------------------------------------------------------------------ */
@@ -559,6 +659,9 @@ export const reviews = pgTable(
     hygieneRating: smallint(),
     /** "Porsinya sesuai porsi normal?" NULL = not answered. */
     portionFull: boolean(),
+    /** The warung's public reply under the review (one, editable). */
+    merchantReply: text(),
+    merchantRepliedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -694,6 +797,34 @@ export const batchPhotos = pgTable(
     // BATCH_PHOTO_MAX_BYTES (400 KB). The client always re-encodes to JPEG.
     check("batch_photos_size", sql`${t.byteSize} BETWEEN 1 AND 409600`),
     check("batch_photos_type", sql`${t.contentType} = 'image/jpeg'`),
+  ],
+);
+
+/**
+ * The warung's own photo of a menu (one per menu, replaced on upload). Shown to buyers for field
+ * pilot warung (the same rule as batch photos); for any other warung only the owner sees it.
+ * menus.image_url points at GET /api/v1/menus/:id/photo?v=<id>.
+ */
+export const menuPhotos = pgTable(
+  "menu_photos",
+  {
+    menuId: uuid()
+      .primaryKey()
+      .references(() => menus.id, { onDelete: "cascade" }),
+    /** Version id, refreshed on every upload; used as the ?v= cache buster. */
+    id: uuid().notNull().defaultRandom(),
+    merchantId: uuid()
+      .notNull()
+      .references(() => merchants.id, { onDelete: "cascade" }),
+    bytes: bytea().notNull(),
+    contentType: varchar({ length: 20 }).notNull(),
+    byteSize: integer().notNull(),
+    uploadedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_menu_photos_merchant").on(t.merchantId),
+    check("menu_photos_size", sql`${t.byteSize} BETWEEN 1 AND 409600`),
+    check("menu_photos_type", sql`${t.contentType} = 'image/jpeg'`),
   ],
 );
 

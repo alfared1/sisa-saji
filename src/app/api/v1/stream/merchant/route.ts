@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { getDb } from "@/db";
 import { handle } from "@/server/http";
-import { requireMerchant } from "@/server/auth/session";
+import { requirePickupAccess } from "@/server/auth/session";
 import { pollMerchantEvents } from "@/server/services/merchant/stream";
 
 const POLL_MS = 5_000;
@@ -32,7 +32,7 @@ export const maxDuration = 300;
 
 export const GET = handle(async (req) => {
   await connection();
-  const { merchantId } = await requireMerchant();
+  const { merchantId } = await requirePickupAccess(); // owner or cashier
   const db = getDb();
   let cursor = resumeCursor(req.headers.get("last-event-id") ?? new URL(req.url).searchParams.get("last_event_id"), Date.now()) ?? Date.now();
   const seen = new Map<string, number>(); // event key → event time (pruned past the overlap window)

@@ -12,7 +12,7 @@ import { useNow } from "@/hooks/use-now";
 import { api } from "@/lib/api/client";
 import type { OrderDetail, OrdersResponse } from "@/lib/contracts";
 import { DAY_NAMES_ID, formatIdr, wibDate, wibDayOfWeek } from "@/lib/time";
-import { merchantKeys, useMerchantReady } from "../lib/queries";
+import { merchantKeys, useCounterReady, useIsCashier } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
 import { LiveDot } from "../dashboard/store-status-header";
 import { MerchantPage, MerchantPageHeader } from "../ui";
@@ -62,7 +62,8 @@ export function MerchantOrdersView() {
   const now = useNow(60_000);
   const today = now !== null ? wibDate(new Date(now)) : "";
   const live = useMerchantLive();
-  const ready = useMerchantReady();
+  const ready = useCounterReady();
+  const isCashier = useIsCashier();
 
   const query = useQuery({
     queryKey: merchantKeys.orders(tab, tab === "today" ? today : tab === "history" ? historyDate : undefined),
@@ -165,7 +166,7 @@ export function MerchantOrdersView() {
                 <h2 id="waiting-h" className="mb-2 text-sm font-semibold">
                   Menunggu diambil <span className="text-muted-foreground tabular-nums">({waiting.length})</span>
                 </h2>
-                {waiting.some(isCancellableTicket) && (
+                {!isCashier && waiting.some(isCancellableTicket) && (
                   <p className="mb-2 text-xs text-muted-foreground">
                     Tiket bayar di warung menahan porsi paling lama {PAY_AT_WARUNG_HOLD_MINUTES} menit, lalu batal otomatis bila
                     tidak diambil. Bila pembeli belum datang mendekati batas waktu, kamu bisa membatalkan tiketnya.

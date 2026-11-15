@@ -18,13 +18,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import { buyerCancelText, isCancelledByWarung } from "@/lib/constants";
+import { buyerCancelText, isCancelledByWarung, PAID_ORDER_CANCEL_REASONS } from "@/lib/constants";
 import type { OrderDetail, OrderResponse } from "@/lib/contracts";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useTicketsStore } from "@/stores/tickets";
 import { LoginCta, OrderStatusChip } from "../bits";
 import { customerKeys } from "../lib/queries";
 import { CompletedView, ImpactCelebrationModal, ReviewFormSheet } from "./completed-view";
+import { RefundNote } from "./cancel-request-card";
 import { OrderItemsCard } from "./order-bits";
 import { PaymentView } from "./payment-view";
 import { PickupTicketView } from "./pickup-pass";
@@ -106,6 +107,7 @@ function ClosedView({ order }: { order: OrderDetail }) {
           </div>
         }
       />
+      <RefundNote order={order} />
       <OrderItemsCard order={order} className="opacity-80" />
     </div>
   );
@@ -120,6 +122,7 @@ export function OrderDetailScreen({ id }: { id: string }) {
   const [celebrate, setCelebrate] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const prevStatus = useRef<string | null>(null);
+  const prevRequest = useRef<string | null | undefined>(undefined);
   const online = useOnline();
 
   const q = useQuery({
@@ -140,6 +143,17 @@ export function OrderDetailScreen({ id }: { id: string }) {
   useEffect(() => {
     if (live) syncOrder(live);
   }, [live, syncOrder]);
+
+  // The warung answered a cancel request while this page was open.
+  useEffect(() => {
+    if (!live) return;
+    const now = live.cancel_request?.status ?? null;
+    const prev = prevRequest.current;
+    prevRequest.current = now;
+    if (prev === "PENDING" && now === "REJECTED") {
+      toast.error("Warung menolak permintaan batal", { id: "cancel-rejected", description: live.cancel_request?.response ?? undefined });
+    }
+  }, [live]);
 
   // Status transitions → toasts / celebration.
   useEffect(() => {
@@ -164,7 +178,15 @@ export function OrderDetailScreen({ id }: { id: string }) {
       toast.error(prev === "READY_FOR_PICKUP" ? "Batas waktu tiket sudah lewat" : "Waktu pembayaran habis", { id: "expired" });
     }
     if (live.status === "CANCELLED" && isCancelledByWarung(live.cancel_reason)) {
-      toast.error("Warung membatalkan tiketmu", { id: "cancelled-by-warung", description: buyerCancelText(live.cancel_reason) ?? undefined });
+      toast.error(live.refund ? "Warung membatalkan pesananmu" : "Warung membatalkan tiketmu", {
+        id: "cancelled-by-warung",
+        description: buyerCancelText(live.cancel_reason) ?? undefined,
+      });
+    } else if (live.status === "CANCELLED" && live.refund) {
+      toast.success(
+        live.cancel_reason === PAID_ORDER_CANCEL_REASONS.BUYER_APPROVED.reason ? "Permintaan batal disetujui" : "Pesanan dibatalkan",
+        { id: "cancel-approved", description: buyerCancelText(live.cancel_reason) ?? undefined },
+      );
     }
     if (live.status === "COMPLETED") {
       markCelebrated(live.id);

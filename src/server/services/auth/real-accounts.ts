@@ -1,13 +1,13 @@
 /**
- * Accounts that belong to real people: owners of field pilot warung, and buyers who have
- * ordered at one. While OTP_DEV_MODE shows login codes on screen, anyone who knows such a
+ * Accounts that belong to real people: owners and cashiers of field pilot warung, and buyers
+ * who have ordered at one. While OTP_DEV_MODE shows login codes on screen, anyone who knows such a
  * phone number or email could sign in as that person, so OTP login refuses them until
  * real WhatsApp/email delivery is on (see otp.ts). Demo accounts are never "real".
  */
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { merchants, orders, users } from "@/db/schema";
+import { merchants, merchantStaff, orders, users } from "@/db/schema";
 import { REAL_OTP_REQUIRED_REASON } from "@/lib/contracts";
 import { isDemoAccount } from "@/lib/demo-accounts";
 import { ApiError } from "@/server/http";
@@ -36,6 +36,14 @@ export async function isRealPersonAccount(db: Db, id: LoginIdentifier): Promise<
     .where(and(eq(merchants.ownerUserId, user.id), eq(merchants.isPilot, true)))
     .limit(1);
   if (owner) return true;
+
+  const [cashier] = await db
+    .select({ one: sql<number>`1` })
+    .from(merchantStaff)
+    .innerJoin(merchants, eq(merchants.id, merchantStaff.merchantId))
+    .where(and(eq(merchantStaff.userId, user.id), eq(merchants.isPilot, true)))
+    .limit(1);
+  if (cashier) return true;
 
   const [buyer] = await db
     .select({ one: sql<number>`1` })
