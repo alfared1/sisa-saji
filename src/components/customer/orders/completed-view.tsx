@@ -7,20 +7,20 @@
 import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import {
   CloudIcon,
   LeafIcon,
   Loader2Icon,
   MessageSquareHeartIcon,
-  PartyPopperIcon,
   Share2Icon,
   StarIcon,
   TreesIcon,
   WalletIcon,
 } from "lucide-react";
 import { LogoMark } from "@/components/common/logo";
+import { TudungPlate } from "@/components/common/tudung-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -53,6 +53,7 @@ import {
 } from "../lib/order-status";
 import { customerKeys } from "../lib/queries";
 import { OrderItemsCard } from "./order-bits";
+import { OrderSteps } from "./order-steps";
 
 /* ------------------------------ Share ------------------------------ */
 
@@ -91,7 +92,7 @@ function ImpactInfographic({ order }: { order: OrderDetail }) {
     { icon: TreesIcon, value: `${formatDecimal(trees * 12, 1)} bln`, label: "kerja 1 pohon menyerap CO₂" },
   ];
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-impact p-5 text-white shadow-card">
+    <section className="ss-anyaman relative overflow-hidden rounded-3xl bg-deep p-5 text-white shadow-card">
       <div className="relative flex items-center gap-2">
         <LogoMark className="size-8" />
         <p className="text-xs font-semibold text-white/85">Dampak pesanan {order.order_number}</p>
@@ -112,39 +113,6 @@ function ImpactInfographic({ order }: { order: OrderDetail }) {
   );
 }
 
-/* ------------------------------- Confetti ------------------------------- */
-
-const CONFETTI_COLORS = ["#16a34a", "#f97316", "#facc15", "#ef4444", "#22c55e", "#0ea5e9"];
-/** Deterministic pseudo-random in [0,1) so renders stay pure. */
-const rnd = (i: number, salt: number) => {
-  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
-
-function Confetti() {
-  const reduce = useReducedMotion();
-  if (reduce) return null;
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {Array.from({ length: 36 }, (_, i) => (
-        <motion.span
-          key={i}
-          className="absolute top-0 block rounded-[2px]"
-          style={{
-            left: `${rnd(i, 1) * 100}%`,
-            width: 6 + rnd(i, 2) * 6,
-            height: 10 + rnd(i, 3) * 8,
-            background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-          }}
-          initial={{ y: -30, rotate: 0, opacity: 1 }}
-          animate={{ y: 520, rotate: (rnd(i, 4) - 0.5) * 720, x: (rnd(i, 5) - 0.5) * 120, opacity: [1, 1, 0] }}
-          transition={{ duration: 2.2 + rnd(i, 6) * 1.4, delay: rnd(i, 7) * 0.6, ease: "easeIn" }}
-        />
-      ))}
-    </div>
-  );
-}
-
 export function ImpactCelebrationModal({
   order,
   open,
@@ -158,21 +126,16 @@ export function ImpactCelebrationModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[calc(100%-2rem)] overflow-hidden rounded-3xl p-0 sm:max-w-sm">
-        <div className="relative bg-gradient-to-b from-brand-soft to-card px-6 pt-8 pb-6 text-center">
-          {open && <Confetti />}
-          <motion.span
-            initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
-            animate={{ scale: 1, rotate: 0, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 14 }}
-            className="relative mx-auto inline-flex size-20 items-center justify-center rounded-3xl bg-primary text-primary-foreground"
-          >
-            <PartyPopperIcon className="size-10" />
-          </motion.span>
-          <DialogTitle className="relative mt-5 text-2xl font-bold">Pesanan selesai!</DialogTitle>
-          <DialogDescription className="relative mt-1 text-sm leading-relaxed">
+      <DialogContent className="max-w-[calc(100%-2rem)] overflow-hidden rounded-3xl p-0 sm:max-w-sm [&>[data-slot=dialog-close]]:text-on-deep [&>[data-slot=dialog-close]]:hover:bg-white/10 [&>[data-slot=dialog-close]]:hover:text-on-deep">
+        {/* The tudung lifts off the plate: the food is in the buyer's hands. */}
+        <div className="ss-anyaman bg-deep px-6 pt-7 pb-5 text-center text-on-deep">
+          <TudungPlate cover={open ? "lift" : "still"} className="mx-auto h-20 w-28 text-on-deep" />
+          <DialogTitle className="mt-3 text-2xl font-bold">Pesanan selesai!</DialogTitle>
+          <DialogDescription className="mt-1 text-sm leading-relaxed text-leaf">
             Terima kasih sudah menyelamatkan makanan dari {order.merchant.name}.
           </DialogDescription>
+        </div>
+        <div className="px-6 pt-1 pb-6 text-center">
           <motion.div
             initial={{ y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -456,6 +419,7 @@ export function CompletedView({ order, onReview }: { order: OrderDetail; onRevie
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
+      <OrderSteps at="done" cash={order.payment_method === "BAYAR_DI_WARUNG"} />
       <ImpactInfographic order={order} />
       <Button variant="outline" className="h-12 rounded-xl font-semibold" onClick={() => void shareImpact(order)}>
         <Share2Icon className="size-4" /> Bagikan ke Instagram Story / WhatsApp

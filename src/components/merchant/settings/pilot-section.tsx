@@ -158,7 +158,7 @@ export function PilotSection({ merchant }: { merchant: MerchantProfile }) {
 
   if (merchant.is_pilot) {
     return (
-      <SectionCard title="Uji coba lapangan" icon={FlaskConicalIcon}>
+      <SectionCard id="uji-coba" title="Uji coba lapangan" icon={FlaskConicalIcon}>
         <p className="text-sm leading-relaxed">
           Warungmu ikut uji coba
           {merchant.pilot_joined_at ? ` sejak ${joinedLabel(merchant.pilot_joined_at)}` : ""}. Pembeli membayar langsung di
@@ -199,6 +199,7 @@ export function PilotSection({ merchant }: { merchant: MerchantProfile }) {
 
   return (
     <SectionCard
+      id="uji-coba"
       title="Uji coba lapangan"
       icon={FlaskConicalIcon}
       description={

@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 test.describe("about page + demo login", () => {
   test("explains the product with its sources and SDGs", async ({ page }) => {
     await page.goto("/welcome");
-    await page.getByRole("link", { name: "Tentang" }).click();
+    await page.getByRole("link", { name: "Tentang", exact: true }).first().click();
     await expect(page).toHaveURL(/\/tentang$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("terjual sebelum");
     for (const name of ["Masalahnya", "Riset pengguna", "Cara kerjanya", "Dampak yang dihitung", "Teknologi di baliknya", "Model bisnis", "Sumber"]) {

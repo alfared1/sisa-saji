@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeftIcon } from "lucide-react";
 import { ErrorState } from "@/components/common/error-state";
-import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-switcher";
+import { PublicFooter, PublicHeader } from "@/components/common/public-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
+import {
+  PAY_AT_WARUNG_HOLD_MINUTES,
+  PAY_AT_WARUNG_MAX_PORTIONS,
+  PAY_AT_WARUNG_NO_SHOW_LIMIT,
+  PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS,
+} from "@/lib/constants";
 import { LEFTOVER_DESTINATIONS, type PilotStats } from "@/lib/contracts";
 import { CO2E_SOURCE } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
@@ -86,6 +91,110 @@ function LeftoverSection({ l }: { l: PilotStats["leftovers"] }) {
   );
 }
 
+const PILOT_RULES = [
+  "Bayar langsung di warung, tunai atau QRIS milik warung.",
+  "Tanpa biaya layanan dan tanpa voucher.",
+  `Porsi ditahan ${PAY_AT_WARUNG_HOLD_MINUTES} menit, paling banyak ${PAY_AT_WARUNG_MAX_PORTIONS} porsi per tiket.`,
+  `${PAY_AT_WARUNG_NO_SHOW_LIMIT} tiket tidak diambil dalam ${PAY_AT_WARUNG_NO_SHOW_WINDOW_DAYS} hari: belum bisa memesan di warung uji coba dulu.`,
+  "Foto menu dan etalase tampil ke semua pembeli, dengan jam unggah.",
+] as const;
+
+function RulesCard() {
+  return (
+    <section aria-labelledby="aturan-title" className="ss-anyaman rounded-3xl bg-deep p-6 text-on-deep">
+      <h2 id="aturan-title" className="font-bold text-leaf">
+        Aturan di warung uji coba
+      </h2>
+      <ul className="mt-3 space-y-2.5 leading-relaxed">
+        {PILOT_RULES.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const MODE_ROWS: readonly [string, string, string][] = [
+  ["Warung", "Warung fiktif dari data contoh", "Warung sungguhan yang bergabung dengan kode undangan"],
+  ["Bayar", "QRIS, GoPay, DANA disimulasikan; tunai di warung", "Hanya bayar langsung di warung (tunai atau QRIS milik warung)"],
+  ["Biaya layanan dan voucher", "Ada untuk bayar online", "Tidak ada"],
+  ["Saldo warung", "Bertambah dari pesanan online, pencairan disimulasikan", "Tidak dipakai, uang sudah diterima di tempat"],
+  ["Foto etalase dan foto menu", "Hanya pemilik (foto akun demo: sesi demo, 60 menit)", "Tampil ke semua pembeli, dengan jam unggah"],
+  ["Login", "Kode OTP boleh tampil di layar", "Wajib kode yang benar-benar terkirim"],
+  ["Akun demo pembeli", "Bisa memesan", "Tidak bisa memesan"],
+  ["Notifikasi Jam Lapar", "Tidak memicu notifikasi", "Memicu notifikasi ke pembeli dalam 500 m"],
+  ["Hasil di halaman ini", "Tidak dihitung", "Hanya pesanan selesai setelah bergabung, tanpa pesanan pemilik sendiri"],
+  ["Menu otomatis", "Diisi ulang supaya selalu ada menu", "Tidak pernah diisi otomatis"],
+  ["Reset data", "Dihapus dan dibuat ulang", "Ditolak tanpa izin khusus"],
+];
+
+function ModesTable() {
+  return (
+    <section aria-labelledby="mode-title" className="mt-12">
+      <h2 id="mode-title" className="text-xl font-bold">
+        Data demo dan warung uji coba
+      </h2>
+      <p className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">
+        Dua mode berjalan berdampingan. Tabel ini menunjukkan apa yang berbeda, supaya angka demo tidak tertukar dengan angka
+        lapangan.
+      </p>
+      <div className="mt-4 overflow-x-auto rounded-2xl bg-card ring-1 ring-border">
+        <table className="w-full min-w-[36rem] text-left text-sm">
+          <thead className="bg-surface">
+            <tr>
+              <th scope="col" className="px-4 py-3 font-semibold">
+                Hal
+              </th>
+              <th scope="col" className="px-4 py-3 font-semibold">
+                Data demo
+              </th>
+              <th scope="col" className="px-4 py-3 font-semibold">
+                Warung uji coba
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {MODE_ROWS.map(([what, demo, pilot]) => (
+              <tr key={what}>
+                <th scope="row" className="px-4 py-3 align-top font-semibold">
+                  {what}
+                </th>
+                <td className="px-4 py-3 align-top text-muted-foreground">{demo}</td>
+                <td className="px-4 py-3 align-top">{pilot}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/** Joining happens in the warung's own settings (it needs the owner's session and real OTP). */
+function JoinSection() {
+  const { user } = useSession();
+  const owner = Boolean(user?.merchant_id);
+  return (
+    <section aria-labelledby="gabung-title" className="mt-12 grid gap-4 rounded-3xl bg-card p-6 ring-1 ring-border sm:grid-cols-[1fr_auto] sm:items-center">
+      <div>
+        <h2 id="gabung-title" className="text-xl font-bold">
+          Bergabung
+        </h2>
+        <p className="mt-1 max-w-prose text-sm leading-relaxed text-muted-foreground">
+          Untuk pemilik warung yang sudah menerima kode undangan dari tim. Kode dimasukkan di Pengaturan mode warung, dan butuh
+          kode masuk yang benar-benar terkirim ke WhatsApp atau email.
+        </p>
+      </div>
+      <Link
+        href={owner ? "/merchant/settings#uji-coba" : "/auth/login?role=MERCHANT&next=%2Fmerchant%2Fsettings"}
+        className="inline-flex h-12 items-center justify-center rounded-xl bg-primary px-6 font-semibold text-primary-foreground outline-none hover:bg-primary/90 focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {owner ? "Masukkan kode undangan" : "Masuk sebagai pemilik warung"}
+      </Link>
+    </section>
+  );
+}
+
 /** /uji-coba: the field pilot's real numbers, kept apart from the demo data on purpose. */
 export function PilotResultsView() {
   const stats = useQuery({
@@ -97,31 +206,22 @@ export function PilotResultsView() {
 
   return (
     <div className="app-backdrop min-h-dvh">
-      <div className="mx-auto w-full max-w-3xl px-4 pb-16">
-        <header className="safe-top flex h-16 items-center justify-between">
-          <Link
-            href="/welcome"
-            aria-label="Beranda Sisa-Saji"
-            className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <Logo />
-          </Link>
-          <ThemeToggle />
-        </header>
-
-        <Link
-          href="/welcome"
-          className="inline-flex h-11 items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeftIcon className="size-4" aria-hidden /> Beranda
-        </Link>
-
-        <h1 className="mt-2 text-3xl leading-tight font-bold sm:text-4xl">Hasil uji coba di warung sungguhan</h1>
-        <p className="mt-3 max-w-prose text-base leading-relaxed text-muted-foreground">
-          Angka di halaman ini hanya berasal dari warung yang ikut uji coba lapangan. Data contoh di aplikasi demo tidak
-          ikut dihitung. Pesanan dihitung dari pengambilan yang diverifikasi di aplikasi, sedangkan angka sampah dilaporkan
-          sendiri oleh warung.
-        </p>
+      <PublicHeader />
+      <div className="mx-auto w-full max-w-5xl px-4 pb-4 lg:px-8">
+        <div className="grid gap-6 pt-6 lg:grid-cols-[1.4fr_1fr] lg:items-start lg:gap-10 lg:pt-12">
+          <div>
+            <h1 className="text-4xl leading-tight font-bold sm:text-5xl">Uji coba lapangan</h1>
+            <p className="mt-4 max-w-prose text-lg leading-relaxed">
+              Warung sungguhan bergabung dengan kode undangan. Di sini hanya tampil hasil dari warung itu, terpisah dari data demo
+              yang ada di aplikasi.
+            </p>
+            <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground">
+              Pesanan dihitung dari pengambilan yang diverifikasi di aplikasi, tanpa pesanan pemilik di warungnya sendiri. Angka
+              sampah dilaporkan sendiri oleh warung.
+            </p>
+          </div>
+          <RulesCard />
+        </div>
 
         {stats.isPending ? (
           <div className="mt-8 grid grid-cols-2 gap-3">
@@ -146,13 +246,14 @@ export function PilotResultsView() {
             <p className="mt-6 text-sm font-semibold text-muted-foreground">
               {s.warung_count} warung ikut uji coba{s.started_at ? ` sejak ${dateLabel(s.started_at)}` : ""}
             </p>
-            <section aria-label="Hasil uji coba" className="mt-3 grid grid-cols-2 gap-3">
+            <section aria-label="Hasil uji coba" className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Figure value={s.portions_rescued.toLocaleString("id-ID")} label="porsi terselamatkan" />
               <Figure value={kg(s.food_saved_grams)} unit="kg" label="pangan tidak terbuang" />
               <Figure value={kg(s.co2_avoided_grams)} unit="kg" label="emisi CO₂e dicegah" />
               <Figure value={formatIdr(s.warung_revenue_idr)} label="pemasukan warung dari surplus" />
               <Figure value={s.orders_completed.toLocaleString("id-ID")} label="pesanan diambil" />
               <Figure value={s.unique_buyers.toLocaleString("id-ID")} label="pembeli berbeda" />
+              <Figure value={s.tickets_unclaimed.toLocaleString("id-ID")} label="tiket bayar di warung tidak diambil" />
             </section>
 
             <LeftoverSection l={s.leftovers} />
@@ -205,6 +306,9 @@ export function PilotResultsView() {
           </>
         )}
 
+        <ModesTable />
+        <JoinSection />
+
         <section aria-labelledby="cara-hitung" className="mt-10 rounded-2xl bg-muted p-4 text-sm leading-relaxed text-foreground/85">
           <h2 id="cara-hitung" className="font-semibold text-foreground">
             Cara menghitung
@@ -239,6 +343,7 @@ export function PilotResultsView() {
           </ul>
         </section>
       </div>
+      <PublicFooter />
     </div>
   );
 }

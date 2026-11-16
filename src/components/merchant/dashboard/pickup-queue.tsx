@@ -51,7 +51,7 @@ export function IncomingPickupQueue({ orders, className }: { orders: OrderDetail
           <ul className="space-y-2.5">
             {sorted.slice(0, 6).map((o) => (
               <li key={o.id}>
-                <MerchantOrderCard order={o} compact />
+                <MerchantOrderCard order={o} compact queue />
               </li>
             ))}
           </ul>

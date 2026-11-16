@@ -153,6 +153,7 @@ export function DynamicPriceMenuCard({
               discountPct={batch.discount_pct}
               showBadge={false}
               layout="stacked"
+              plate
             />
             {!inactive && <CountdownBadge endIso={batch.pickup_end_time} variant="plain" className="mt-1" />}
           </div>

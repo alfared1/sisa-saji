@@ -8,10 +8,11 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { DownloadIcon, HourglassIcon, Loader2Icon, ShieldCheckIcon, TimerOffIcon, XCircleIcon } from "lucide-react";
+import { DownloadIcon, Loader2Icon, ShieldCheckIcon, TimerOffIcon, XCircleIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Money } from "@/components/common/money";
 import { QrCodeView } from "@/components/common/qr-code-view";
+import { TudungPlate } from "@/components/common/tudung-icon";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +24,7 @@ import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { customerKeys } from "../lib/queries";
 import { OrderItemsCard } from "./order-bits";
+import { OrderSteps } from "./order-steps";
 
 const METHOD_CHIPS: { key: PaymentMethod | "SHOPEEPAY" | "BANK"; label: string }[] = [
   { key: "QRIS", label: "QRIS" },
@@ -131,9 +133,18 @@ function SimulatedWalletDialog({
   );
 }
 
+/** "2 porsi Nasi Timbel sudah dikunci untukmu" (one menu) or "3 porsi sudah dikunci untukmu" (several). */
+function lockedLine(order: OrderDetail): string {
+  const portions = order.items.reduce((n, it) => n + it.quantity, 0);
+  const names = new Set(order.items.map((it) => it.menu_name));
+  const what = names.size === 1 ? `${portions} porsi ${order.items[0].menu_name}` : `${portions} porsi`;
+  return `${what} sudah dikunci untukmu`;
+}
+
 export function PaymentView({ order }: { order: OrderDetail }) {
   const qc = useQueryClient();
-  const c = useCountdown(order.payment_expires_at, 3);
+  // Red only in the last 2 minutes, so red keeps meaning "now".
+  const c = useCountdown(order.payment_expires_at, 2);
   const qrRef = useRef<HTMLDivElement>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
@@ -184,45 +195,38 @@ export function PaymentView({ order }: { order: OrderDetail }) {
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
-      {/* Countdown */}
+      <OrderSteps at="pay" />
+
+      {/* Portion locked: the tudung settles over the plate, then the payment countdown. */}
       <section
-        className={cn(
-          "rounded-3xl p-4 ring-1",
-          c.isUrgent ? "bg-urgent-soft ring-urgent/20" : "bg-deal-soft ring-deal/15",
-        )}
-        aria-live="polite"
+        aria-labelledby="judul-kunci"
+        className="ss-anyaman flex flex-col items-center gap-3 rounded-3xl bg-deep px-4 pt-5 pb-4 text-center text-on-deep"
       >
-        <div className="flex items-center gap-3">
+        <TudungPlate cover="settle" className="h-20 w-28 text-on-deep" />
+        <h2 id="judul-kunci" className="text-lg leading-snug font-bold text-balance">
+          {lockedLine(order)}
+        </h2>
+        <p className="flex flex-wrap items-baseline justify-center gap-2 text-sm text-leaf" aria-live="polite">
+          <span>{timesUp ? "Waktu bayar habis" : "Bayar dalam"}</span>
           <span
-            className={cn(
-              "inline-flex size-11 shrink-0 items-center justify-center rounded-2xl bg-card shadow-soft",
-              c.isUrgent ? "text-urgent" : "text-deal",
-            )}
-          >
-            <HourglassIcon className={cn("size-5", !timesUp && "animate-soft-pulse")} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-balance">Selesaikan pembayaran dalam</p>
-            <p className="text-xs text-balance text-muted-foreground">
-              Porsi dikunci untukmu sampai {formatClockId(order.payment_expires_at)} WIB
-            </p>
-          </div>
-          <span
-            className={cn(
-              "text-3xl font-extrabold tabular-nums",
-              c.isUrgent || timesUp ? "text-urgent" : "text-deal",
-            )}
+            className={cn("text-3xl font-extrabold tabular-nums", c.isUrgent || timesUp ? "text-on-deep-urgent" : "text-on-deep")}
             role="timer"
             aria-label={`Sisa waktu ${mmss}`}
           >
             {c.ready ? mmss : "10:00"}
           </span>
-        </div>
+        </p>
         <Progress
           value={pct}
-          className={cn("mt-3 h-1.5 bg-card *:data-[slot=progress-indicator]:bg-current", c.isUrgent ? "text-urgent" : "text-deal")}
+          className={cn(
+            "h-1 bg-on-deep/20 *:data-[slot=progress-indicator]:bg-current",
+            c.isUrgent ? "text-on-deep-urgent" : "text-leaf",
+          )}
           aria-hidden
         />
+        <p className="text-[13px] leading-relaxed text-balance text-leaf">
+          Porsi dikunci sampai {formatClockId(order.payment_expires_at)} WIB. Lewat dari itu, porsi kembali ke stok warung.
+        </p>
       </section>
 
       {/* QRIS */}
@@ -236,9 +240,10 @@ export function PaymentView({ order }: { order: OrderDetail }) {
           <h2 className="mt-3 text-base font-bold">Bayar dengan {walletName} lewat QRIS</h2>
         )}
         <p className="mt-3 text-xs text-muted-foreground">Total pembayaran</p>
-        <p className="text-3xl font-bold">
+        <p className="text-3xl font-extrabold text-deal tabular-nums">
           <Money value={order.total_customer_paid_idr} />
         </p>
+        <span aria-hidden className="mx-auto mt-1.5 block h-1 w-9 rounded-full bg-plate" />
         <div ref={qrRef} className="mt-4">
           {order.qris_string ? (
             <QrCodeView

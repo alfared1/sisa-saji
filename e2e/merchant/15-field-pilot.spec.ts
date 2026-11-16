@@ -102,7 +102,7 @@ test("pilot warung: joining needs real OTP, pay at the warung, verified pickup s
   expect(stats.warung.some((w) => w.slug === batch.merchant_slug && w.portions_rescued >= 1)).toBe(true);
   expect(stats.leftovers).toMatchObject({ nights_reported: 1, donated: 3, discarded: 2, waste_reduction_pct: 80 });
   await phone.goto("/uji-coba");
-  await expect(phone.getByRole("heading", { name: "Hasil uji coba di warung sungguhan" })).toBeVisible();
+  await expect(phone.getByRole("heading", { level: 1, name: "Uji coba lapangan" })).toBeVisible();
   await expect(phone.getByRole("region", { name: "Hasil uji coba" }).getByText("porsi terselamatkan")).toBeVisible();
   await expect(phone.getByText("Porsi yang dibuang turun 80%")).toBeVisible();
 

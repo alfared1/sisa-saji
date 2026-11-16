@@ -4,8 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, ChevronDownIcon } from "lucide-react";
 import { DemoLoginButtons } from "@/components/common/demo-login-buttons";
-import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-switcher";
+import { PublicFooter, PublicHeader } from "@/components/common/public-chrome";
 import { useGlobalStats } from "@/hooks/use-global-stats";
 import {
   CO2E_PER_KG_FOOD,
@@ -154,13 +153,8 @@ export function AboutView() {
 
   return (
     <div className="app-backdrop min-h-dvh">
-      <div className="mx-auto w-full max-w-4xl px-4 pb-16 lg:px-8">
-        <header className="safe-top flex h-16 items-center justify-between">
-          <Link href="/welcome" aria-label="Beranda Sisa-Saji" className="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-            <Logo />
-          </Link>
-          <ThemeToggle />
-        </header>
+      <PublicHeader />
+      <div className="mx-auto w-full max-w-4xl px-4 pb-4 lg:px-8">
 
         <section className="pt-6 lg:pt-12">
           <h1 className="max-w-3xl text-[2rem] leading-[1.1] font-bold sm:text-5xl">
@@ -341,6 +335,7 @@ export function AboutView() {
           </ul>
         </section>
       </div>
+      <PublicFooter />
     </div>
   );
 }

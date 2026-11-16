@@ -11,10 +11,14 @@ test.describe("welcome + PWA", () => {
     await expect(impact.getByText("pesanan diambil")).toBeVisible();
     await expect(impact.getByText("Data demo", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Makan malam kenyang mulai Rp 10.000 dari warung terdekat sebelum tutup",
+      "Makan malam dari warung dekat kampus, harganya turun sebelum tutup.",
     );
-    await expect(page.getByRole("heading", { name: "Harga turun mendekati jam tutup" })).toBeVisible();
-    await expect(page.getByText(/bayar tunai di warung dengan porsi ditahan 30 menit/)).toBeVisible();
+    // The price slider runs the real pricing rules and stops at the warung's minimum.
+    const slider = page.getByRole("slider", { name: "Geser jam" });
+    await slider.fill(String(21 * 60 + 45));
+    await expect(page.getByText(/naik ke harga minimum warung Rp\s10\.000\./)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dari Beranda sampai pintu warung" })).toBeVisible();
+    await expect(page.getByText(/porsi ditahan 30 menit, paling banyak 3 porsi/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Masuk" }).first()).toBeVisible();
   });
 

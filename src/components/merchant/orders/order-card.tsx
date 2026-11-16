@@ -2,11 +2,18 @@
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Clock3Icon, LeafIcon, PackageCheckIcon, RecycleIcon } from "lucide-react";
+import Link from "next/link";
+import { Clock3Icon, LeafIcon, PackageCheckIcon, RecycleIcon, ScanLineIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { OrderChatButton, OrderChatSheet } from "@/components/common/order-chat";
 import { useSearchParam } from "@/hooks/use-search-param";
-import { ORDER_STATUS_LABELS, type OrderDetail, type OrdersResponse, type OrderStatus } from "@/lib/contracts";
+import {
+  ORDER_STATUS_LABELS,
+  type OrderDetail,
+  type OrdersResponse,
+  type OrderStatus,
+  type PaymentMethod,
+} from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { merchantKeys, useIsCashier } from "../lib/queries";
@@ -66,19 +73,45 @@ export function portionsOf(order: Pick<OrderDetail, "items">): number {
   return order.items.reduce((s, i) => s + i.quantity, 0);
 }
 
+const ONLINE_METHOD_LABEL: Partial<Record<PaymentMethod, string>> = { QRIS: "QRIS", GOPAY: "GoPay", OVO: "OVO", DANA: "DANA" };
+
+/**
+ * How the order is paid, as the counter needs to know it: "Lunas QRIS" (nothing to collect) or
+ * "Tunai Rp 19.500" (collect this at pickup). Null while an online order is still unpaid.
+ */
+export function PaymentChip({ order }: { order: OrderDetail }) {
+  const cash = order.payment_method === "BAYAR_DI_WARUNG";
+  if (cash && !order.paid_at) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-deal-soft px-2 py-0.5 font-semibold text-deal tabular-nums">
+        Tunai {formatIdr(order.total_customer_paid_idr)}
+      </span>
+    );
+  }
+  if (!order.paid_at) return null;
+  return (
+    <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 font-semibold text-secondary-foreground">
+      {cash ? "Lunas di warung" : `Lunas ${ONLINE_METHOD_LABEL[order.payment_method] ?? "online"}`}
+    </span>
+  );
+}
+
 /**
  * Merchant-side order card (no pickup codes — the customer shows theirs). With `actions`,
  * an open "bayar di warung" ticket gets a "Batalkan tiket" button, and a paid online order gets
- * "Stok habis" or, when the buyer asked to cancel, Setujui / Tolak.
+ * "Stok habis" or, when the buyer asked to cancel, Setujui / Tolak. `queue` (dashboard pickup
+ * queue) adds Scan and Chat right on the card, the two things the counter does next.
  */
 export function MerchantOrderCard({
   order,
   compact = false,
   actions = false,
+  queue = false,
 }: {
   order: OrderDetail;
   compact?: boolean;
   actions?: boolean;
+  queue?: boolean;
 }) {
   const waiting = order.status === "PAID" || order.status === "READY_FOR_PICKUP";
   const qc = useQueryClient();
@@ -86,7 +119,7 @@ export function MerchantOrderCard({
   // A chat push opens /merchant/orders?chat=<order id>; once closed, the link does not reopen it.
   const [linkClosed, setLinkClosed] = useState(false);
   const chatParam = useSearchParam("chat");
-  const linked = actions && chatParam === order.id && !linkClosed;
+  const linked = (actions || queue) && chatParam === order.id && !linkClosed;
   const onChatOpenChange = (o: boolean) => {
     setChatOpen(o);
     if (!o) setLinkClosed(true);
@@ -98,7 +131,7 @@ export function MerchantOrderCard({
         : old,
     );
   }, [qc, order.id]);
-  const chat = actions && (waiting || (order.unread_messages ?? 0) > 0);
+  const chat = (actions || queue) && (waiting || (order.unread_messages ?? 0) > 0);
   // Cancelling and refunds are the owner's decisions; a cashier only serves and chats.
   const isCashier = useIsCashier();
   const ownerActions = actions && !isCashier;
@@ -128,11 +161,7 @@ export function MerchantOrderCard({
                 <Clock3Icon className="size-3.5" aria-hidden /> {formatClockId(order.created_at)}
               </span>
             )}
-            {order.payment_method === "BAYAR_DI_WARUNG" && (
-              <span className="inline-flex items-center rounded-full bg-deal-soft px-2 py-0.5 font-semibold text-deal">
-                {order.paid_at ? "Lunas di warung" : "Bayar di warung"}
-              </span>
-            )}
+            <PaymentChip order={order} />
             {order.uses_own_lunchbox && (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 font-semibold text-primary">
                 <RecycleIcon className="size-3" aria-hidden /> Bawa wadah
@@ -157,15 +186,34 @@ export function MerchantOrderCard({
               {formatIdr(order.refund.amount_idr)} dikembalikan ke pembeli
             </p>
           )}
-          {chat && (
-            <div className="mt-2">
+          {queue && waiting && (
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <Link
+                href="/merchant/orders/scan"
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <ScanLineIcon className="size-4" aria-hidden /> Scan
+              </Link>
               <OrderChatButton
-                label="Chat pembeli"
-                variant="ghost"
+                label="Chat"
+                variant="outline"
                 unread={order.unread_messages ?? 0}
                 onClick={() => setChatOpen(true)}
-                className="-ml-3 h-10 px-3 text-sm"
+                className="h-11 text-sm"
               />
+            </div>
+          )}
+          {chat && (
+            <div className={cn(!queue && "mt-2")}>
+              {!queue && (
+                <OrderChatButton
+                  label="Chat pembeli"
+                  variant="ghost"
+                  unread={order.unread_messages ?? 0}
+                  onClick={() => setChatOpen(true)}
+                  className="-ml-3 h-10 px-3 text-sm"
+                />
+              )}
               <OrderChatSheet
                 orderId={order.id}
                 as="merchant"

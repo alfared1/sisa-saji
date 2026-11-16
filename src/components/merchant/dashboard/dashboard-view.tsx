@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { BanknoteIcon, ClockIcon, LeafIcon, UtensilsIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { ErrorState } from "@/components/common/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNow } from "@/hooks/use-now";
@@ -12,7 +12,8 @@ import { formatIdr, wibTime } from "@/lib/time";
 import { useMerchantDashboard } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
 import { cn } from "@/lib/utils";
-import { MerchantPage, StatTile } from "../ui";
+import type { MerchantDashboard } from "@/lib/contracts";
+import { MerchantPage } from "../ui";
 import { ActiveSurplusBatchList } from "./active-batch-list";
 import { AiPredictionAlertCard } from "./ai-prediction-card";
 import { LeftoverReportCard } from "./leftover-report-card";
@@ -37,6 +38,61 @@ function DashboardSkeleton() {
         <Skeleton className="h-72 rounded-3xl" />
       </div>
     </div>
+  );
+}
+
+/**
+ * "Ringkasan hari ini": one number leads (portions sold out of those put up tonight, with a bar),
+ * then money recovered and food saved. Money is orange with the plate line, like every price.
+ */
+function TodaySummary({ today: t }: { today: MerchantDashboard["today"] }) {
+  const total = Math.max(t.portions_published, t.portions_sold);
+  const pct = total > 0 ? Math.round((t.portions_sold / total) * 100) : 0;
+  return (
+    <section aria-labelledby="ringkasan-heading" className="space-y-3">
+      <h2 id="ringkasan-heading" className="text-lg font-bold">
+        Ringkasan hari ini
+      </h2>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl bg-card p-4 ring-1 ring-border">
+          <p className="text-sm text-muted-foreground">Porsi terjual</p>
+          <p className="mt-1 flex items-baseline gap-2">
+            <span className="text-4xl leading-none font-extrabold tabular-nums">{t.portions_sold}</span>
+            {total > 0 && <span className="text-base font-semibold text-muted-foreground tabular-nums">dari {total}</span>}
+          </p>
+          {total > 0 ? (
+            <div
+              role="progressbar"
+              aria-label="Porsi terjual dari porsi yang dipasang hari ini"
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-valuenow={t.portions_sold}
+              className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+            >
+              <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">Belum ada porsi yang dipasang hari ini.</p>
+          )}
+          {t.orders_pending_pickup > 0 && (
+            <p className="mt-2 text-xs font-semibold text-foreground/80">{t.orders_pending_pickup} pesanan menunggu diambil</p>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:contents">
+          <div className="min-w-0 rounded-2xl bg-card p-4 ring-1 ring-border">
+            <p className="text-sm leading-tight text-muted-foreground">Pendapatan dipulihkan</p>
+            <p className="mt-1.5 truncate text-xl font-extrabold text-deal tabular-nums sm:text-2xl">{formatIdr(t.revenue_idr)}</p>
+            <span aria-hidden className="mt-1 block h-[3px] w-7 rounded-full bg-plate" />
+            <p className="mt-1.5 text-xs text-muted-foreground">{t.orders_completed} pesanan selesai</p>
+          </div>
+          <div className="min-w-0 rounded-2xl bg-card p-4 ring-1 ring-border">
+            <p className="text-sm leading-tight text-muted-foreground">Pangan terselamatkan</p>
+            <p className="mt-1.5 truncate text-xl font-extrabold tabular-nums sm:text-2xl">{formatKg(t.food_saved_grams)}</p>
+            <p className="mt-2.5 text-xs text-muted-foreground">{formatKg(t.co2_avoided_grams)} CO₂e dicegah</p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -75,35 +131,7 @@ export function MerchantDashboardView() {
     <MerchantPage className="space-y-4 lg:space-y-6">
       <StoreStatusHeader merchant={d.merchant} ownerName={user?.full_name ?? "Mitra"} greeting={greeting} liveStatus={live.status} />
 
-      <section aria-label="Ringkasan hari ini">
-        <h2 className="sr-only">Ringkasan hari ini</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile icon={BanknoteIcon} label="Pendapatan hari ini" value={formatIdr(t.revenue_idr)} hint={`${t.orders_completed} pesanan selesai`} tint="deal" />
-          <StatTile icon={UtensilsIcon} label="Porsi terjual" value={t.portions_sold} hint="porsi surplus terselamatkan" />
-          <StatTile
-            icon={ClockIcon}
-            label="Menunggu diambil"
-            value={t.orders_pending_pickup}
-            hint={t.orders_pending_pickup ? "Siapkan bungkusnya" : "Antrean kosong"}
-            tint={t.orders_pending_pickup ? "urgent" : "neutral"}
-          />
-          <StatTile icon={LeafIcon} label="Pangan diselamatkan" value={formatKg(t.food_saved_grams)} hint={`${formatKg(t.co2_avoided_grams)} CO₂e dicegah`} tint="brand" />
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 lg:hidden">
-          <Link href="/merchant/saldo" className="rounded-2xl bg-card p-3.5 ring-1 ring-border hover:bg-muted">
-            <span className="block text-xs font-semibold text-muted-foreground">Saldo</span>
-            <span className="block text-base font-extrabold tabular-nums">{formatIdr(d.merchant.wallet_balance_idr)}</span>
-          </Link>
-          <Link href="/merchant/ulasan" className="rounded-2xl bg-card p-3.5 ring-1 ring-border hover:bg-muted">
-            <span className="block text-xs font-semibold text-muted-foreground">Ulasan</span>
-            <span className="block text-base font-extrabold tabular-nums">
-              {d.merchant.total_reviews > 0
-                ? `${d.merchant.rating_avg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} · ${d.merchant.total_reviews}`
-                : "Belum ada"}
-            </span>
-          </Link>
-        </div>
-      </section>
+      <TodaySummary today={t} />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-6">
         <div className="min-w-0 space-y-4 lg:space-y-6">
@@ -117,6 +145,17 @@ export function MerchantDashboardView() {
           orders={d.pending_pickups}
           className={cn("lg:sticky lg:top-6", d.pending_pickups.length > 0 && "order-first lg:order-none")}
         />
+      </div>
+
+      {/* Phones: publishing is always one thumb away, just above the tabs. */}
+      <div aria-hidden className="h-16 lg:hidden" />
+      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 border-t border-border bg-background/95 px-4 py-2.5 backdrop-blur-xl lg:hidden">
+        <Link
+          href="/merchant/surplus/new"
+          className="mx-auto flex h-12 max-w-2xl items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-primary-foreground outline-none active:scale-[0.99] focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <PlusIcon className="size-5" aria-hidden /> Publikasikan surplus
+        </Link>
       </div>
     </MerchantPage>
   );

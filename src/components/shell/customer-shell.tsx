@@ -43,6 +43,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, LeafIcon, MapIcon, ReceiptTextIcon, UserRoundIcon, type LucideIcon } from "lucide-react";
 import { FloatingCartBar } from "@/components/common/floating-cart-bar";
+import { ActiveOrderBar, useActiveOrder } from "./active-order-bar";
 import { DesktopTopNav } from "./desktop-top-nav";
 import { cn } from "@/lib/utils";
 import { selectCartCount, useCartStore } from "@/stores/cart";
@@ -109,7 +110,17 @@ export function CustomerShell({
 function DesktopChrome({ previewPathname }: { previewPathname?: string }) {
   const routerPathname = usePathname();
   const pathname = previewPathname ?? routerPathname ?? "/";
-  return <DesktopTopNav pathname={pathname} tabs={CUSTOMER_TABS} />;
+  const { order: activeOrder } = useActiveOrder(isCustomerTabRoot(pathname) && !pathname.startsWith("/orders"));
+  return (
+    <>
+      <DesktopTopNav pathname={pathname} tabs={CUSTOMER_TABS} />
+      {activeOrder && (
+        <div className="hidden lg:block">
+          <ActiveOrderBar order={activeOrder} className="px-[max(1rem,calc((100vw-1280px)/2+1rem))]" />
+        </div>
+      )}
+    </>
+  );
 }
 
 /** Bottom spacer + fixed tab bar / floating cart bar, chosen from the current path (phones; hidden on lg+). */
@@ -120,12 +131,15 @@ function CustomerChrome({ previewPathname }: { previewPathname?: string }) {
   const cartCount = useCartStore(selectCartCount);
   const showNav = isCustomerTabRoot(pathname);
   const showCart = hydrated && cartCount > 0 && showsCartBar(pathname);
+  // The order list itself shows every running order, so the bar stays off there.
+  const { order: activeOrder } = useActiveOrder(showNav && !pathname.startsWith("/orders"));
 
   return (
     <>
       {/* Spacer so the last content clears the fixed bars (replaces padding on <main>). */}
       <div aria-hidden className={cn("shrink-0 lg:hidden", showNav ? "pb-nav" : "safe-bottom")}>
         {showCart && <div className="h-20" />}
+        {activeOrder && <div className="h-15" />}
       </div>
       <div aria-hidden className="hidden h-16 shrink-0 lg:block" />
 
@@ -135,6 +149,7 @@ function CustomerChrome({ previewPathname }: { previewPathname?: string }) {
             <FloatingCartBar />
           </div>
         )}
+        {activeOrder && <ActiveOrderBar order={activeOrder} className="pointer-events-auto" />}
         {showNav && <CustomerBottomNav pathname={pathname} />}
       </div>
     </>

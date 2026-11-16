@@ -11,6 +11,7 @@ import type { Db } from "@/db/client";
 import { merchants, orderItems, orders, users } from "@/db/schema";
 import type { MerchantMeResponse, PilotAvailability, PilotStats } from "@/lib/contracts";
 import { DEMO_LOCKED_MESSAGE, DEMO_LOCKED_REASON, isDemoAccount } from "@/lib/demo-accounts";
+import { MERCHANT_TICKET_CANCEL_REASONS } from "@/lib/constants";
 import { getPilotInviteCode, isRealOtpDelivery } from "@/lib/env";
 import { ApiError } from "@/server/http";
 import { getMerchantMe, loadMerchant } from "@/server/services/merchant/profile";
@@ -153,6 +154,22 @@ export async function getPilotStats(db: Db): Promise<PilotStats> {
     })
     .from(perOrder);
 
+  // "Bayar di warung" tickets at pilot warung that were never collected: expired at the end of
+  // their hold, or cancelled by the warung as "Tidak datang". The cost of holding portions free.
+  const [unclaimed] = await db
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(orders)
+    .innerJoin(merchants, eq(merchants.id, orders.merchantId))
+    .where(
+      and(
+        eq(merchants.isPilot, true),
+        gte(orders.createdAt, merchants.pilotJoinedAt),
+        ne(orders.customerId, merchants.ownerUserId),
+        eq(orders.paymentMethod, "BAYAR_DI_WARUNG"),
+        sql`(${orders.status} = 'EXPIRED' OR ${orders.cancelReason} IS NOT DISTINCT FROM ${MERCHANT_TICKET_CANCEL_REASONS.NO_SHOW.reason})`,
+      ),
+    );
+
   const byWarung = await db
     .select({
       merchantId: perOrder.merchantId,
@@ -201,6 +218,7 @@ export async function getPilotStats(db: Db): Promise<PilotStats> {
     money_saved_idr: Number(t?.saved ?? 0),
     warung_revenue_idr: Number(t?.revenue ?? 0),
     unique_buyers: t?.buyers ?? 0,
+    tickets_unclaimed: unclaimed?.n ?? 0,
     leftovers: {
       nights_reported: sum("nights"),
       donated: sum("donated"),

@@ -535,6 +535,8 @@ describe("public pilot results", () => {
     expect(stats.food_saved_grams).toBeGreaterThan(0);
     expect(stats.co2_avoided_grams).toBe(Math.round(stats.food_saved_grams * 2.5));
     expect(stats.unique_buyers).toBe(1);
+    // The "Tidak datang" ticket cancelled above counts as a ticket nobody collected.
+    expect(stats.tickets_unclaimed).toBeGreaterThanOrEqual(1);
     expect(stats.warung).toEqual([expect.objectContaining({ slug: pilot.slug, orders_completed: 1, portions_rescued: 2 })]);
     expect(stats.daily).toHaveLength(1);
   });

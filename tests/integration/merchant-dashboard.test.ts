@@ -28,7 +28,7 @@ describe("GET /merchant/dashboard", () => {
   it("returns today's stats, live batches, pending pickups and tonight's AI prediction", async () => {
     const d = await getMerchantDashboard(db, merchant.id);
     expect(d.merchant.id).toBe(merchant.id);
-    for (const k of ["revenue_idr", "orders_completed", "orders_pending_pickup", "portions_sold", "food_saved_grams", "co2_avoided_grams"] as const) {
+    for (const k of ["revenue_idr", "orders_completed", "orders_pending_pickup", "portions_sold", "portions_published", "food_saved_grams", "co2_avoided_grams"] as const) {
       expect(Number.isInteger(d.today[k])).toBe(true);
       expect(d.today[k]).toBeGreaterThanOrEqual(0);
     }

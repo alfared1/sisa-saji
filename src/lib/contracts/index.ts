@@ -423,6 +423,8 @@ export type PilotStats = {
   /** Recovery revenue the warung collected for food that would have been thrown away. */
   warung_revenue_idr: number;
   unique_buyers: number;
+  /** "Bayar di warung" tickets never collected (expired, or cancelled by the warung as "Tidak datang"). */
+  tickets_unclaimed: number;
   /**
    * Nightly leftover reports from pilot warung, on or after the night they joined. Portions
    * that were given away, fed to animals or composted still did not end up as waste.
@@ -1250,6 +1252,8 @@ export type MerchantDashboard = {
     orders_completed: number;
     orders_pending_pickup: number;
     portions_sold: number;
+    /** Portions in today's batches (not cancelled): the "dari N" of "4 dari 9 porsi terjual". */
+    portions_published: number;
     food_saved_grams: number;
     co2_avoided_grams: number;
   };

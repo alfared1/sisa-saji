@@ -103,6 +103,19 @@ export async function getMerchantDashboard(db: Db, merchantId: string, now: Date
       ),
     );
 
+  // Portions put up for tonight (batches whose pickup window starts today), for "4 dari 9".
+  const [published] = await db
+    .select({ n: sql<number>`COALESCE(SUM(${surplusBatches.initialStock}), 0)::int` })
+    .from(surplusBatches)
+    .where(
+      and(
+        eq(surplusBatches.merchantId, merchantId),
+        sql`${surplusBatches.status} <> 'CANCELLED'`,
+        gte(surplusBatches.pickupStartTime, from),
+        lt(surplusBatches.pickupStartTime, to),
+      ),
+    );
+
   const pendingIds = await db
     .select({ id: orders.id })
     .from(orders)
@@ -139,6 +152,7 @@ export async function getMerchantDashboard(db: Db, merchantId: string, now: Date
       orders_completed: completed.n,
       orders_pending_pickup: pendingIds.length,
       portions_sold: portions.n,
+      portions_published: published.n,
       food_saved_grams: completed.food,
       co2_avoided_grams: completed.co2,
     },

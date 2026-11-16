@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlarmClockIcon, CalendarClockIcon, CloudOffIcon, MapPinIcon, ShieldCheckIcon, StoreIcon } from "lucide-react";
+import { AlarmClockIcon, CalendarClockIcon, CloudOffIcon, ReceiptTextIcon, ShieldCheckIcon, StoreIcon } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { payAtWarungAudience } from "../lib/order-status";
 import { CancelRequestCard, canRequestCancel } from "./cancel-request-card";
 import { customerKeys } from "../lib/queries";
 import { DirectionsAndWhatsAppButtons, OrderItemsCard, pickupCodeLabel } from "./order-bits";
+import { OrderSteps } from "./order-steps";
 
 /**
  * "Bayar di warung" ticket (any warung): the customer pays the warung at pickup (cash or the
@@ -153,95 +154,113 @@ export function PickupDeadlineBanner({ deadlineIso, payAtWarung = false }: { dea
   );
 }
 
-/** Live clock + moving holographic band so a screenshot is easy to tell apart from the real pass. */
-function LiveBand() {
+/**
+ * Live "Tiket asli" clock: it ticks every second, so a screenshot (frozen clock) is easy to tell
+ * apart from the real ticket.
+ */
+function LiveClockPill() {
   const now = useNow(1000);
+  const d = now !== null ? new Date(now) : null;
   return (
-    <div className="relative mt-4 h-9 overflow-hidden rounded-xl bg-impact">
-      <div className="ss-pass-shine absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/60 to-transparent" aria-hidden />
-      <div className="relative flex h-full items-center justify-center gap-2 text-xs font-semibold text-white">
-        <ShieldCheckIcon className="size-4" />
-        Tiket asli · {now !== null ? `${wibTime(new Date(now))}:${String(new Date(now).getSeconds()).padStart(2, "0")}` : "--:--:--"} WIB
-      </div>
-      <style>{`
-        @keyframes ss-pass-shine { from { left: -40%; } to { left: 110%; } }
-        .ss-pass-shine { animation: ss-pass-shine 2.4s linear infinite; }
-        @media (prefers-reduced-motion: reduce) { .ss-pass-shine { animation: none; } }
-      `}</style>
-    </div>
+    <span className="inline-flex items-center gap-2 rounded-full bg-leaf/16 px-3 py-1.5 text-[13px] font-bold text-leaf">
+      <ShieldCheckIcon className="size-4" aria-hidden />
+      Tiket asli
+      <span className="text-[15px] font-extrabold text-on-deep tabular-nums">
+        {d ? `${wibTime(d)}:${String(d.getSeconds()).padStart(2, "0")}` : "--:--:--"}
+      </span>
+      <span className="sr-only">WIB</span>
+    </span>
   );
 }
 
+/** Woven deep-green ticket: live clock, SJ code, QR, deadline, where to collect. */
 export function DigitalPickupPass({ order, savedOffline }: { order: OrderDetail; savedOffline: boolean }) {
   const [big, setBig] = useState(false);
   return (
-    <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
-      <div className="flex items-center gap-2.5 bg-brand-soft px-4 py-3">
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-soft">
-          <StoreIcon className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{order.merchant.name}</p>
-          <p className="text-[11px] text-muted-foreground tabular-nums">{order.order_number}</p>
+    <>
+      <article
+        aria-label={`Tiket ${pickupCodeLabel(order)}`}
+        className="ss-anyaman relative overflow-hidden rounded-3xl bg-deep text-on-deep shadow-card"
+      >
+        <div className="relative flex flex-wrap items-start justify-between gap-2 px-4 pt-4 pb-2">
+          <div className="flex flex-col items-start gap-1.5">
+            <LiveClockPill />
+            <p className="text-xs text-leaf">Jam berdetik: bukti tiket asli, bukan tangkapan layar.</p>
+          </div>
+          {savedOffline && (
+            <span
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-on-deep/12 px-2 py-1 text-[11px] font-semibold text-on-deep"
+              title="Tiket ini tetap bisa dibuka tanpa internet"
+            >
+              <CloudOffIcon className="size-3.5" aria-hidden /> Tersimpan offline
+            </span>
+          )}
         </div>
-        {savedOffline && (
-          <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-card px-2 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20"
-            title="Tiket ini tetap bisa dibuka tanpa internet"
+
+        <div className="px-5 pt-2 pb-5 text-center">
+          <p className="text-[13px] font-semibold text-leaf">Kode pengambilan</p>
+          <p
+            className="mt-0.5 text-5xl font-extrabold tracking-[0.1em] tabular-nums min-[380px]:text-[3.2rem]"
+            aria-label={`Kode pengambilan ${pickupCodeLabel(order).split("").join(" ")}`}
           >
-            <CloudOffIcon className="size-3.5" /> Tersimpan offline
-          </span>
-        )}
-      </div>
-
-      <div className="relative px-5 pt-5 pb-5 text-center">
-        <p className="text-xs font-semibold text-muted-foreground">Kode pengambilan</p>
-        <p
-          className="mt-1 text-5xl font-black tracking-[0.12em] tabular-nums min-[380px]:text-[3.4rem]"
-          aria-label={`Kode pengambilan ${pickupCodeLabel(order).split("").join(" ")}`}
-        >
-          {pickupCodeLabel(order)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">Sebutkan kode ini atau tunjukkan QR ke kasir warung</p>
-
-        {order.pickup_qr_token && (
-          <button
-            type="button"
-            onClick={() => setBig((v) => !v)}
-            className="mx-auto mt-4 block rounded-3xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            aria-label={big ? "Perkecil QR" : "Perbesar QR"}
-          >
-            <QrCodeView
-              value={order.pickup_qr_token}
-              size={big ? 300 : 210}
-              level="Q"
-              label={`QR pengambilan ${order.order_number}`}
-            />
-          </button>
-        )}
-        <p className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-          Ketuk QR untuk {big ? "perkecil" : "perbesar"}
-        </p>
-        <LiveBand />
-      </div>
-
-      {/* perforation */}
-      <div className="relative border-t-2 border-dashed border-border">
-        <span className="absolute -top-3 -left-3 size-6 rounded-full bg-background ring-1 ring-border" aria-hidden />
-        <span className="absolute -top-3 -right-3 size-6 rounded-full bg-background ring-1 ring-border" aria-hidden />
-      </div>
-      <div className="space-y-1.5 px-5 py-4 text-sm">
-        <p className="flex items-start gap-2 text-xs text-muted-foreground">
-          <MapPinIcon className="mt-px size-3.5 shrink-0" /> {order.merchant.address}
-        </p>
-        {order.scheduled_pickup_time && (
-          <p className="flex items-center gap-2 text-xs font-semibold">
-            <CalendarClockIcon className="size-3.5 text-primary" /> Rencana ambil {formatClockId(order.scheduled_pickup_time)} WIB
+            {pickupCodeLabel(order)}
           </p>
-        )}
-        <DirectionsAndWhatsAppButtons order={order} />
-      </div>
-    </article>
+
+          {order.pickup_qr_token && (
+            <button
+              type="button"
+              onClick={() => setBig((v) => !v)}
+              className="mx-auto mt-4 block rounded-2xl bg-white p-3 outline-none focus-visible:ring-3 focus-visible:ring-leaf"
+              aria-label={big ? "Perkecil QR" : "Perbesar QR"}
+            >
+              <QrCodeView
+                value={order.pickup_qr_token}
+                size={big ? 300 : 200}
+                level="Q"
+                label={`QR pengambilan ${order.order_number}`}
+              />
+            </button>
+          )}
+          <p className="mt-2 text-[11px] font-semibold text-leaf">Ketuk QR untuk {big ? "perkecil" : "perbesar"}</p>
+          <p className="mt-3 text-sm text-balance text-leaf">
+            Tunjukkan QR atau sebutkan kode ke kasir sebelum {formatClockId(order.pickup_deadline_at)} WIB.
+          </p>
+        </div>
+
+        {/* perforation */}
+        <div aria-hidden className="relative mx-4 border-t-2 border-dashed border-on-deep/30">
+          <span className="absolute -top-2.5 -left-7 size-5 rounded-full bg-background" />
+          <span className="absolute -top-2.5 -right-7 size-5 rounded-full bg-background" />
+        </div>
+        <dl className="space-y-3 px-4 py-4 text-sm">
+          <div className="flex items-start gap-2.5">
+            <StoreIcon className="mt-0.5 size-4.5 shrink-0 text-leaf" aria-hidden />
+            <div className="min-w-0">
+              <dt className="text-xs text-leaf">Ambil di</dt>
+              <dd className="font-bold">{order.merchant.name}</dd>
+              <dd className="mt-0.5 text-xs text-leaf">{order.merchant.address}</dd>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <ReceiptTextIcon className="mt-0.5 size-4.5 shrink-0 text-leaf" aria-hidden />
+            <div className="min-w-0">
+              <dt className="text-xs text-leaf">Pesanan</dt>
+              <dd className="font-bold tabular-nums">{order.order_number}</dd>
+            </div>
+          </div>
+          {order.scheduled_pickup_time && (
+            <div className="flex items-start gap-2.5">
+              <CalendarClockIcon className="mt-0.5 size-4.5 shrink-0 text-leaf" aria-hidden />
+              <div className="min-w-0">
+                <dt className="text-xs text-leaf">Rencana ambil</dt>
+                <dd className="font-bold">{formatClockId(order.scheduled_pickup_time)} WIB</dd>
+              </div>
+            </div>
+          )}
+        </dl>
+      </article>
+      <DirectionsAndWhatsAppButtons order={order} />
+    </>
   );
 }
 
@@ -259,6 +278,7 @@ export function PickupTicketView({ order, savedOffline }: { order: OrderDetail; 
     <div className="flex flex-col gap-4 px-4 pt-4 pb-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-6 lg:pt-6">
       {/* lg+: primary column (display:contents on phones keeps the single flex column). */}
       <div className="contents lg:flex lg:flex-col lg:gap-4">
+        <OrderSteps at="collect" cash={order.payment_method === "BAYAR_DI_WARUNG"} />
         <PickupDeadlineBanner deadlineIso={order.pickup_deadline_at} payAtWarung={payAtWarung} />
         <DigitalPickupPass order={order} savedOffline={savedOffline} />
         {payAtWarung && <PayAtWarungCard order={order} />}

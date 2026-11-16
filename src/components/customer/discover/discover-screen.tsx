@@ -88,6 +88,7 @@ import {
 import { cartMerchantFromBatch, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
 import { HungerAlertBanner } from "../notifications/hunger-alert-banner";
+import { NearbyMapCard } from "./nearby-map-card";
 import { RadiusSegmented, RailLabel, SegmentedRadio } from "./desktop-filters";
 import { QuickFilters } from "./quick-filters";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
@@ -351,7 +352,7 @@ export function DiscoverScreen() {
     !online || (query.isError && query.error instanceof ApiClientError && query.error.code === "NETWORK_ERROR");
 
   return (
-    <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-4 lg:pb-10 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:gap-4 lg:pb-10 xl:grid-cols-[300px_minmax(0,1fr)_320px]">
       <ShellHeader className="pb-0 lg:sticky lg:top-20 lg:z-10 lg:mt-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin] lg:rounded-3xl lg:bg-card lg:shadow-soft lg:ring-1 lg:ring-border lg:[&>div]:py-5">
         <h1 className="sr-only lg:not-sr-only lg:mb-4 lg:text-lg! lg:font-bold">Cari makanan surplus</h1>
         <LocationPill className="lg:hidden" />
@@ -408,6 +409,16 @@ export function DiscoverScreen() {
         {!showMatches && (
           <div className="lg:hidden">
             <ImpactSlot />
+          </div>
+        )}
+
+        {/* What the page answers: how many warung are still open within reach. */}
+        {!loading && !isEmpty && (
+          <div className="-mb-3">
+            <h2 className="text-xl leading-tight font-bold text-balance lg:text-3xl">
+              {sections.merchants.length} warung masih buka dalam {scopeLabel}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">Harga turun otomatis menjelang tutup. Ambil sendiri di warung, tanpa kurir.</p>
           </div>
         )}
 
@@ -538,7 +549,7 @@ export function DiscoverScreen() {
                   icon={FlameIcon}
                   iconClassName="text-urgent"
                 />
-                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden xl:[&>*:nth-child(n+9)]:hidden">
+                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 2xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden 2xl:[&>*:nth-child(n+9)]:hidden">
                   {sections.urgent.map((b) => (
                     <DealTile
                       key={b.batch_id}
@@ -561,7 +572,7 @@ export function DiscoverScreen() {
                   icon={WalletIcon}
                   iconClassName="text-primary"
                 />
-                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden xl:[&>*:nth-child(n+9)]:hidden">
+                <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 lg:pb-0 2xl:grid-cols-4 lg:[&>*:nth-child(n+10)]:hidden 2xl:[&>*:nth-child(n+9)]:hidden">
                   {sections.ceban.map((b) => (
                     <DealTile
                       key={b.batch_id}
@@ -611,6 +622,12 @@ export function DiscoverScreen() {
           </>
         )}
       </div>
+      {/* xl+: the same warung on the map, beside the list. */}
+      <aside className="hidden xl:sticky xl:top-20 xl:mt-4 xl:block" aria-label="Peta sekitar">
+        {sections.merchants.length > 0 && (
+          <NearbyMapCard merchants={sections.merchants} center={{ lat: params.lat, lng: params.lng }} radiusM={params.radius_m} />
+        )}
+      </aside>
       {dialog}
       {sheet}
     </div>

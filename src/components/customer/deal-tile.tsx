@@ -123,6 +123,7 @@ export function DealTile({
               selling={batch.selling_price_idr}
               showBadge={false}
               size="sm"
+              plate
             />
             <p
               className={cn(

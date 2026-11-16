@@ -26,7 +26,8 @@ test("quick order reaches QRIS within 3 screens, then pays to a pickup ticket", 
   // Screen 3: payment page with a dynamic QRIS.
   await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("img", { name: /^QRIS pembayaran / })).toBeVisible();
-  await expect(page.getByText("Selesaikan pembayaran dalam")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /sudah dikunci untukmu$/ })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Tahap pesanan" }).locator('li[aria-current="step"]')).toHaveText(/Bayar$/);
 
   // Demo payment → pickup ticket.
   await page.getByRole("button", { name: /Simulasi Bayar/ }).click();

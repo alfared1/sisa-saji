@@ -46,7 +46,7 @@ export function ImpactCard({ name }: { name: string }) {
   return (
     <Link
       href="/impact"
-      className="group relative block overflow-hidden rounded-3xl bg-impact p-4 text-white shadow-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="group relative block overflow-hidden rounded-3xl ss-anyaman bg-deep p-4 text-white shadow-card outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <div className="relative flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-white/85">

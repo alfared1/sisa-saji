@@ -385,6 +385,7 @@ function QuickOrderBody({
               discountPct={batch.discount_pct}
               showBadge={false}
               size="lg"
+              plate
               className="mt-2"
             />
           </div>

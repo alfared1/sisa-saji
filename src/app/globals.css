@@ -67,6 +67,14 @@
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-surface: var(--surface);
+  /* Deep green role surfaces (active-order bar, merchant mode bar, ticket): logo green in both themes. */
+  --color-deep: #005e2f;
+  --color-on-deep: #fbf8f3;
+  --color-leaf: #b7f0cd;
+  /* Time running out, as text on deep green: 4.7:1. */
+  --color-on-deep-urgent: #ffb4a8;
+  /* Orange plate line under a price (logo plate). */
+  --color-plate: #f5a04a;
 
   /*
    * Palette roles (docs/ARCHITECTURE.md, Konvensi UI):
@@ -146,6 +154,67 @@
   }
 }
 
+/* The tudung (food cover) settles over the plate: a portion was just locked. */
+@keyframes ss-tudung {
+  0% {
+    transform: translateY(-22px) rotate(-8deg);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(3px) rotate(0deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+/* The tudung lifts off the plate: the order was collected. */
+@keyframes ss-angkat {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  45% {
+    transform: translateY(-14px) rotate(-6deg);
+  }
+  100% {
+    transform: translateY(-10px) rotate(-6deg);
+  }
+}
+@keyframes ss-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-tudung {
+  animation: ss-tudung 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: 50% 100%;
+}
+.animate-angkat {
+  animation: ss-angkat 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both;
+  transform-origin: 50% 100%;
+}
+.animate-pop {
+  animation: ss-pop 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-tudung,
+  .animate-angkat,
+  .animate-pop {
+    animation: none !important;
+  }
+}
+
 @keyframes soft-pulse {
   0%,
   100% {
@@ -198,17 +267,19 @@
   --deal: oklch(0.54 0.18 45);
   --deal-foreground: oklch(0.99 0.01 60);
   --deal-soft: oklch(0.95 0.045 60);
-  --urgent: oklch(0.58 0.21 26);
+  /* #C8262A: 5.6:1 with white, 4.7:1 as text on urgent-soft (#FFE6E3). */
+  --urgent: #c8262a;
   --urgent-foreground: oklch(0.99 0.01 25);
-  --urgent-soft: oklch(0.95 0.035 25);
+  --urgent-soft: #ffe6e3;
   --warning: oklch(0.72 0.16 75);
   --warning-soft: oklch(0.96 0.05 90);
   --success: oklch(0.6 0.15 152);
   --success-soft: oklch(0.95 0.04 152);
 
-  --destructive: oklch(0.58 0.21 26);
+  --destructive: #c8262a;
   --border: oklch(0.91 0.012 85);
-  --input: oklch(0.89 0.014 85);
+  /* Field outlines and switch tracks (#8C8478): 3.7:1 on the backdrop, so a control's edge stays visible. */
+  --input: #8c8478;
   --ring: oklch(0.62 0.14 152);
 
   --chart-1: oklch(0.6 0.15 152);
@@ -261,17 +332,19 @@
   --deal: oklch(0.74 0.17 52);
   --deal-foreground: oklch(0.2 0.04 50);
   --deal-soft: oklch(0.3 0.06 50);
-  --urgent: oklch(0.68 0.19 25);
+  /* #F75D59 on urgent-soft #3F1715: 5.0:1. */
+  --urgent: #f75d59;
   --urgent-foreground: oklch(0.18 0.03 25);
-  --urgent-soft: oklch(0.3 0.07 25);
+  --urgent-soft: #3f1715;
   --warning: oklch(0.8 0.15 80);
   --warning-soft: oklch(0.3 0.06 80);
   --success: oklch(0.74 0.16 152);
   --success-soft: oklch(0.3 0.05 152);
 
-  --destructive: oklch(0.68 0.19 25);
+  --destructive: #f75d59;
   --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
+  /* #737D75: 3.9:1 on the dark backdrop. */
+  --input: #737d75;
   --ring: oklch(0.66 0.14 152);
 
   --chart-1: oklch(0.74 0.16 152);
@@ -617,6 +690,16 @@
     stroke-opacity: 0.7;
     fill: var(--primary);
     fill-opacity: 0.07;
+  }
+
+  /*
+   * Woven "tudung saji" texture from the logo, only on deep green surfaces (ticket, active-order bar,
+   * impact card, merchant mode bar). Set the colour with bg-deep, never the background shorthand.
+   */
+  .ss-anyaman {
+    background-image:
+      repeating-linear-gradient(50deg, rgb(251 248 243 / 0.1) 0 1.5px, transparent 1.5px 14px),
+      repeating-linear-gradient(-50deg, rgb(251 248 243 / 0.1) 0 1.5px, transparent 1.5px 14px);
   }
 
   /* Bottom padding that clears the fixed customer tab bar + safe area. */
