@@ -35,10 +35,11 @@ function PayoutDialog({ wallet, open, onOpenChange }: { wallet: WalletResponse; 
   const isDemo = useSession().user?.is_demo ?? false;
   const inputId = useId();
   const errId = useId();
+  const hintId = useId();
   const [amount, setAmount] = useState<number | null>(wallet.balance_idr);
   const tooSmall = amount !== null && amount < wallet.min_payout_idr;
   const tooBig = amount !== null && amount > wallet.balance_idr;
-  const error = tooBig ? `Melebihi saldo ${formatIdr(wallet.balance_idr)}` : tooSmall ? `Minimal ${formatIdr(wallet.min_payout_idr)}` : null;
+  const error = tooBig ? `Melebihi saldo ${formatIdr(wallet.balance_idr)}` : tooSmall ? "Jumlahnya di bawah batas minimal." : null;
 
   const pay = useMutation({
     mutationFn: (amount_idr: number) => api.post<PayoutResponse>("/merchant/wallet/payouts", { amount_idr } satisfies PayoutRequestBody),
@@ -68,9 +69,15 @@ function PayoutDialog({ wallet, open, onOpenChange }: { wallet: WalletResponse; 
         <label htmlFor={inputId} className="text-sm font-semibold">
           Jumlah
         </label>
-        <MoneyInput id={inputId} value={amount} onChange={setAmount} invalid={Boolean(error)} describedBy={errId} />
-        <div className="flex items-center justify-between gap-2">
-          <FieldError id={errId}>{error}</FieldError>
+        <MoneyInput id={inputId} value={amount} onChange={setAmount} invalid={Boolean(error)} describedBy={`${hintId} ${errId}`} />
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-0.5 pt-1">
+            {/* Always visible, not only once the amount is too small. */}
+            <p id={hintId} className="text-xs text-muted-foreground tabular-nums">
+              Minimal {formatIdr(wallet.min_payout_idr)}
+            </p>
+            <FieldError id={errId}>{error}</FieldError>
+          </div>
           <button
             type="button"
             onClick={() => setAmount(wallet.balance_idr)}
@@ -143,7 +150,11 @@ export function MerchantWalletView() {
 
   return (
     <MerchantPage>
-      <MerchantPageHeader title="Saldo warung" backHref="/merchant/dashboard" subtitle="Uang dari pesanan yang sudah diambil pembeli." />
+      <MerchantPageHeader
+        title="Saldo warung"
+        backHref="/merchant/dashboard"
+        subtitle="Uang dari pesanan yang dibayar online, masuk saat pesanan diambil atau lewat batas tanpa diambil. Uang tunai yang dibayar di warung tidak masuk saldo."
+      />
       {q.isPending ? (
         <div className="space-y-4">
           <Skeleton className="h-40 rounded-3xl" />

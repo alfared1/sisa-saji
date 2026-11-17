@@ -24,6 +24,7 @@ import {
   Share2Icon,
   StarIcon,
   StoreIcon,
+  UserRoundIcon,
   UtensilsCrossedIcon,
 } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
@@ -53,7 +54,7 @@ import { useLocationStore } from "@/stores/location";
 import { RatingLine, RatingStars, SectionHeader, useDistanceOrigin } from "../bits";
 import { FoodThumb } from "../food-thumb";
 import { useBatchStream } from "../hooks/use-batch-stream";
-import { distanceLine, formatDateId, formatRating, mapsDirectionsUrl, whatsappUrl } from "../lib/format";
+import { distanceLine, formatRating, mapsDirectionsUrl, whatsappUrl } from "../lib/format";
 import { cartMerchantOf, customerKeys } from "../lib/queries";
 import { DynamicPriceMenuCard } from "../menu-card";
 import { useQuickOrder } from "../quick-order/quick-order-sheet";
@@ -111,7 +112,26 @@ function ReviewAnswers({ review }: { review: Pick<ReviewItem, "hygiene_rating" |
   );
 }
 
-function SubscribeButton({ merchant }: { merchant: MerchantDetail }) {
+/** "Sabtu, 8 Nov 2025" in WIB, for a review. */
+function reviewDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  });
+}
+
+/**
+ * What following a warung sends (notifyMerchantAudience, runProactiveNotifications): a push when
+ * it opens surplus portions or a Diskon Kilat, and tonight's forecast when enough portions are
+ * expected. Pushes only reach devices that allowed notifications.
+ */
+const SUBSCRIBE_HINT =
+  "notifikasi saat warung ini membuka porsi surplus atau Diskon Kilat, dan perkiraan malam ini bila sisa porsinya diperkirakan banyak.";
+
+function SubscribeButton({ merchant, describedBy }: { merchant: MerchantDetail; describedBy?: string }) {
   const qc = useQueryClient();
   const router = useRouter();
   const session = useSession();
@@ -151,6 +171,7 @@ function SubscribeButton({ merchant }: { merchant: MerchantDetail }) {
       variant={subscribed ? "secondary" : "outline"}
       className={cn("h-10 rounded-full px-3.5 font-semibold", subscribed && "text-primary")}
       aria-pressed={subscribed}
+      aria-describedby={describedBy}
       disabled={mutation.isPending || session.isLoading}
       onClick={() => {
         if (!session.user) {
@@ -311,8 +332,11 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     </div>
                   )}
                 </div>
-                <SubscribeButton merchant={m} />
+                <SubscribeButton merchant={m} describedBy="ingatkan-hint" />
               </div>
+              <p id="ingatkan-hint" className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {m.subscription ? `Kamu dapat ${SUBSCRIBE_HINT}` : `“Ingatkan” mengirim ${SUBSCRIBE_HINT} Izinkan notifikasi di perangkat ini.`}
+              </p>
 
               {/* No "·" between the groups (the footprints icon separates them), so none is left dangling on a wrap. */}
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -445,15 +469,16 @@ export function MerchantScreen({ slug, openBatchId = null }: { slug: string; ope
                     <li key={r.id} className="rounded-2xl bg-card p-3.5 ring-1 ring-border">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-primary">
-                            {r.customer_name.charAt(0)}
+                          {/* No reviewer name on a public page: "Pembeli" and the day is enough to read the review. */}
+                          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-primary">
+                            <UserRoundIcon className="size-4" aria-hidden />
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{r.customer_name}</p>
+                            <p className="truncate text-sm font-semibold">Pembeli</p>
                             <RatingStars value={r.rating} />
                           </div>
                         </div>
-                        <span className="shrink-0 text-[11px] text-muted-foreground">{formatDateId(r.created_at)}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">{reviewDate(r.created_at)}</span>
                       </div>
                       <ReviewAnswers review={r} />
                       {r.comment && <p className="mt-2 text-sm leading-relaxed text-foreground/85">{r.comment}</p>}

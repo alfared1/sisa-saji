@@ -114,7 +114,7 @@ export function CancelTicketButton({ order, className }: { order: OrderDetail; c
                     <span className="block text-sm font-semibold">{MERCHANT_TICKET_CANCEL_REASONS[r].label}</span>
                     <span className="block text-xs leading-relaxed text-muted-foreground">
                       {locked
-                        ? `Bisa dipilih mulai jam ${formatClockId(noShowFrom)}. Sampai jam ${formatClockId(order.pickup_deadline_at)} porsinya masih milik pembeli.`
+                        ? `Bisa dipilih mulai pukul ${formatClockId(noShowFrom)}. Sampai pukul ${formatClockId(order.pickup_deadline_at)} porsinya masih milik pembeli.`
                         : HINTS[r]}
                     </span>
                   </span>

@@ -244,10 +244,10 @@ export function MerchantAnalyticsView() {
           </div>
 
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
-            <SectionCard title="Porsi per hari" icon={BarChart3Icon} description="Ketuk batang untuk melihat detail harian.">
+            <SectionCard title="Berapa porsi terjual tiap hari?" icon={BarChart3Icon} description="Ketuk batang untuk melihat detail harian.">
               {a.daily.length ? <DailyPortionsChart daily={a.daily} /> : <p className="text-sm text-muted-foreground">Belum ada data.</p>}
             </SectionCard>
-            <SectionCard title="Menu terlaris" icon={TrophyIcon}>
+            <SectionCard title="Menu apa yang paling laku?" icon={TrophyIcon}>
               {a.top_menus.length ? <TopMenusBars menus={a.top_menus} /> : <p className="text-sm text-muted-foreground">Belum ada penjualan di rentang ini.</p>}
             </SectionCard>
           </div>
@@ -257,7 +257,7 @@ export function MerchantAnalyticsView() {
       <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:mt-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
         <div className="min-w-0 space-y-4 lg:space-y-6">
           <SectionCard
-            title="Hari paling banyak sisa"
+            title="Hari apa paling banyak sisa?"
             icon={CalendarRangeIcon}
             description="Rata-rata porsi berlebih per hari & menu, 4 minggu terakhir."
           >
@@ -269,12 +269,12 @@ export function MerchantAnalyticsView() {
               <WeeklySurplusHeatmap cells={insights.data.heatmap} />
             )}
           </SectionCard>
-          <SectionCard title="Perkiraan 7 hari ke depan" icon={ChartColumnIcon} description="Porsi yang kemungkinan tersisa per malam. Persentase menunjukkan seberapa yakin perkiraannya.">
+          <SectionCard title="Berapa porsi mungkin tersisa 7 hari ke depan?" icon={ChartColumnIcon} description="Porsi yang kemungkinan tersisa per malam. Persentase menunjukkan seberapa yakin perkiraannya.">
             {insights.isPending ? <Skeleton className="h-32 w-full rounded-2xl" /> : insights.data ? <PredictionOutlook week={insights.data.week} /> : null}
           </SectionCard>
         </div>
         <div className="min-w-0 space-y-4 lg:space-y-6">
-          <SectionCard title="Saran produksi" icon={LightbulbIcon}>
+          <SectionCard title="Perlu masak lebih sedikit?" icon={LightbulbIcon}>
             {insights.isPending ? (
               <Skeleton className="h-24 w-full rounded-2xl" />
             ) : insights.data && insights.data.advisories.length ? (

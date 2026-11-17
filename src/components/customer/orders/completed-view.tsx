@@ -55,6 +55,9 @@ import { customerKeys } from "../lib/queries";
 import { OrderItemsCard } from "./order-bits";
 import { OrderSteps } from "./order-steps";
 
+/** Same cap as ReviewBody.comment in the contract. */
+const REVIEW_COMMENT_MAX = 500;
+
 /* ------------------------------ Share ------------------------------ */
 
 async function shareImpact(order: OrderDetail) {
@@ -371,11 +374,22 @@ export function ReviewFormSheet({
             <Textarea
               id="review-comment"
               value={comment}
-              maxLength={500}
+              maxLength={REVIEW_COMMENT_MAX}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Porsinya pas, masih hangat waktu diambil…"
+              aria-describedby="review-comment-count"
               className="min-h-24 rounded-2xl text-base"
             />
+            <p
+              id="review-comment-count"
+              className={cn(
+                "mt-1 text-right text-xs text-muted-foreground tabular-nums",
+                comment.length >= REVIEW_COMMENT_MAX * 0.9 && "font-semibold text-urgent",
+              )}
+            >
+              {comment.length}/{REVIEW_COMMENT_MAX}
+              <span className="sr-only"> karakter</span>
+            </p>
           </div>
 
           <Button type="submit" className="h-12 w-full rounded-xl text-base font-semibold" disabled={rating < 1 || submit.isPending}>

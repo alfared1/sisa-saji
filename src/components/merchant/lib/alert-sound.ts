@@ -5,7 +5,7 @@
  * cancel, a chat message), plus a vibration on phones. Tones are synthesised with Web Audio,
  * so there is no sound file to load. Browsers only allow audio after the page was touched once,
  * so the context is resumed on the first tap; until then the alert just vibrates.
- * The warung can turn sounds off in Pengaturan (stored per device).
+ * The warung can turn sounds off in Pengaturan or on the Pesanan page (stored per device).
  */
 
 const STORAGE_KEY = "ss-merchant-sound";
@@ -50,12 +50,28 @@ export function isSoundEnabled(): boolean {
   }
 }
 
+const listeners = new Set<() => void>();
+
+/** For useSyncExternalStore: every toggle on the page, and other tabs, stay in step. */
+export function subscribeSound(listener: () => void): () => void {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 export function setSoundEnabled(on: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, on ? "on" : "off");
   } catch {
     /* storage blocked: the default (on) stays */
   }
+  listeners.forEach((l) => l());
 }
 
 export function playAlert(kind: AlertKind): void {

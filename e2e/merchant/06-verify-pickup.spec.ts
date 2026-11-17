@@ -30,10 +30,10 @@ test("merchant verifies a customer's SJ code; customer sees COMPLETED, reviews, 
   const pin = page.getByRole("textbox", { name: "Kode pengambilan 4 digit" });
   await expect(pin).toBeVisible();
 
-  // Wrong PIN → inline error.
+  // Wrong PIN → inline error with the typed attempts left before the lock.
   await pin.click();
   await pin.pressSequentially(await unusedCode(DEMO_MERCHANT_SLUG));
-  await expect(page.getByRole("alert").filter({ hasText: "Kode tidak ditemukan" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: /Kode salah\. Sisa \d+ percobaan dalam 10 menit\./ })).toBeVisible();
 
   // Correct PIN → order review → complete.
   await pin.click();

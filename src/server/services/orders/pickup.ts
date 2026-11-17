@@ -8,7 +8,7 @@ import { and, desc, eq, gt, inArray, lte, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { merchants, orderItems, orders, pickupCodeFailures, users } from "@/db/schema";
 import { BADGE_TIERS, PAY_AT_WARUNG_EXPIRED_REASON, PICKUP_CODE_LENGTH } from "@/lib/constants";
-import type { OrderDetail } from "@/lib/contracts";
+import type { InvalidPickupCodeDetails, OrderDetail } from "@/lib/contracts";
 import { badgeTierForFoodSaved, co2GramsFromFoodGrams } from "@/lib/impact";
 import { verifyPickupToken } from "@/lib/pickup-token";
 import { ApiError } from "@/server/http";
@@ -51,14 +51,19 @@ export const PICKUP_CODE_LOCK_WINDOW_MINUTES = 10;
  * them (it would find and complete tickets without the customer). QR tokens are
  * HMAC-signed and are not limited.
  */
-async function assertCodeEntryAllowed(db: Db, merchantId: string, now: Date) {
+async function recentCodeFailures(db: Db, merchantId: string, now: Date): Promise<number> {
   const since = new Date(now.getTime() - PICKUP_CODE_LOCK_WINDOW_MINUTES * 60_000);
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(pickupCodeFailures)
     .where(and(eq(pickupCodeFailures.merchantId, merchantId), gt(pickupCodeFailures.createdAt, since)));
-  if ((row?.n ?? 0) >= PICKUP_CODE_MAX_FAILURES) {
-    console.warn(`[pickup] code entry locked for merchant ${merchantId}: ${row?.n} wrong codes`);
+  return row?.n ?? 0;
+}
+
+async function assertCodeEntryAllowed(db: Db, merchantId: string, now: Date) {
+  const n = await recentCodeFailures(db, merchantId, now);
+  if (n >= PICKUP_CODE_MAX_FAILURES) {
+    console.warn(`[pickup] code entry locked for merchant ${merchantId}: ${n} wrong codes`);
     throw new ApiError(
       "RATE_LIMITED",
       "Terlalu banyak kode salah. Coba lagi dalam beberapa menit atau pindai QR pembeli.",
@@ -67,9 +72,16 @@ async function assertCodeEntryAllowed(db: Db, merchantId: string, now: Date) {
   }
 }
 
-async function recordCodeFailure(db: Db, merchantId: string, now: Date) {
+/** Records a wrong typed code; returns how many typed attempts are left before the lock. */
+async function recordCodeFailure(db: Db, merchantId: string, now: Date): Promise<number> {
   await db.insert(pickupCodeFailures).values({ merchantId, createdAt: now });
+  return Math.max(0, PICKUP_CODE_MAX_FAILURES - (await recentCodeFailures(db, merchantId, now)));
 }
+
+const attemptsDetails = (attemptsLeft: number): InvalidPickupCodeDetails => ({
+  attempts_left: attemptsLeft,
+  window_minutes: PICKUP_CODE_LOCK_WINDOW_MINUTES,
+});
 
 /** True when this warung's ticket with `code` lapsed (hold ended) within the last few hours. */
 async function hasRecentlyLapsedTicket(db: Db, merchantId: string, code: string, now: Date): Promise<boolean> {
@@ -89,8 +101,8 @@ async function hasRecentlyLapsedTicket(db: Db, merchantId: string, code: string,
   return Boolean(row);
 }
 
-function invalid(): never {
-  throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak valid atau tidak ditemukan");
+function invalid(details?: InvalidPickupCodeDetails): never {
+  throw new ApiError("INVALID_PICKUP_CODE", "Kode pengambilan tidak valid atau tidak ditemukan", details);
 }
 
 export async function lookupPickup(
@@ -115,12 +127,12 @@ export async function lookupPickup(
       .orderBy(desc(orders.createdAt))
       .limit(1);
     if (!o) {
-      await recordCodeFailure(db, args.merchantId, now);
+      const attemptsLeft = await recordCodeFailure(db, args.merchantId, now);
       // The expiry job may already have closed the ticket: say so instead of "invalid code".
       if (await hasRecentlyLapsedTicket(db, args.merchantId, parsed.code, now)) {
         throw new ApiError("ORDER_STATE_CONFLICT", LAPSED_TICKET_MESSAGE);
       }
-      invalid();
+      invalid(attemptsDetails(attemptsLeft));
     }
     orderId = o.id;
   } else {
@@ -161,7 +173,8 @@ export async function verifyPickup(
   } catch (err) {
     // Recorded outside the (rolled back) transaction.
     if (isCode && err instanceof ApiError && err.code === "INVALID_PICKUP_CODE") {
-      await recordCodeFailure(db, args.merchantId, now);
+      const attemptsLeft = await recordCodeFailure(db, args.merchantId, now);
+      throw new ApiError(err.code, err.message, attemptsDetails(attemptsLeft), err.status);
     }
     throw err;
   }

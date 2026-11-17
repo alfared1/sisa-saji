@@ -32,13 +32,13 @@ import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { useSession } from "@/hooks/use-session";
 import { ApiClientError, api } from "@/lib/api/client";
-import { BADGE_TIERS } from "@/lib/constants";
+import { BADGE_TIERS, CO2_KG_PER_TREE_YEAR } from "@/lib/constants";
 import type { ImpactSummary, SubscribeBody, SubscriptionItem, SubscriptionsResponse } from "@/lib/contracts";
 import { formatKg } from "@/lib/impact";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { LoginCta, SectionHeader, TabTitle } from "../bits";
-import { useImpactSummary } from "../impact-card";
+import { useGlobalStats, useImpactSummary } from "../impact-card";
 import { badgeLabel, formatDecimal } from "../lib/format";
 import { customerKeys } from "../lib/queries";
 import { HungerAlertStatus } from "../notifications/hunger-alert-banner";
@@ -46,7 +46,7 @@ import { MonthlyImpactChart } from "./monthly-chart";
 
 const TIER_ICONS = [SproutIcon, AwardIcon, TrophyIcon] as const;
 
-function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
+function EcoHeroBadgeProgress({ d, demo }: { d: ImpactSummary; demo: boolean }) {
   const currentIdx = Math.max(0, BADGE_TIERS.findIndex((t) => t.tier === d.badge_tier));
   const next = d.next_badge;
   const remaining = next ? Math.max(0, next.min_food_saved_grams - d.total_food_saved_grams) : 0;
@@ -58,6 +58,11 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
           <CurrentIcon className="size-7" />
         </span>
         <div className="min-w-0">
+          {demo && (
+            <span className="mb-1 inline-flex rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+              Data demo
+            </span>
+          )}
           <p className="text-xs font-semibold text-white/80">Level kamu</p>
           <p className="text-2xl leading-tight font-bold">{badgeLabel(d.badge_tier)}</p>
         </div>
@@ -102,7 +107,7 @@ function EcoHeroBadgeProgress({ d }: { d: ImpactSummary }) {
 }
 
 function Totals({ d }: { d: ImpactSummary }) {
-  const tiles = [
+  const tiles: { icon: typeof LeafIcon; value: string; label: string; note?: string; tint: string }[] = [
     { icon: LeafIcon, value: formatKg(d.total_food_saved_grams), label: "pangan diselamatkan", tint: "bg-brand-soft text-brand-strong" },
     {
       icon: CloudIcon,
@@ -115,6 +120,7 @@ function Totals({ d }: { d: ImpactSummary }) {
       icon: TreesIcon,
       value: `${formatDecimal(d.tree_equivalent, 2)} pohon`,
       label: "setara serapan setahun",
+      note: `Dasar: ${formatDecimal(CO2_KG_PER_TREE_YEAR, 2)} kg CO₂ per pohon per tahun`,
       tint: "bg-brand-soft text-brand-strong",
     },
   ];
@@ -127,6 +133,7 @@ function Totals({ d }: { d: ImpactSummary }) {
           </span>
           <p className="mt-2 truncate text-lg font-extrabold tabular-nums">{t.value}</p>
           <p className="text-xs text-muted-foreground">{t.label}</p>
+          {t.note && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{t.note}</p>}
         </div>
       ))}
       <p className="col-span-2 text-center text-xs text-muted-foreground lg:text-left xl:col-span-4">
@@ -320,6 +327,8 @@ export function ImpactScreen() {
   const session = useSession();
   const loggedIn = Boolean(session.user);
   const q = useImpactSummary(loggedIn);
+  // /stats/global carries isDemoData(): the orders behind these totals are at fictional warung.
+  const demo = useGlobalStats(loggedIn).data?.is_demo_data ?? false;
   const [metric, setMetric] = useState<"food" | "co2" | "money">("food");
 
   return (
@@ -357,7 +366,7 @@ export function ImpactScreen() {
           <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
         ) : (
           <>
-            <EcoHeroBadgeProgress d={q.data} />
+            <EcoHeroBadgeProgress d={q.data} demo={demo} />
             <Totals d={q.data} />
             <div className="contents lg:block lg:col-span-7 xl:col-span-8">
               <MonthlyImpactChart monthly={q.data.monthly} metric={metric} onMetricChange={setMetric} />

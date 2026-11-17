@@ -10,9 +10,16 @@ import { errorMessage } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
+import { MAX_CASHIERS_PER_WARUNG } from "@/lib/constants";
 import type { AddCashierBody, CashierView, StaffResponse } from "@/lib/contracts";
 import { merchantKeys, useMerchantReady } from "../lib/queries";
 import { SectionCard } from "../ui";
+
+/** Only the last 4 digits stay readable: "•••• •••• 7890". */
+export function maskPhone(phone: string): string {
+  const digits = phone.replace(/D/g, "");
+  return digits.length <= 4 ? digits : `•••• •••• ${digits.slice(-4)}`;
+}
 
 /**
  * "Kasir": the owner adds helpers by phone number. A cashier logs in with that number (OTP) and
@@ -49,7 +56,8 @@ export function StaffSection({ locked }: { locked: boolean }) {
   });
 
   const cashiers = q.data?.cashiers ?? [];
-  const full = q.data ? cashiers.length >= q.data.max : false;
+  const max = q.data?.max ?? MAX_CASHIERS_PER_WARUNG;
+  const full = q.data ? cashiers.length >= max : false;
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) return;
@@ -59,13 +67,23 @@ export function StaffSection({ locked }: { locked: boolean }) {
   return (
     <SectionCard title="Kasir" icon={UsersIcon} description="Kasir bisa melihat antrean, scan tiket, dan chat pembeli. Tidak bisa melihat saldo atau mengubah menu.">
       {locked && <DemoLockNotice className="mb-3" message="Akun demo: menambah kasir dikunci." />}
+      {q.data && (
+        <p className="mb-2 text-xs font-semibold text-muted-foreground tabular-nums">
+          {cashiers.length} dari {max} kasir
+        </p>
+      )}
       {cashiers.length > 0 && (
         <ul className="mb-3 divide-y divide-border rounded-2xl ring-1 ring-border">
           {cashiers.map((c) => (
             <li key={c.user_id} className="flex items-center justify-between gap-3 px-3 py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{c.full_name}</p>
-                <p className="text-xs text-muted-foreground tabular-nums">{c.phone_number}</p>
+                {c.phone_number && (
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    <span aria-hidden>{maskPhone(c.phone_number)}</span>
+                    <span className="sr-only">Nomor berakhiran {c.phone_number.replace(/D/g, "").slice(-4)}</span>
+                  </p>
+                )}
               </div>
               {!locked && (
                 <Button
@@ -82,6 +100,10 @@ export function StaffSection({ locked }: { locked: boolean }) {
       )}
       {!locked && !full && (
         <form onSubmit={onSubmit} className="space-y-2">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Paling banyak {max} kasir per warung. Satu nomor hanya bisa jadi kasir di satu warung, dan nomor pemilik warung lain tidak
+            bisa ditambahkan.
+          </p>
           <div>
             <label htmlFor={phoneId} className="text-xs font-semibold">
               Nomor HP kasir
@@ -108,13 +130,13 @@ export function StaffSection({ locked }: { locked: boolean }) {
           </Button>
         </form>
       )}
-      {full && <p className="text-xs text-muted-foreground">Sudah {q.data?.max} kasir, batas per warung.</p>}
+      {full && <p className="text-xs text-muted-foreground">Sudah {max} kasir, batas per warung. Hapus satu kasir untuk menambah yang baru.</p>}
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(o) => !o && setRemoving(null)}
         destructive
         title={`Hapus ${removing?.full_name ?? "kasir"}?`}
-        description="Dia tidak bisa lagi melihat antrean atau scan tiket warungmu."
+        description="Aksesnya langsung berhenti: dia tidak bisa lagi melihat antrean, scan tiket, atau chat pembeli warungmu."
         confirmLabel="Ya, hapus"
         cancelLabel="Batal"
         loading={remove.isPending}

@@ -19,7 +19,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSession } from "@/hooks/use-session";
 import { useNow } from "@/hooks/use-now";
 import { api } from "@/lib/api/client";
-import type { MerchantReviewsResponse, MerchantReviewView, ReviewReplyBody, ReviewReplyResponse } from "@/lib/contracts";
+import {
+  REVIEW_REPLY_MAX_LENGTH,
+  type MerchantReviewsResponse,
+  type MerchantReviewView,
+  type ReviewReplyBody,
+  type ReviewReplyResponse,
+} from "@/lib/contracts";
 import { wibDate } from "@/lib/time";
 import { formatDateLabel } from "../orders/orders-view";
 import { merchantKeys, useMerchantReady } from "../lib/queries";
@@ -27,11 +33,18 @@ import { MerchantPage, MerchantPageHeader } from "../ui";
 
 type Filter = "all" | "unreplied" | "low";
 const REVIEWS_STEP = 10;
+const EMPTY: Record<Filter, { title: string; description: string }> = {
+  all: { title: "Belum ada ulasan", description: "Pembeli bisa memberi ulasan setelah pesanannya diambil." },
+  unreplied: { title: "Semua ulasan sudah dibalas", description: "Ulasan baru yang belum kamu balas muncul di sini." },
+  low: { title: "Tidak ada ulasan 3 bintang ke bawah", description: "Ulasan dengan 1 sampai 3 bintang muncul di sini supaya cepat ditanggapi." },
+};
 const oneDecimal = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 
 function ReplyBox({ review, locked }: { review: MerchantReviewView; locked: boolean }) {
   const qc = useQueryClient();
   const id = useId();
+  const hintId = useId();
+  const countId = useId();
   const [editing, setEditing] = useState(!review.reply);
   const [text, setText] = useState(review.reply ?? "");
   const save = useMutation({
@@ -68,7 +81,10 @@ function ReplyBox({ review, locked }: { review: MerchantReviewView; locked: bool
       </div>
     );
   }
-  if (locked) return null;
+  if (locked) {
+    // Why is spelled out once in the notice above the list; each card says the box is locked.
+    return <p className="mt-3 text-xs text-muted-foreground">Balasan publik dikunci untuk akun demo.</p>;
+  }
   return (
     <form
       className="mt-3"
@@ -77,18 +93,25 @@ function ReplyBox({ review, locked }: { review: MerchantReviewView; locked: bool
         if (text.trim()) save.mutate(text.trim());
       }}
     >
-      <label htmlFor={id} className="sr-only">
-        Balas ulasan {review.customer_name}
+      <label htmlFor={id} className="text-xs font-semibold">
+        Balasan publik
       </label>
+      <p id={hintId} className="text-xs text-muted-foreground">
+        Tampil di halaman warungmu dan dibaca semua pembeli.
+      </p>
       <Textarea
         id={id}
         value={text}
-        maxLength={300}
-        placeholder="Balas ulasan ini, tampil di halaman warungmu"
+        maxLength={REVIEW_REPLY_MAX_LENGTH}
+        aria-describedby={`${hintId} ${countId}`}
+        placeholder="Terima kasih sudah mampir…"
         onChange={(e) => setText(e.target.value)}
-        className="min-h-16 rounded-xl"
+        className="mt-1.5 min-h-16 rounded-xl"
       />
-      <div className="mt-2 flex justify-end gap-2">
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <span id={countId} className="mr-auto text-xs text-muted-foreground tabular-nums">
+          {text.length}/{REVIEW_REPLY_MAX_LENGTH}
+        </span>
         {review.reply && (
           <Button type="button" variant="ghost" className="h-10 rounded-xl" onClick={() => setEditing(false)}>
             Batal
@@ -108,13 +131,13 @@ function ReviewCard({ r, locked, today }: { r: MerchantReviewView; locked: boole
     <li className="rounded-3xl bg-card p-4 shadow-soft ring-1 ring-border sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{r.customer_name}</p>
+          {/* Buyers stay anonymous here: "Pembeli" and the date, not their name. */}
+          <p className="text-sm font-semibold">
+            Pembeli <span className="font-normal text-muted-foreground">· {formatDateLabel(wibDate(new Date(r.created_at)), today)}</span>
+          </p>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">{r.menu_names.join(", ")}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <RatingStars value={r.rating} />
-          <span className="text-[11px] text-muted-foreground">{formatDateLabel(wibDate(new Date(r.created_at)), today)}</span>
-        </div>
+        <RatingStars value={r.rating} className="shrink-0" />
       </div>
       {(r.hygiene_rating !== null || r.portion_full !== null) && (
         <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -200,7 +223,7 @@ export function MerchantReviewsView() {
             Belum dibalas
           </TabsTrigger>
           <TabsTrigger value="low" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft sm:text-sm">
-            Bintang 1 sampai 3
+            3 bintang ke bawah
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -215,11 +238,7 @@ export function MerchantReviewsView() {
           <ErrorState error={q.error} onRetry={() => void q.refetch()} retrying={q.isFetching} />
         ) : q.data.reviews.length === 0 ? (
           <div className="rounded-3xl bg-card ring-1 ring-border">
-            <EmptyState
-              icon={MessageSquareTextIcon}
-              title={filter === "all" ? "Belum ada ulasan" : "Tidak ada ulasan di sini"}
-              description={filter === "all" ? "Pembeli bisa memberi ulasan setelah pesanannya diambil." : "Coba pilih tab lain."}
-            />
+            <EmptyState icon={MessageSquareTextIcon} title={EMPTY[filter].title} description={EMPTY[filter].description} />
           </div>
         ) : (
           <>

@@ -9,18 +9,42 @@ import { ErrorState } from "@/components/common/error-state";
 import { ListSkeleton } from "@/components/common/list-skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNow } from "@/hooks/use-now";
+import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
 import type { OrderDetail, OrdersResponse } from "@/lib/contracts";
 import { DAY_NAMES_ID, formatIdr, wibDate, wibDayOfWeek } from "@/lib/time";
 import { merchantKeys, useCounterReady, useIsCashier } from "../lib/queries";
 import { useMerchantLive } from "../lib/use-merchant-live";
 import { LiveDot } from "../dashboard/store-status-header";
+import { SoundToggle } from "../settings/sound-toggle";
 import { MerchantPage, MerchantPageHeader } from "../ui";
 import { PAY_AT_WARUNG_HOLD_MINUTES } from "@/lib/constants";
 import { isCancellableTicket } from "./cancel-ticket";
 import { MerchantOrderCard, portionsOf } from "./order-card";
 
 type Tab = "active" | "today" | "history";
+
+/** One query per tab; the tab counts reuse the same keys, so they share the cache and the live refresh. */
+function ordersQuery(tab: Tab, today: string, historyDate: string) {
+  return {
+    queryKey: merchantKeys.orders(tab, tab === "today" ? today : tab === "history" ? historyDate : undefined),
+    queryFn: () =>
+      api.get<OrdersResponse>(
+        "/merchant/orders",
+        tab === "active"
+          ? { status: "ACTIVE", limit: 100 }
+          : tab === "today"
+            ? { status: "COMPLETED", date: today, limit: 200 }
+            : { date: historyDate || undefined, limit: 100 },
+      ),
+    staleTime: 10_000,
+  };
+}
+
+/** " (3)" after a tab label once its count is known; Riwayat has none (it is the whole history). */
+function countSuffix(count: number | undefined) {
+  return count === undefined ? null : <span className="tabular-nums"> ({count})</span>;
+}
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
@@ -64,21 +88,11 @@ export function MerchantOrdersView() {
   const live = useMerchantLive();
   const ready = useCounterReady();
   const isCashier = useIsCashier();
+  const cashierOf = useSession().user?.cashier_of;
 
-  const query = useQuery({
-    queryKey: merchantKeys.orders(tab, tab === "today" ? today : tab === "history" ? historyDate : undefined),
-    enabled: ready && (tab !== "today" || today !== ""),
-    queryFn: () =>
-      api.get<OrdersResponse>(
-        "/merchant/orders",
-        tab === "active"
-          ? { status: "ACTIVE", limit: 100 }
-          : tab === "today"
-            ? { status: "COMPLETED", date: today, limit: 200 }
-            : { date: historyDate || undefined, limit: 100 },
-      ),
-    staleTime: 10_000,
-  });
+  const query = useQuery({ ...ordersQuery(tab, today, historyDate), enabled: ready && (tab !== "today" || today !== "") });
+  const activeCount = useQuery({ ...ordersQuery("active", today, historyDate), enabled: ready }).data?.orders.length;
+  const todayCount = useQuery({ ...ordersQuery("today", today, historyDate), enabled: ready && today !== "" }).data?.orders.length;
 
   const orders = query.data?.orders ?? [];
   const waiting = orders.filter((o) => o.status === "PAID" || o.status === "READY_FOR_PICKUP");
@@ -105,19 +119,34 @@ export function MerchantOrdersView() {
         }
       />
 
+      {isCashier && cashierOf && (
+        <p role="note" className="mb-3 rounded-2xl bg-surface px-3.5 py-3 text-xs leading-relaxed text-muted-foreground ring-1 ring-border">
+          Kamu masuk sebagai kasir {cashierOf.merchant_name}: layani pesanan, scan kode, dan chat pembeli. Pembatalan diputuskan pemilik.
+        </p>
+      )}
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
         <TabsList className="grid h-12! w-full grid-cols-3 rounded-2xl bg-muted p-1 sm:w-auto sm:min-w-[30rem]">
           <TabsTrigger value="active" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
-            Aktif
+            Aktif{countSuffix(activeCount)}
           </TabsTrigger>
           <TabsTrigger value="today" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
-            Selesai Hari Ini
+            {/* A third of a phone is too narrow for the full label plus a count. */}
+            <span className="sm:hidden">Selesai</span>
+            <span className="max-sm:hidden">Selesai Hari Ini</span>
+            {countSuffix(todayCount)}
           </TabsTrigger>
           <TabsTrigger value="history" className="h-full rounded-xl px-1 text-xs font-semibold data-active:shadow-soft max-sm:[&_svg]:hidden sm:text-sm">
             Riwayat
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      <SoundToggle
+        label="Bunyi pesanan"
+        description="Bunyi dan getar di perangkat ini saat ada pesanan, permintaan batal, atau chat."
+        className="mt-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-border sm:max-w-md"
+      />
 
       {tab === "history" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

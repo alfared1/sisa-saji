@@ -51,6 +51,7 @@ function MenuCard({
   onToggle,
   toggling,
   locked,
+  isPilot,
 }: {
   menu: MenuView;
   onEdit: () => void;
@@ -58,6 +59,8 @@ function MenuCard({
   toggling: boolean;
   /** Shared demo warung: menus are read-only (publishing still works). */
   locked: boolean;
+  /** Pilot warung: buyers see menu photos. Otherwise only the owner does (preview). */
+  isPilot: boolean;
 }) {
   const floorPct = Math.round((menu.min_recovery_price_idr / menu.original_price_idr) * 100);
   return (
@@ -75,6 +78,10 @@ function MenuCard({
             {(MERCHANT_MENU_CATEGORIES as readonly MenuCategory[]).includes(menu.category)
               ? MENU_CATEGORY_LABELS[menu.category]
               : "Paket lama, tulis isi dan kategorinya dulu"}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground/80">{menu.image_url ? "Ada foto" : "Belum ada foto"}</span>
+            {!isPilot && " · pembeli baru melihat foto setelah warungmu ikut uji coba"}
           </p>
         </div>
         <label className={cn("flex h-11 shrink-0 items-center gap-2 text-xs font-semibold", locked ? "cursor-not-allowed" : "cursor-pointer")}>
@@ -214,6 +221,7 @@ export function MerchantMenusView() {
           menu={m}
           toggling={togglingId === m.id}
           locked={locked}
+          isPilot={me.data?.merchant.is_pilot ?? false}
           onEdit={() => setEditing({ mode: "edit", menu: m })}
           onToggle={(v) => update.mutate({ id: m.id, body: { is_active: v } })}
         />

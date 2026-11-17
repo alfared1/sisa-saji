@@ -287,13 +287,23 @@ describe("pickup code guessing lockout", () => {
       const c = String(n).padStart(4, "0");
       if (!used.has(c)) misses.push(c);
     }
-    for (const c of misses.slice(0, PICKUP_CODE_MAX_FAILURES - 1)) {
-      await expectCode(lookupPickup(db, { merchantId: m.id, input: c, pickupQrSecret: SECRET, now: t }), "INVALID_PICKUP_CODE");
+    // Each wrong typed code tells the counter how many tries are left before the lock.
+    for (const [i, c] of misses.slice(0, PICKUP_CODE_MAX_FAILURES - 1).entries()) {
+      const err = await expectCode(lookupPickup(db, { merchantId: m.id, input: c, pickupQrSecret: SECRET, now: t }), "INVALID_PICKUP_CODE");
+      expect(err.status).toBe(400);
+      expect(err.details).toEqual({ attempts_left: PICKUP_CODE_MAX_FAILURES - 1 - i, window_minutes: PICKUP_CODE_LOCK_WINDOW_MINUTES });
     }
-    await expectCode(
+    const last = await expectCode(
       verifyPickup(db, { merchantId: m.id, orderId: order.id, input: wrong, pickupQrSecret: SECRET, now: t }),
       "INVALID_PICKUP_CODE",
     );
+    expect(last.details).toEqual({ attempts_left: 0, window_minutes: PICKUP_CODE_LOCK_WINDOW_MINUTES });
+    // A forged QR token is not a typed code: no attempt is used and no count is given.
+    const forged = await expectCode(
+      lookupPickup(db, { merchantId: m.id, input: `${order.id}.forged`, pickupQrSecret: SECRET, now: t }),
+      "INVALID_PICKUP_CODE",
+    );
+    expect(forged.details).toBeUndefined();
     // Locked now — even the right code is refused while typed.
     await expectCode(lookupPickup(db, { merchantId: m.id, input: row.pickupCode, pickupQrSecret: SECRET, now: t }), "RATE_LIMITED");
     await expectCode(

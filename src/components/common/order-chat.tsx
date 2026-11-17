@@ -16,6 +16,7 @@ import {
   ResponsiveSheetHeader,
   ResponsiveSheetTitle,
 } from "@/components/common/responsive-sheet";
+import { CountdownBadge } from "@/components/common/countdown-badge";
 import { Button } from "@/components/ui/button";
 import { ApiClientError, api } from "@/lib/api/client";
 import { ORDER_CHAT_MAX_LENGTH, ORDER_CHAT_QUICK_REPLIES } from "@/lib/constants";
@@ -83,6 +84,7 @@ export function OrderChatSheet({
   title,
   description,
   onSeen,
+  pickupDeadlineAt,
 }: {
   orderId: string;
   as: Side;
@@ -92,6 +94,8 @@ export function OrderChatSheet({
   description?: string;
   /** Called after the chat was read (refresh the order's unread count). */
   onSeen?: () => void;
+  /** Pickup deadline of an order still waiting to be collected: "Ambil dalam …" at the top. */
+  pickupDeadlineAt?: string | null;
 }) {
   const qc = useQueryClient();
   const inputId = useId();
@@ -148,6 +152,12 @@ export function OrderChatSheet({
   const canSend = q.data?.can_send ?? false;
   const quick = ORDER_CHAT_QUICK_REPLIES[as === "merchant" ? "MERCHANT" : "CUSTOMER"];
   const lastMine = [...messages].reverse().find((m) => m.mine);
+  // Red in the last tenth, so the cut-off at ORDER_CHAT_MAX_LENGTH is no surprise.
+  const nearLimit = text.length >= ORDER_CHAT_MAX_LENGTH * 0.9;
+  const privacyNote =
+    as === "merchant"
+      ? "Hanya warung dan pembeli pesanan ini yang bisa membaca chat ini."
+      : "Hanya kamu dan warung yang bisa membaca chat ini.";
 
   return (
     <ResponsiveSheet open={open} onOpenChange={onOpenChange}>
@@ -155,6 +165,14 @@ export function OrderChatSheet({
         <ResponsiveSheetHeader className="text-left">
           <ResponsiveSheetTitle className="text-lg font-bold">{title}</ResponsiveSheetTitle>
           {description && <ResponsiveSheetDescription>{description}</ResponsiveSheetDescription>}
+          {pickupDeadlineAt && canSend && (
+            <CountdownBadge
+              endIso={pickupDeadlineAt}
+              prefix="Ambil dalam"
+              overLabel="Batas ambil sudah lewat"
+              className="mt-1 self-start"
+            />
+          )}
         </ResponsiveSheetHeader>
 
         <div className="flex max-h-[min(60vh,28rem)] min-h-48 flex-col px-4 pb-4">
@@ -232,8 +250,19 @@ export function OrderChatSheet({
                   {send.isPending ? <Loader2Icon className="animate-spin" aria-hidden /> : <SendHorizontalIcon aria-hidden />}
                 </Button>
               </form>
+              <div className="mt-1.5 flex items-start justify-between gap-3 px-1 text-[11px] text-muted-foreground">
+                <p>{privacyNote}</p>
+                <p
+                  className={cn("shrink-0 tabular-nums", nearLimit && "font-semibold text-urgent")}
+                  aria-live={nearLimit ? "polite" : "off"}
+                >
+                  {text.length}/{ORDER_CHAT_MAX_LENGTH}
+                  <span className="sr-only"> karakter</span>
+                </p>
+              </div>
             </>
           )}
+          {q.data && !canSend && <p className="mt-1.5 px-1 text-center text-[11px] text-muted-foreground">{privacyNote}</p>}
         </div>
       </ResponsiveSheetContent>
     </ResponsiveSheet>

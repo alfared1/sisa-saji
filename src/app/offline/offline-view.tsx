@@ -2,10 +2,12 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ChevronDownIcon, MapPinIcon, RotateCwIcon, WifiIcon, WifiOffIcon } from "lucide-react";
+import { ChevronDownIcon, MapPinIcon, NavigationIcon, RotateCwIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { Logo } from "@/components/common/logo";
+import { mapsDirectionsUrl } from "@/components/customer/lib/format";
 import { orderLineText } from "@/components/customer/lib/order-status";
+import { LiveClockPill } from "@/components/customer/orders/pickup-pass";
 import { QrCodeView } from "@/components/common/qr-code-view";
 import { Button } from "@/components/ui/button";
 import { PICKUP_CODE_PREFIX } from "@/lib/constants";
@@ -28,14 +30,22 @@ function useOnline(): boolean {
   return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => false);
 }
 
-function TicketPass({ ticket }: { ticket: SavedTicket }) {
+function TicketPass({ ticket, online }: { ticket: SavedTicket; online: boolean }) {
   const [showQr, setShowQr] = useState(false);
   const { order } = ticket;
   // Tickets saved before lauk existed have no `lauk` field; orderLineText skips it then.
   const items = order.items.map(orderLineText).join("; ");
+  const { lat, lng } = order.merchant;
+  // Maps needs the network; offline the button stays visible and says why it is off.
+  const directions = online && Number.isFinite(lat) && Number.isFinite(lng) ? mapsDirectionsUrl(lat, lng) : null;
 
   return (
     <article className="overflow-hidden rounded-3xl bg-card shadow-card ring-1 ring-border">
+      {/* Same ticking clock as the online ticket: a screenshot shows a frozen time. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-deep px-4 py-2.5">
+        <LiveClockPill />
+        <p className="text-xs text-leaf">Jam berdetik: bukti tiket asli.</p>
+      </div>
       <div className="flex items-start justify-between gap-3 bg-brand-soft/70 px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{order.merchant.name}</p>
@@ -80,10 +90,31 @@ function TicketPass({ ticket }: { ticket: SavedTicket }) {
           </>
         )}
       </div>
-      <div className="border-t border-border px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2.5">
         <Link href={`/orders/${order.id}`} className="text-xs font-semibold text-primary hover:underline">
           Buka detail tiket
         </Link>
+        {directions ? (
+          <Button asChild variant="outline" className="h-10 rounded-xl text-sm font-semibold">
+            <a href={directions} target="_blank" rel="noreferrer">
+              <NavigationIcon className="size-4" aria-hidden /> Petunjuk arah
+            </a>
+          </Button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span id={`arah-${order.id}`} className="text-xs text-muted-foreground">
+              Butuh sinyal
+            </span>
+            <Button
+              variant="outline"
+              disabled
+              aria-describedby={`arah-${order.id}`}
+              className="h-10 rounded-xl text-sm font-semibold"
+            >
+              <NavigationIcon className="size-4" aria-hidden /> Petunjuk arah
+            </Button>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -139,7 +170,7 @@ export function OfflineView() {
           ) : (
             <div className="mt-3 space-y-4">
               {list.map((t) => (
-                <TicketPass key={t.order.id} ticket={t} />
+                <TicketPass key={t.order.id} ticket={t} online={online} />
               ))}
             </div>
           )}

@@ -10,7 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ApiClientError, api } from "@/lib/api/client";
-import type { OrderDetail, OrderResponse } from "@/lib/contracts";
+import type { InvalidPickupCodeDetails, OrderDetail, OrderResponse } from "@/lib/contracts";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { parsePickupCode, pickupPayload, sanitizePinInput } from "../lib/logic";
@@ -25,8 +25,17 @@ type Stage = { kind: "idle" } | { kind: "review"; order: OrderDetail; code: stri
 export function pickupErrorMessage(err: unknown): string {
   if (err instanceof ApiClientError) {
     switch (err.code) {
-      case "INVALID_PICKUP_CODE":
+      case "INVALID_PICKUP_CODE": {
+        // A wrong typed code: the server says how many tries are left before code entry locks.
+        const d = err.details as Partial<InvalidPickupCodeDetails> | undefined;
+        if (typeof d?.attempts_left === "number") {
+          const window = `${d.window_minutes ?? 10} menit`;
+          return d.attempts_left > 0
+            ? `Kode salah. Sisa ${d.attempts_left} percobaan dalam ${window}.`
+            : `Kode salah. Ketik kode dikunci selama ${window}, pindai QR pembeli dulu.`;
+        }
         return "Kode tidak ditemukan. Pastikan pembeli menunjukkan tiket aktif dari warung ini.";
+      }
       case "ORDER_STATE_CONFLICT":
         return "Pesanan ini sudah diambil sebelumnya (atau statusnya berubah).";
       case "PICKUP_WINDOW_CLOSED":

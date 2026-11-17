@@ -56,9 +56,12 @@ function Progress({ step }: { step: number }) {
     <div>
       <ol className="flex gap-1.5" aria-label="Langkah pendaftaran">
         {STEPS.map((s, i) => (
-          <li key={s.key} className="flex-1" aria-current={i === step ? "step" : undefined}>
+          <li key={s.key} className="min-w-0 flex-1" aria-current={i === step ? "step" : undefined}>
             <span className={cn("block h-1.5 rounded-full transition-colors duration-300", i <= step ? "bg-primary" : "bg-border")} />
-            <span className={cn("mt-1.5 hidden text-[11px] font-semibold sm:block", i === step ? "text-foreground" : "text-muted-foreground")}>{s.label}</span>
+            {/* All five names stay visible on phones too, so the owner sees what is still ahead. */}
+            <span className={cn("mt-1.5 block truncate text-[11px] font-semibold", i === step ? "text-foreground" : "text-muted-foreground")}>
+              {s.label}
+            </span>
           </li>
         ))}
       </ol>

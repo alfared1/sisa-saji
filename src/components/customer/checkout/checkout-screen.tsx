@@ -36,7 +36,7 @@ import { PAY_AT_WARUNG_MAX_PORTIONS } from "@/lib/constants";
 import { findItem, laukNoun } from "@/lib/lauk";
 import { formatClockId, formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { selectCartCount, selectCartEarliestEnd, useCartStore, type CartItem } from "@/stores/cart";
+import { CART_MAX_QTY_PER_ITEM, selectCartCount, selectCartEarliestEnd, useCartStore, type CartItem } from "@/stores/cart";
 import { useStoresHydrated } from "@/stores/hydration";
 import { useLocationStore } from "@/stores/location";
 import { QtyStepper } from "../bits";
@@ -71,6 +71,30 @@ import {
 type LineState = "ok" | "soldout" | "gone";
 
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/** Fair-use limits from checkout.ts (MAX_PENDING_ORDERS_PER_USER and one per warung), shown under the button. */
+const FAIR_USE_NOTE = "Paling banyak 1 pesanan belum dibayar per warung dan 2 secara total.";
+
+/**
+ * Why a line's stepper stops where it does, shown once the line reached it. `batchMax` is the
+ * cart line's max_quantity: the batch stock and CART_MAX_QTY_PER_ITEM, or the per-buyer cap
+ * the server answered with (perBuyerCaps), whichever is lower.
+ */
+function qtyCapReason({
+  ticketCapped,
+  batchMax,
+  availableStock,
+}: {
+  ticketCapped: boolean;
+  batchMax: number;
+  availableStock: number | null;
+}): string {
+  if (ticketCapped) return `Paling banyak ${PAY_AT_WARUNG_MAX_PORTIONS} porsi untuk bayar di warung`;
+  if (availableStock !== null && batchMax >= availableStock) return `Sisa ${availableStock} porsi`;
+  if (batchMax >= CART_MAX_QTY_PER_ITEM) return `Paling banyak ${CART_MAX_QTY_PER_ITEM} porsi per menu`;
+  if (availableStock === null) return `Sisa ${batchMax} porsi`;
+  return `Paling banyak ${batchMax} porsi per pembeli untuk menu ini`;
+}
 
 export function CheckoutScreen() {
   const router = useRouter();
@@ -155,6 +179,8 @@ export function CheckoutScreen() {
     return out;
   }, [detail.data, items, now]);
   const stateOf = (it: CartItem): LineState => lineState.get(it.batch_id) ?? "ok";
+  const stockOf = (it: CartItem): number | null =>
+    detail.data?.batches.find((b) => b.batch_id === it.batch_id)?.available_stock ?? null;
   /** The chosen lauk is no longer on tonight's list (only judged once fresh batch data is in). */
   const laukGone = (it: CartItem) =>
     Boolean(detail.data) && it.lauk !== null && findItem(it.lauk_available, it.lauk) === null;
@@ -402,6 +428,11 @@ export function CheckoutScreen() {
                 const state = stateOf(it);
                 const missing = state === "ok" && laukGone(it);
                 const lineMax = cartLineMax(items, it.key, it.max_quantity);
+                const stepMax = cash ? ticketLineMax(items, it.key, lineMax, PAY_AT_WARUNG_MAX_PORTIONS) : lineMax;
+                const capReason =
+                  state === "ok" && it.quantity >= stepMax
+                    ? qtyCapReason({ ticketCapped: stepMax < lineMax, batchMax: it.max_quantity, availableStock: stockOf(it) })
+                    : null;
                 const noun = laukNoun(it.category);
                 return (
                   <li key={it.key} className="py-3 first:pt-0 last:pb-0">
@@ -436,7 +467,7 @@ export function CheckoutScreen() {
                         <QtyStepper
                           value={it.quantity}
                           min={0}
-                          max={cash ? ticketLineMax(items, it.key, lineMax, PAY_AT_WARUNG_MAX_PORTIONS) : lineMax}
+                          max={stepMax}
                           size="sm"
                           label={it.lauk ? `${it.menu_name}, ${it.lauk}` : it.menu_name}
                           onChange={(v) => changeQty(it, v)}
@@ -452,6 +483,11 @@ export function CheckoutScreen() {
                         </Button>
                       )}
                     </div>
+                    {capReason && (
+                      <p className="mt-1 text-right text-[11px] text-muted-foreground" role="status">
+                        {capReason}
+                      </p>
+                    )}
                     {state === "ok" && missing && (
                       <p className="mt-2 text-xs font-semibold text-urgent">
                         {it.lauk_available.length > 0
@@ -571,6 +607,7 @@ export function CheckoutScreen() {
               <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
                 <LockIcon className="size-3 shrink-0" aria-hidden /> {holdNote}
               </p>
+              <p className="mt-1 text-center text-[11px] text-muted-foreground">{FAIR_USE_NOTE}</p>
             </div>
           </PriceAndImpactBreakdown>
         </div>
@@ -595,6 +632,7 @@ export function CheckoutScreen() {
           ) : (
             <p className="mt-2 text-center text-[11px] text-muted-foreground">{holdNote}</p>
           )}
+          <p className="mt-0.5 text-center text-[11px] text-muted-foreground">{FAIR_USE_NOTE}</p>
         </div>
       </div>
 

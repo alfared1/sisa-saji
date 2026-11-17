@@ -933,6 +933,13 @@ export const PickupLookupBody = z.object({
 export type PickupLookupBody = z.input<typeof PickupLookupBody>;
 /** → OrderResponse */
 
+/**
+ * `error.details` of 400 INVALID_PICKUP_CODE (lookup-pickup and verify-pickup) when a typed
+ * 4-digit code was wrong: typed attempts left before code entry is locked (RATE_LIMITED) for
+ * `window_minutes`. Absent for QR tokens, which are not limited.
+ */
+export type InvalidPickupCodeDetails = { attempts_left: number; window_minutes: number };
+
 /** POST /api/v1/orders/:id/verify-pickup — merchant. READY_FOR_PICKUP → COMPLETED. → OrderResponse */
 export const VerifyPickupBody = z.object({
   pickup_code_or_qr_token: z.string().trim().min(4).max(200),
@@ -1418,7 +1425,8 @@ export type MerchantReviewsResponse = {
  * PUT /api/v1/merchant/reviews/:id/reply — owner; { reply } (empty removes it). Shown under the
  * review on the warung page. 403 DEMO_LOCKED for the shared demo warung. → { review }
  */
-export const ReviewReplyBody = z.object({ reply: z.string().trim().max(300) });
+export const REVIEW_REPLY_MAX_LENGTH = 300;
+export const ReviewReplyBody = z.object({ reply: z.string().trim().max(REVIEW_REPLY_MAX_LENGTH) });
 export type ReviewReplyBody = z.input<typeof ReviewReplyBody>;
 export type ReviewReplyResponse = { review: MerchantReviewView };
 

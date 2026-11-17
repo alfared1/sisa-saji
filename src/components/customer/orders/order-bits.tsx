@@ -133,6 +133,7 @@ export function DirectionsAndWhatsAppButtons({ order }: { order: OrderDetail }) 
         title={order.merchant.name}
         description={`Chat soal pesanan ${order.order_number}`}
         onSeen={markSeen}
+        pickupDeadlineAt={order.status === "PAID" || order.status === "READY_FOR_PICKUP" ? order.pickup_deadline_at : null}
       />
     </div>
   );

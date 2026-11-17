@@ -6,7 +6,9 @@ import Link from "next/link";
 import { Clock3Icon, LeafIcon, PackageCheckIcon, RecycleIcon, ScanLineIcon } from "lucide-react";
 import { CountdownBadge } from "@/components/common/countdown-badge";
 import { OrderChatButton, OrderChatSheet } from "@/components/common/order-chat";
+import { useNow } from "@/hooks/use-now";
 import { useSearchParam } from "@/hooks/use-search-param";
+import { MERCHANT_TICKET_CANCEL_REASONS, noShowCancelOpensAt } from "@/lib/constants";
 import {
   ORDER_STATUS_LABELS,
   type OrderDetail,
@@ -93,6 +95,30 @@ export function PaymentChip({ order }: { order: OrderDetail }) {
     <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 font-semibold text-secondary-foreground">
       {cash ? "Lunas di warung" : `Lunas ${ONLINE_METHOD_LABEL[order.payment_method] ?? "online"}`}
     </span>
+  );
+}
+
+/**
+ * Footer of an open cash ticket: when it lapses, and, until the warung may pick it, from when
+ * "Tidak datang" can be chosen (so the rule is on the card, not only inside the dialog).
+ */
+function TicketCancelFooter({ order }: { order: OrderDetail }) {
+  const now = useNow(15_000);
+  const noShowFrom = noShowCancelOpensAt(order.created_at, order.pickup_deadline_at);
+  const noShowLocked = now !== null && now < noShowFrom.getTime();
+  return (
+    <div className="mt-2 -mb-1 flex flex-col items-start gap-1 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="text-xs text-muted-foreground">
+        <p>Batal otomatis pukul {formatClockId(order.pickup_deadline_at)} bila tidak diambil.</p>
+        {noShowLocked && (
+          <p className="mt-0.5">
+            &ldquo;{MERCHANT_TICKET_CANCEL_REASONS.NO_SHOW.label}&rdquo; bisa dipilih mulai pukul {formatClockId(noShowFrom)}.
+          </p>
+        )}
+      </div>
+      {/* Stacked on phones: the ghost button's label lines up with the text above. */}
+      <CancelTicketButton order={order} className="-ml-3 shrink-0 sm:ml-0" />
+    </div>
   );
 }
 
@@ -232,14 +258,12 @@ export function MerchantOrderCard({
               <OutOfStockCancelButton order={order} className="-mr-2" />
             </div>
           )}
-          {ownerActions && isCancellableTicket(order) && (
-            <div className="mt-2 -mb-1 flex flex-col items-start gap-1 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-              <p className="text-xs text-muted-foreground">
-                Batal otomatis jam {formatClockId(order.pickup_deadline_at)} bila tidak diambil.
-              </p>
-              {/* Stacked on phones: the ghost button's label lines up with the text above. */}
-              <CancelTicketButton order={order} className="-ml-3 sm:ml-0" />
-            </div>
+          {ownerActions && isCancellableTicket(order) && <TicketCancelFooter order={order} />}
+          {/* A cashier cannot decide: the request is visible, the decision stays with the owner. */}
+          {actions && isCashier && isPaidOnlineOpen(order) && order.cancel_request?.status === "PENDING" && (
+            <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
+              Pembeli minta batal. Menunggu keputusan pemilik.
+            </p>
           )}
         </div>
       </div>

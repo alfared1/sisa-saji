@@ -29,7 +29,6 @@ import { useSession } from "@/hooks/use-session";
 import { MerchantOnboardingBody, type MerchantProfile } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { isSoundEnabled, playAlert, setSoundEnabled } from "../lib/alert-sound";
 import { useMerchantMe, useUpdateMerchant } from "../lib/queries";
 import { ZOD_ID_OPTIONS } from "../lib/zod-id";
 import {
@@ -45,29 +44,8 @@ import {
 import { MerchantPage, MerchantPageHeader, SectionCard } from "../ui";
 import { HelpSection } from "./help-section";
 import { PilotSection } from "./pilot-section";
+import { SoundToggle } from "./sound-toggle";
 import { StaffSection } from "./staff-section";
-
-/** Alert tone + vibration for new orders, cancel requests and chat (per device). */
-function SoundToggle() {
-  const [on, setOn] = useState(() => isSoundEnabled());
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-3">
-      <span>
-        <span className="block text-sm font-semibold">Bunyi pesanan masuk</span>
-        <span className="block text-xs text-muted-foreground">Bunyi dan getar saat ada pesanan, permintaan batal, atau chat.</span>
-      </span>
-      <Switch
-        checked={on}
-        onCheckedChange={(v) => {
-          setOn(v);
-          setSoundEnabled(v);
-          if (v) playAlert("order");
-        }}
-        aria-label="Bunyi pesanan masuk"
-      />
-    </label>
-  );
-}
 
 /** `locked`: the shared demo warung, whose profile the API refuses to change (fields stay readable). */
 function SettingsForm({ merchant, locked }: { merchant: MerchantProfile; locked: boolean }) {
@@ -217,7 +195,7 @@ export function MerchantSettingsView() {
             <SectionCard title="Tampilan" icon={SunMoonIcon}>
               <ThemeSwitcher className="max-w-md" />
               <div className="mt-4 border-t border-border pt-4">
-                <SoundToggle />
+                <SoundToggle label="Bunyi pesanan masuk" description="Bunyi dan getar saat ada pesanan, permintaan batal, atau chat." />
               </div>
             </SectionCard>
 

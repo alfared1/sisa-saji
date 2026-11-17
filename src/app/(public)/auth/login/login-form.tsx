@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2Icon } from "lucide-react";
+import { CircleAlertIcon, Loader2Icon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,12 +44,29 @@ const COPY: Record<AuthRole, { title: string; subtitle: string }> = {
   },
 };
 
+/**
+ * The phone field shows a fixed "+62", so people type 812…; pasted 0812…, 62812… and +62812…
+ * still work. The server accepts 08…, 628… and +628… (phoneNumberSchema), so a bare 8… gets a 0.
+ */
+function phoneIdentifier(raw: string): string {
+  const v = normalisePhoneInput(raw);
+  return /^8/.test(v) ? `0${v}` : v;
+}
+
+/** "0812…" coming back from the verify page shows as "812…" next to the fixed "+62". */
+function phoneDisplay(identifier: string): string {
+  return identifier.replace(/^(\+?62|0)(?=8)/, "");
+}
+
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [role, setRole] = useState<AuthRole>(() => parseRole(params.get("role")));
   const [kind, setKind] = useState<IdentifierKind>(() => parseKind(params.get("via")));
-  const [value, setValue] = useState(() => params.get("id") ?? "");
+  const [value, setValue] = useState(() => {
+    const id = params.get("id") ?? "";
+    return parseKind(params.get("via")) === "phone" ? phoneDisplay(id) : id;
+  });
   const [fieldError, setFieldError] = useState<string | null>(null);
   const next = safeNextPath(params.get("next"));
   // The one-tap demo account exists only while the app runs on demo data.
@@ -75,12 +92,12 @@ export function LoginForm() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     setFieldError(null);
-    const identifier = kind === "phone" ? normalisePhoneInput(value) : value.trim().toLowerCase();
+    const identifier = kind === "phone" ? phoneIdentifier(value) : value.trim().toLowerCase();
     const body: OtpRequestBody = kind === "phone" ? { phone_number: identifier, role } : { email: identifier, role };
     const parsed = OtpRequestBody.safeParse(body);
     if (!parsed.success) {
       setFieldError(
-        kind === "phone" ? "Nomor HP tidak valid. Contoh: 081234567890" : "Alamat email tidak valid.",
+        kind === "phone" ? "Nomor HP tidak valid. Contoh: 812 3456 7890" : "Alamat email tidak valid.",
       );
       return;
     }
@@ -164,6 +181,14 @@ export function LoginForm() {
             {kind === "phone" ? "Nomor WhatsApp" : "Alamat email"}
           </Label>
           <div className="relative">
+            {kind === "phone" && (
+              <span
+                className="pointer-events-none absolute inset-y-2 left-0 flex items-center border-r border-border pr-2.5 pl-3 text-base font-semibold tabular-nums"
+                aria-hidden
+              >
+                +62
+              </span>
+            )}
             <Input
               id="identifier"
               name={kind === "phone" ? "tel" : "email"}
@@ -171,7 +196,7 @@ export function LoginForm() {
               inputMode={kind === "phone" ? "tel" : "email"}
               autoComplete={kind === "phone" ? "tel" : "email"}
               autoFocus
-              placeholder={kind === "phone" ? "Contoh: 0812 3456 7890" : "Contoh: nama@kampus.ac.id"}
+              placeholder={kind === "phone" ? "812 3456 7890" : "Contoh: nama@kampus.ac.id"}
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
@@ -180,16 +205,17 @@ export function LoginForm() {
               }}
               aria-invalid={fieldError ? true : undefined}
               aria-describedby={fieldError ? "identifier-error" : "identifier-hint"}
-              className={cn("h-12 rounded-xl bg-card text-base", kind === "phone" && "tabular-nums")}
+              className={cn("h-12 rounded-xl bg-card text-base", kind === "phone" && "pl-16 tabular-nums")}
             />
           </div>
           {fieldError ? (
-            <p id="identifier-error" className="text-xs font-medium text-destructive">
+            <p id="identifier-error" className="flex items-start gap-1.5 text-xs font-medium text-destructive">
+              <CircleAlertIcon className="mt-px size-3.5 shrink-0" aria-hidden />
               {fieldError}
             </p>
           ) : (
             <p id="identifier-hint" className="text-xs text-muted-foreground">
-              {kind === "phone" ? "Kode dikirim lewat WhatsApp." : "Kode dikirim ke kotak masuk email kamu."}
+              {kind === "phone" ? "Ketik nomornya tanpa 0 di depan. Kode dikirim lewat WhatsApp." : "Kode dikirim ke kotak masuk email kamu."}
             </p>
           )}
         </div>

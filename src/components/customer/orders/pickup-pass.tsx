@@ -158,7 +158,7 @@ export function PickupDeadlineBanner({ deadlineIso, payAtWarung = false }: { dea
  * Live "Tiket asli" clock: it ticks every second, so a screenshot (frozen clock) is easy to tell
  * apart from the real ticket.
  */
-function LiveClockPill() {
+export function LiveClockPill() {
   const now = useNow(1000);
   const d = now !== null ? new Date(now) : null;
   return (

@@ -18,6 +18,7 @@ import { ShellHeader } from "@/components/shell/customer-shell";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { api } from "@/lib/api/client";
+import { buyerCancelText } from "@/lib/constants";
 import type { OrderDetail, OrdersResponse } from "@/lib/contracts";
 import { formatKg } from "@/lib/impact";
 import { cn } from "@/lib/utils";
@@ -36,10 +37,21 @@ import {
 import { customerKeys } from "../lib/queries";
 import { pickupCodeLabel } from "./order-bits";
 
+/** Why a cancelled or expired order closed, in the buyer's words (same fallbacks as the order page). */
+function closedReason(order: OrderDetail): string {
+  return (
+    buyerCancelText(order.cancel_reason) ??
+    (order.status === "EXPIRED"
+      ? "Pembayaran tidak diterima sebelum batas waktu, jadi porsinya kami kembalikan ke warung."
+      : "Pesanan ini sudah dibatalkan dan stoknya dikembalikan ke warung.")
+  );
+}
+
 function OrderCard({ order }: { order: OrderDetail }) {
   const items = order.items.map(orderLineText).join("; ");
   const ready = order.status === "READY_FOR_PICKUP" || order.status === "PAID";
   const pending = order.status === "PENDING_PAYMENT";
+  const closed = order.status === "CANCELLED" || order.status === "EXPIRED";
   return (
     <Link
       href={`/orders/${order.id}`}
@@ -78,6 +90,20 @@ function OrderCard({ order }: { order: OrderDetail }) {
             <p className="text-xl leading-tight font-black tracking-[0.1em] tabular-nums">{pickupCodeLabel(order)}</p>
           </div>
           <CountdownBadge endIso={order.pickup_deadline_at} prefix="Ambil dalam" overLabel="Lewat batas" variant="solid" />
+        </div>
+      )}
+      {closed && (
+        <div className="mx-4 mt-3 rounded-2xl bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
+          <p>{closedReason(order)}</p>
+          {order.refund && (
+            <p className="mt-1 tabular-nums">
+              <span className="font-semibold text-foreground">
+                Dana dikembalikan <Money value={order.refund.amount_idr} />
+              </span>{" "}
+              · {order.refund.ref}
+              {order.merchant.is_demo_data ? " · simulasi" : ""}
+            </p>
+          )}
         </div>
       )}
       {pending && (
