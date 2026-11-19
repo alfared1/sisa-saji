@@ -196,7 +196,7 @@ export function LoginForm() {
               inputMode={kind === "phone" ? "tel" : "email"}
               autoComplete={kind === "phone" ? "tel" : "email"}
               autoFocus
-              placeholder={kind === "phone" ? "812 3456 7890" : "Contoh: nama@kampus.ac.id"}
+              placeholder={kind === "phone" ? "812 3456 7890" : "Contoh: nama@email.com"}
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);

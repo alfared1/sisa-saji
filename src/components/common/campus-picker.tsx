@@ -27,7 +27,7 @@ export function CampusPicker({
   return (
     <div className={cn("space-y-3", className)}>
       <label className="relative flex h-11 items-center">
-        <span className="sr-only">Cari kampus atau kota</span>
+        <span className="sr-only">Cari kota atau tempat</span>
         <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" aria-hidden />
         <input
           type="search"
@@ -42,7 +42,7 @@ export function CampusPicker({
             e.preventDefault();
             if (matches.length === 1) onSelect(matches[0].id);
           }}
-          placeholder="Cari kampus atau kota"
+          placeholder="Cari kota atau tempat"
           className="h-11 w-full rounded-2xl bg-muted/80 pr-10 pl-10 text-sm font-medium ring-1 ring-transparent transition outline-none placeholder:text-muted-foreground focus:bg-card focus:ring-ring/60 [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
@@ -50,7 +50,7 @@ export function CampusPicker({
             type="button"
             onClick={() => setQuery("")}
             className="absolute right-1 inline-flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-            aria-label="Hapus pencarian kampus"
+            aria-label="Hapus pencarian lokasi"
           >
             <XIcon className="size-4" />
           </button>
@@ -59,7 +59,7 @@ export function CampusPicker({
 
       {groups.length === 0 && (
         <p className="rounded-2xl bg-muted/60 px-3 py-4 text-center text-sm text-muted-foreground">
-          Belum ada kampus atau kota dengan nama itu.
+          Belum ada kota atau tempat dengan nama itu.
         </p>
       )}
 

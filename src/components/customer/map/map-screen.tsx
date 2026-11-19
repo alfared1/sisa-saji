@@ -504,7 +504,7 @@ export function MapScreen() {
           {indonesia ? (
             <>
               <div className="mb-3 flex items-baseline justify-between gap-2">
-                <RailLabel>Kota & kampus</RailLabel>
+                <RailLabel>Kota & tempat</RailLabel>
                 {!allPending && (
                   <span className="text-xs font-semibold text-muted-foreground tabular-nums">{hubCount} lokasi</span>
                 )}

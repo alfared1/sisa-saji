@@ -152,7 +152,7 @@ export function ProfileSection({ form, idPrefix = "pf" }: { form: ProfileForm; i
         <Textarea
           id={id("desc")}
           rows={2}
-          placeholder="Masakan rumahan prasmanan langganan mahasiswa."
+          placeholder="Masakan rumahan prasmanan langganan warga sekitar."
           className="rounded-2xl bg-card text-base"
           {...register("description")}
         />

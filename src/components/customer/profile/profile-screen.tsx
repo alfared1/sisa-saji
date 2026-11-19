@@ -197,7 +197,7 @@ function ProfileEditor({ user, onDone }: { user: SessionUser; onDone: () => void
         />
       </div>
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold text-muted-foreground">Kampus / kota</legend>
+        <legend className="mb-2 text-sm font-semibold text-muted-foreground">Kota atau tempat</legend>
         <div className="max-h-80 overflow-y-auto overscroll-contain rounded-2xl bg-muted/40 p-2 ring-1 ring-border">
           <CampusPicker value={campus} onSelect={setCampusId} />
         </div>
@@ -298,7 +298,7 @@ export function ProfileScreen() {
             {/* Shared demo account: name and campus are locked for everybody (API: 403 DEMO_LOCKED). */}
             {user.is_demo ? (
               <DemoLockNotice
-                message="Akun demo dipakai bersama, jadi nama dan kampusnya dikunci supaya tetap rapi untuk semua pengunjung."
+                message="Akun demo dipakai bersama, jadi nama dan lokasinya dikunci supaya tetap rapi untuk semua pengunjung."
                 className="mx-4 mb-4"
               />
             ) : (

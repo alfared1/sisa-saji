@@ -163,8 +163,8 @@ export function PushOptIn() {
           {push.permission === "denied"
             ? "Notifikasi diblokir. Izinkan lewat pengaturan browser."
             : on
-              ? "Kami kabari saat warung favorit atau warung dekat kos buka diskon malam."
-              : "Kabari aku saat warung favorit atau warung dekat kos buka diskon malam."}
+              ? "Kami kabari saat warung favorit atau warung di dekatmu buka diskon malam."
+              : "Kabari aku saat warung favorit atau warung di dekatmu buka diskon malam."}
         </p>
       </div>
       {!on && push.permission !== "denied" && (

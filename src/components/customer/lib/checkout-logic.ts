@@ -133,7 +133,7 @@ export function checkoutErrorAction(code: ErrorCode | "NETWORK_ERROR", details: 
 export function impactShareText(args: { foodKg: string; co2Kg: string; saved: string; merchant: string }): string {
   return (
     `Aku baru menyelamatkan ${args.foodKg} makanan dari ${args.merchant} lewat Sisa-Saji.\n` +
-    `Mencegah ${args.co2Kg} CO₂e dan hemat ${args.saved}. Yuk ikut selamatkan makanan di sekitar kampus!`
+    `Mencegah ${args.co2Kg} CO₂e dan hemat ${args.saved}. Yuk ikut selamatkan makanan di sekitarmu!`
   );
 }
 

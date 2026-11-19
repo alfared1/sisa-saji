@@ -63,9 +63,9 @@ export function HungerAlertDialog({ open, onOpenChange }: { open: boolean; onOpe
               <div className="mt-3 rounded-xl bg-warning-soft p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
                 <p className="flex items-start gap-2 font-semibold">
                   <TriangleAlertIcon className="mt-px size-4 shrink-0" aria-hidden />
-                  Ini titik kampus, bukan kosmu.
+                  Ini titik kota atau tempat umum, bukan tempat tinggalmu.
                 </p>
-                <p className="mt-1 pl-6">Biar jaraknya pas, nyalakan dari kos dan pakai lokasimu sekarang.</p>
+                <p className="mt-1 pl-6">Biar jaraknya pas, nyalakan dari rumah atau kos dan pakai lokasimu sekarang.</p>
                 <Button
                   type="button"
                   variant="outline"

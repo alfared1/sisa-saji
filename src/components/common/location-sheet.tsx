@@ -41,7 +41,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
           <DrawerTitle className="text-lg font-bold">Lokasi pencarian</DrawerTitle>
           <DrawerDescription>
             {mapOpen
-              ? "Lihat seluruh Indonesia, atau pilih kampus / lokasimu untuk surplus di sekitarnya."
+              ? "Lihat seluruh Indonesia, atau pilih kota atau lokasimu untuk surplus di sekitarnya."
               : "Kami tampilkan surplus makanan di sekitar titik ini."}
           </DrawerDescription>
         </DrawerHeader>
@@ -129,7 +129,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
 
           <section>
             <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
-              Pilih kampus / kota
+              Pilih kota atau tempat
             </h3>
             <CampusPicker
               value={source === "campus" && !allIndonesia ? campusId : null}

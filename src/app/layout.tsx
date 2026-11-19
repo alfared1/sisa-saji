@@ -23,11 +23,11 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   applicationName: "Sisa-Saji",
   keywords: [
-    "makan murah mahasiswa Bogor",
+    "makan murah Bogor",
     "makan malam hemat",
     "diskon makanan",
     "warung",
-    "mahasiswa",
+    "makan malam murah",
     "food waste",
     "makanan surplus",
     "PWA",

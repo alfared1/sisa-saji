@@ -30,7 +30,7 @@ export function HungerAlertBanner(): React.ReactNode {
                 Aktifkan Notifikasi Jam Lapar ({HUNGER_ALERT_TIME_LABEL})
               </h2>
               <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                Sekali semalam, kami kabari saat warung dalam {alert.radiusM} m dari kosmu buka diskon malam.
+                Sekali semalam, kami kabari saat warung dalam {alert.radiusM} m dari tempat tinggalmu buka diskon malam.
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export function HungerAlertStatus({ className }: { className?: string }): React.
           <p className="text-xs leading-snug text-muted-foreground">
             {on
               ? `Sekali semalam mulai ${HUNGER_ALERT_TIME_LABEL}, untuk warung dalam ${alert.radiusM} m dari ${alert.label ?? "titikmu"}.`
-              : `Kabari aku sekali semalam saat warung dalam ${alert.radiusM} m dari kos buka diskon malam.`}
+              : `Kabari aku sekali semalam saat warung dalam ${alert.radiusM} m dari tempat tinggalku buka diskon malam.`}
           </p>
           {/* The dialog keeps "Kirim contoh notifikasi" reachable after the alert is switched on. */}
           {on && (

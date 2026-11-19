@@ -18,9 +18,9 @@ export type UseGeolocationOptions = {
 };
 
 const ERROR_COPY: Record<Exclude<GeoStatus, "idle" | "locating" | "granted">, string> = {
-  denied: "Izin lokasi ditolak. Kami pakai lokasi kampus, kamu bisa ganti kapan saja.",
-  unavailable: "Perangkat ini tidak mendukung GPS. Pilih lokasi kampus secara manual.",
-  error: "Lokasi belum bisa didapat. Coba lagi atau pilih kampus terdekat.",
+  denied: "Izin lokasi ditolak. Kami pakai titik bawaan, kamu bisa ganti kapan saja.",
+  unavailable: "Perangkat ini tidak mendukung GPS. Pilih kota atau tempat secara manual.",
+  error: "Lokasi belum bisa didapat. Coba lagi atau pilih kota terdekat.",
 };
 
 export function getCurrentPosition(timeoutMs = 10_000): Promise<GeolocationPosition> {

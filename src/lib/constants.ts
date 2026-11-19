@@ -290,6 +290,6 @@ export const ESCALATION_INTERVAL_MINUTES = 5;
 /** Demo vouchers (platform-funded). Replace with a vouchers table when needed. */
 export const DEMO_VOUCHERS = [
   { code: "HEMAT2K", title: "Potongan Rp 2.000 (min. Rp 10.000)", discount_idr: 2000, min_subtotal_idr: 10000 },
-  { code: "MAHASISWA", title: "Potongan Rp 1.000 untuk mahasiswa", discount_idr: 1000, min_subtotal_idr: 0 },
+  { code: "HEMAT1K", title: "Potongan Rp 1.000 tanpa minimal belanja", discount_idr: 1000, min_subtotal_idr: 0 },
   { code: "BAWABEKAL", title: "Potongan Rp 1.500 bawa wadah sendiri", discount_idr: 1500, min_subtotal_idr: 8000 },
 ] as const;

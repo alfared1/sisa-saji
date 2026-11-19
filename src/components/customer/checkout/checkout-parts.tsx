@@ -208,7 +208,7 @@ export function PickupOptionsCard({
             <RadioDot checked={false} muted />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-muted-foreground">Titip Antar Kolektif Kos/Asrama</span>
+            <span className="block text-sm font-semibold text-muted-foreground">Titip Antar Kolektif</span>
             <span className="mt-1 inline-flex rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-amber-900 dark:text-amber-100">
               Segera hadir
             </span>
@@ -322,7 +322,7 @@ function DeliveryInterestSheet({
         <ResponsiveSheetHeader className="text-left">
           <ResponsiveSheetTitle className="text-lg font-bold">Kabari saya saat titip antar hadir</ResponsiveSheetTitle>
           <ResponsiveSheetDescription>
-            Titip antar kolektif belum tersedia. Kami mencatat kos atau asramamu untuk menghitung minat, dan namanya tidak
+            Titip antar kolektif belum tersedia. Kami mencatat tempat antarmu (kos, asrama, kompleks, atau kantor) untuk menghitung minat, dan namanya tidak
             ditampilkan ke orang lain.
           </ResponsiveSheetDescription>
         </ResponsiveSheetHeader>
@@ -333,7 +333,7 @@ function DeliveryInterestSheet({
             if (demo || pending) return;
             const name = kos.trim().replace(/\s+/g, " ");
             if (name.length < 2) {
-              setError("Tulis nama kos atau asrama, minimal 2 huruf.");
+              setError("Tulis nama tempatnya, minimal 2 huruf.");
               return;
             }
             onSubmit(name);
@@ -342,13 +342,13 @@ function DeliveryInterestSheet({
           {demo && <DemoLockNotice message="Akun demo tidak bisa mendaftar. Masuk dengan akunmu sendiri." />}
           <div className="space-y-1.5">
             <label htmlFor={inputId} className="text-sm font-semibold text-muted-foreground">
-              Nama kos atau asrama
+              Nama tempat antar
             </label>
             <Input
               id={inputId}
               value={kos}
               maxLength={60}
-              placeholder="Contoh: Asrama Putra IPB"
+              placeholder="Contoh: Kos Melati, Perumahan Griya Asri"
               disabled={demo}
               onChange={(e) => {
                 setKos(e.target.value);

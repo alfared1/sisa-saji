@@ -62,7 +62,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           <h2 className="mt-10 text-4xl leading-tight font-bold xl:text-[2.75rem] [@media(max-height:760px)]:mt-6 [@media(max-height:760px)]:text-3xl">Makan malam kenyang mulai Rp 10.000</h2>
           <p className="mt-3 max-w-md text-base leading-relaxed text-white/85">
-            Warung dekat kosmu menjual porsi yang belum laku menjelang tutup. Harganya turun mendekati jam tutup, tapi tidak
+            Warung di sekitarmu menjual porsi yang belum laku menjelang tutup. Harganya turun mendekati jam tutup, tapi tidak
             pernah di bawah harga lantai warung.
           </p>
           <div className="mt-8 [@media(max-height:760px)]:mt-5">

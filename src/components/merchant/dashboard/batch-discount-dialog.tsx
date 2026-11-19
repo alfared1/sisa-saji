@@ -1,12 +1,15 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Loader2Icon } from "lucide-react";
+import { Loader2Icon, ZapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { MerchantBatchView } from "@/lib/contracts";
 import { formatIdr } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { maxDiscountForFloor, priceForDiscount } from "../lib/logic";
+
+const PRESET_DISCOUNTS = [0, 20, 30, 50, 70, 80] as const;
 
 /**
  * "Ubah diskon" on a live batch: the warung picks the discount itself. The price uses the same
@@ -32,6 +35,7 @@ export function BatchDiscountDialog({
   const [pct, setPct] = useState(() => Math.min(batch.current_discount_pct, max));
   const result = priceForDiscount(batch.original_price_idr, batch.min_recovery_price_idr, pct);
   const atFloor = result.floorApplied || pct >= max;
+  const isNormalPrice = batch.current_discount_pct === 0;
 
   return (
     <Dialog
@@ -42,18 +46,46 @@ export function BatchDiscountDialog({
     >
       <DialogContent className="max-w-[calc(100%-2rem)] rounded-3xl p-6 sm:max-w-sm">
         <DialogHeader className="text-left">
-          <DialogTitle className="text-lg font-bold">Ubah diskon</DialogTitle>
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+            {isNormalPrice && <ZapIcon className="size-5 text-deal" aria-hidden />}
+            {isNormalPrice ? "Pasang diskon tutup toko" : "Ubah diskon"}
+          </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            {batch.menu_name}. Harga otomatis dimatikan supaya harganya tetap seperti yang kamu pilih.
+            {isNormalPrice
+              ? `Atur diskon untuk ${batch.menu_name} agar sisa porsi cepat laku sebelum warung tutup.`
+              : `${batch.menu_name}. Harga otomatis dimatikan supaya harganya tetap seperti yang kamu pilih.`}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-2xl bg-surface p-4 ring-1 ring-border">
           <div className="flex items-baseline justify-between gap-3">
             <label htmlFor={sliderId} className="text-sm font-semibold">
-              Diskon
+              Pilihan diskon
             </label>
             <span className="text-2xl font-extrabold tabular-nums">{pct}%</span>
           </div>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            {PRESET_DISCOUNTS.map((d) => {
+              const clamped = Math.min(d, max);
+              const selected = pct === clamped;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setPct(clamped)}
+                  className={cn(
+                    "h-8 rounded-lg px-2.5 text-xs font-semibold tabular-nums transition-colors",
+                    selected
+                      ? "bg-deal text-deal-foreground shadow-sm"
+                      : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-border/70",
+                  )}
+                >
+                  {d === 0 ? "Normal (0%)" : `${d}%`}
+                </button>
+              );
+            })}
+          </div>
+
           <input
             id={sliderId}
             type="range"
@@ -62,7 +94,7 @@ export function BatchDiscountDialog({
             step={1}
             value={pct}
             onChange={(e) => setPct(Number(e.target.value))}
-            className="mt-2 h-11 w-full accent-[var(--primary)]"
+            className="mt-3 h-11 w-full accent-[var(--primary)]"
             aria-valuetext={`${pct} persen, harga ${formatIdr(result.sellingPriceIdr)}`}
           />
           <p className="text-sm">

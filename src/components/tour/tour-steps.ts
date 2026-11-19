@@ -104,7 +104,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
     {
       id: "pembeli-sambut",
       title: "Makan malam kenyang mulai Rp 10.000",
-      body: "Menjelang tutup, warung dekat kosmu menjual porsi yang belum laku dengan harga miring. Isi menunya jelas, porsinya normal, dan kamu ambil sendiri tanpa ongkos kirim.",
+      body: "Menjelang tutup, warung di sekitarmu menjual porsi yang belum laku dengan harga miring. Isi menunya jelas, porsinya normal, dan kamu ambil sendiri tanpa ongkos kirim.",
       bullets: [
         { icon: Clock3Icon, text: `Porsi malam muncul tiap malam, ${SURPLUS_WINDOW_LABEL}` },
         { icon: ClipboardListIcon, text: "Isi porsi, lauk tersisa, dan nilai kebersihan dari pembeli lain tertulis jelas" },
@@ -164,7 +164,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
     {
       id: "mitra-gabung",
       title: "Ubah sisa jadi pemasukan",
-      body: "Porsi yang belum laku menjelang tutup tetap bisa terjual ke mahasiswa di sekitarmu. Daftarnya gratis.",
+      body: "Porsi yang belum laku menjelang tutup tetap bisa terjual ke pembeli di sekitarmu. Daftarnya gratis.",
       bullets: [
         { icon: WalletIcon, text: "Biaya layanan dibayar pembeli, hasil penjualan masuk utuh ke warungmu" },
         { icon: FootprintsIcon, text: "Pembeli datang dan mengambil sendiri, tanpa kurir" },

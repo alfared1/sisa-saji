@@ -352,6 +352,11 @@ function BatchCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill status={batch.status} startIso={batch.pickup_start_time} />
+            {batch.current_discount_pct === 0 && (
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                Harga Normal
+              </span>
+            )}
             {!closed && <CountdownBadge endIso={batch.pickup_end_time} />}
           </div>
           <h3 className="mt-1.5 text-base leading-snug font-semibold">{batch.menu_name}</h3>
@@ -426,13 +431,24 @@ function BatchCard({
               />
               Diskon otomatis
             </label>
-            <button
-              type="button"
-              onClick={() => setDiscountOpen(true)}
-              className="inline-flex h-11 items-center rounded-2xl px-3 text-xs font-semibold text-deal outline-none hover:bg-deal-soft focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              Ubah diskon
-            </button>
+            {batch.current_discount_pct === 0 ? (
+              <button
+                type="button"
+                onClick={() => setDiscountOpen(true)}
+                className="inline-flex h-11 items-center gap-1.5 rounded-2xl bg-deal/10 px-3 text-xs font-bold text-deal outline-none hover:bg-deal/20 focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <ZapIcon className="size-3.5" aria-hidden />
+                Pasang diskon tutup
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDiscountOpen(true)}
+                className="inline-flex h-11 items-center rounded-2xl px-3 text-xs font-semibold text-deal outline-none hover:bg-deal-soft focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                Ubah diskon
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setConfirm(true)}

@@ -125,7 +125,7 @@ const SDGS = [
   {
     goal: "SDG 2.1",
     title: "Pangan terjangkau",
-    body: "Makanan layak dengan harga jauh di bawah normal untuk mahasiswa dan warga sekitar warung.",
+    body: "Makanan layak dengan harga jauh di bawah normal untuk siapa saja di sekitar warung: pekerja, keluarga, dan mahasiswa.",
   },
   {
     goal: "SDG 11.6",
@@ -183,7 +183,7 @@ export function AboutView() {
             <>
               Bappenas (2021) memperkirakan Indonesia membuang 23 sampai 48 juta ton pangan setiap tahun pada 2000 sampai 2019,
               setara 115 sampai 184 kg per orang per tahun. Di warung kecil, porsi yang tidak laku sampai tutup biasanya dibuang:
-              warung rugi bahan, padahal di sekitarnya banyak mahasiswa yang mencari makan malam murah.
+              warung rugi bahan, padahal di sekitarnya banyak orang yang mencari makan malam murah: pekerja yang pulang malam, keluarga, dan mahasiswa.
             </>
           }
         />
@@ -191,7 +191,7 @@ export function AboutView() {
         <Section
           id="riset"
           title="Riset pengguna"
-          lead="Survei tim Sisa-Saji terhadap 50 mahasiswa di Kabupaten dan Kota Bogor. Angka di bawah adalah persentase responden. Hasilnya membentuk aplikasi ini: isi menu ditulis jelas, kebersihan dan porsi dinilai pembeli lain, jarak ke warung ditulis dalam meter dengan filter jalan kaki, dan porsi bisa dikunci sebelum berangkat."
+          lead="Survei awal tim Sisa-Saji terhadap 50 mahasiswa di Kabupaten dan Kota Bogor, kelompok pembeli pertama yang kami temui. Aplikasinya terbuka untuk semua orang. Angka di bawah adalah persentase responden. Hasilnya membentuk aplikasi ini: isi menu ditulis jelas, kebersihan dan porsi dinilai pembeli lain, jarak ke warung ditulis dalam meter dengan filter jalan kaki, dan porsi bisa dikunci sebelum berangkat."
         >
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {RESEARCH.map((r) => (

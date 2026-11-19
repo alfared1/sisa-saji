@@ -61,7 +61,7 @@ export type StockPatchInput = z.output<typeof StockPatchBody>;
 export type BatchPatchInput = z.output<typeof BatchPatchBody>;
 
 export const PUBLISH_MIN_LEAD_MINUTES = 10;
-export const PUBLISH_MAX_WINDOW_HOURS = 12;
+export const PUBLISH_MAX_WINDOW_HOURS = 18;
 export const SURPLUS_LIVE_RADIUS_M = DEFAULT_SEARCH_RADIUS_M;
 export const REASON_INITIAL_PUBLISH = "INITIAL_PUBLISH";
 /** The warung set the discount of a live batch by hand. */
@@ -208,8 +208,8 @@ function explain(x: {
   }
   out.push(
     x.activeUsers > 0
-      ? `Ada ${x.activeUsers} mahasiswa aktif dalam radius 2 km.`
-      : "Belum ada mahasiswa aktif terdeteksi dalam radius 2 km.",
+      ? `Ada ${x.activeUsers} calon pembeli aktif dalam radius 2 km.`
+      : "Belum ada calon pembeli aktif terdeteksi dalam radius 2 km.",
   );
   out.push(`Diskon ${x.pct}% (${formatIdr(x.price)}) untuk ${x.minutesToClose} menit sebelum tutup.`);
   if (x.floorApplied) out.push(`Harga ditahan di harga minimum ${formatIdr(x.price)} yang Anda tetapkan.`);

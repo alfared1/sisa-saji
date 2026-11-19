@@ -3,7 +3,7 @@ import { ProfileScreen } from "@/components/customer/profile/profile-screen";
 
 export const metadata: Metadata = {
   title: "Akun",
-  description: "Profil, kampus, notifikasi, dan pengaturan akun Sisa-Saji.",
+  description: "Profil, lokasi, notifikasi, dan pengaturan akun Sisa-Saji.",
 };
 
 export default function ProfilePage() {

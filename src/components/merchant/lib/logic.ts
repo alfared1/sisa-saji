@@ -11,9 +11,9 @@ import { MINUTE_MS, atWib, formatClockId, wibDate, wibTime } from "@/lib/time";
 /* Publish window                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Server rules (services/merchant/surplus.ts): end > now + 10 min and ≤ now + 12 h. */
+/** Server rules (services/merchant/surplus.ts): end > now + 10 min and ≤ now + 18 h. */
 export const PUBLISH_MIN_LEAD_MINUTES = 10;
-export const PUBLISH_MAX_WINDOW_HOURS = 12;
+export const PUBLISH_MAX_WINDOW_HOURS = 18;
 /** Client safety margin on top of the server minimum (request latency, slow taps). */
 const LEAD_MARGIN_MINUTES = 2;
 export const QUICK_WINDOW_MINUTES = [60, 90, 120] as const;

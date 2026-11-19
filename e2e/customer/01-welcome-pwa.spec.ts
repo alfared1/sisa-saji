@@ -11,7 +11,7 @@ test.describe("welcome + PWA", () => {
     await expect(impact.getByText("pesanan diambil")).toBeVisible();
     await expect(impact.getByText("Data demo", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Makan malam dari warung dekat kampus, harganya turun sebelum tutup.",
+      "Makan malam dari warung di sekitarmu, harganya turun sebelum tutup.",
     );
     // The price slider runs the real pricing rules and stops at the warung's minimum.
     const slider = page.getByRole("slider", { name: "Geser jam" });

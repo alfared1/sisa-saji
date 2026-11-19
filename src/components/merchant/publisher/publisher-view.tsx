@@ -139,7 +139,7 @@ function PublishSuccess({
               <b className="text-foreground tabular-nums">{result.notified_devices}</b> perangkat di sekitar diberi notifikasi
             </span>
           ) : (
-            <span>Tampil untuk mahasiswa dalam radius 2 km</span>
+            <span>Tampil untuk pembeli dalam radius 2 km</span>
           )}
         </p>
         {seconds !== null && seconds < 600 && (
@@ -427,7 +427,7 @@ export function SurplusPublisherView() {
       menu_id: menuId,
       initial_stock: stock,
       pickup_end_time: endIso,
-      auto_discount_enabled: autoEscalation,
+      auto_discount_enabled: override === 0 ? false : autoEscalation,
       full_portion: fullPortion,
     };
     if (menu && menu.lauk_options.length > 0) body.lauk_available = laukAvailable;

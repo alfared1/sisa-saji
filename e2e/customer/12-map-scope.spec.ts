@@ -172,7 +172,7 @@ test.describe("map scope (laptop)", () => {
   test("side panel: hub rows switch to nearby, the back button returns to Indonesia", async ({ page }) => {
     await page.goto("/map");
     const panel = page.locator("aside");
-    await expect(panel.getByText("Kota & kampus")).toBeVisible();
+    await expect(panel.getByText("Kota & tempat")).toBeVisible();
     await expect(panel.getByText(/^[\d.]+ warung di [\d.]+ kota · [\d.]+ porsi live$/)).toBeVisible();
     await expect(page.getByRole("button", { name: /^Lokasi: Seluruh Indonesia/ })).toBeVisible();
 
@@ -185,7 +185,7 @@ test.describe("map scope (laptop)", () => {
     await expectHubPick(page, KOTA_BOGOR, counts);
 
     await panel.getByRole("button", { name: "Seluruh Indonesia", exact: true }).click();
-    await expect(panel.getByText("Kota & kampus")).toBeVisible();
+    await expect(panel.getByText("Kota & tempat")).toBeVisible();
     await expect(groups(page).first()).toBeAttached();
     await expect(page.locator(".ss-radius")).toHaveCount(0);
   });

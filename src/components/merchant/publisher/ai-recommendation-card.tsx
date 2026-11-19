@@ -106,6 +106,8 @@ export function EscalationTimeline({ steps, endIso }: { steps: EscalationStep[];
   );
 }
 
+const PRESET_OVERRIDE_DISCOUNTS = [0, 20, 30, 50, 70] as const;
+
 export function ManualOverride({
   quote,
   value,
@@ -119,13 +121,22 @@ export function ManualOverride({
   const max = maxDiscountForFloor(quote.original_price_idr, quote.min_recovery_price_idr);
   if (value === null) {
     return (
-      <button
-        type="button"
-        onClick={() => onChange(Math.min(max, quote.recommended_discount_pct))}
-        className="inline-flex h-11 items-center gap-2 rounded-xl px-1 text-sm font-semibold text-foreground/80 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        Atur diskon manual
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(0)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-muted px-3 text-xs font-semibold text-foreground/80 outline-none hover:bg-muted/80 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Harga Normal (0%)
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, quote.recommended_discount_pct))}
+          className="inline-flex h-9 items-center gap-2 rounded-xl px-1 text-sm font-semibold text-foreground/80 outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          Atur diskon manual
+        </button>
+      </div>
     );
   }
   const v = Math.min(value, max);
@@ -144,6 +155,27 @@ export function ManualOverride({
           <XIcon className="size-3.5" aria-hidden /> Pakai saran harga
         </button>
       </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {PRESET_OVERRIDE_DISCOUNTS.map((d) => {
+          const clamped = Math.min(d, max);
+          const selected = v === clamped;
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onChange(clamped)}
+              className={cn(
+                "h-7 rounded-lg px-2 text-[11px] font-semibold tabular-nums transition-colors",
+                selected ? "bg-deal text-deal-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-border/60",
+              )}
+            >
+              {d === 0 ? "Normal (0%)" : `${d}%`}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mt-2 flex items-center gap-3">
         <input
           id={id}
@@ -158,10 +190,16 @@ export function ManualOverride({
         />
         <span className="w-12 text-right text-lg font-extrabold tabular-nums">{v}%</span>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Harga jual <b className="text-foreground tabular-nums">{formatIdr(result.sellingPriceIdr)}</b>
-        {result.floorApplied || v >= max ? ` · mentok di harga minimum ${formatIdr(quote.min_recovery_price_idr)}` : ""}
-      </p>
+      {v === 0 ? (
+        <p className="text-xs font-semibold text-primary">
+          Harga normal (tanpa diskon) · Cocok untuk menu baru buka dari pagi. Diskon bisa dipasang nanti saat mau tutup.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Harga jual <b className="text-foreground tabular-nums">{formatIdr(result.sellingPriceIdr)}</b>
+          {result.floorApplied || v >= max ? ` · mentok di harga minimum ${formatIdr(quote.min_recovery_price_idr)}` : ""}
+        </p>
+      )}
     </div>
   );
 }
@@ -271,7 +309,7 @@ export function AiDiscountRecommendationCard({
             <div className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2.5 text-sm text-foreground/85">
               <UsersIcon className="size-4 shrink-0" aria-hidden />
               <span>
-                <b className="tabular-nums">{quote.active_users_in_radius}</b> mahasiswa aktif dalam radius 2 km
+                <b className="tabular-nums">{quote.active_users_in_radius}</b> calon pembeli aktif dalam radius 2 km
               </span>
             </div>
 

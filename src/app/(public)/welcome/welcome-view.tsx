@@ -153,7 +153,7 @@ function TicketPreview() {
 const STEPS = [
   {
     title: "Pilih menu di Beranda",
-    body: "Lihat harga kini, sisa porsi, dan jarak jalan kaki dari kampus.",
+    body: "Lihat harga kini, sisa porsi, dan jarak jalan kaki dari lokasimu.",
     preview: <MenuCardPreview />,
   },
   {
@@ -327,7 +327,7 @@ export function WelcomeView() {
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 pt-6 pb-14 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-14 lg:px-8 lg:pt-12">
         <section>
           <h1 className="text-[2.2rem] leading-[1.08] font-bold text-balance sm:text-5xl lg:text-6xl">
-            Makan malam dari warung dekat kampus, harganya turun sebelum tutup.
+            Makan malam dari warung di sekitarmu, harganya turun sebelum tutup.
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">Ambil sendiri di warung. Tanpa kurir, tanpa biaya antar.</p>
           <div className="mt-6 flex flex-wrap gap-3">

@@ -183,7 +183,7 @@ function GeoPrompt() {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button variant="outline" className="h-11 rounded-xl font-semibold" onClick={dismiss}>
-          Pakai kampus
+          Pakai titik ini
         </Button>
         <Button
           className="h-11 rounded-xl font-semibold"

@@ -337,7 +337,7 @@ describe("price-curve labels (publisher)", () => {
     for (let k = 1; k < shown.length; k++) expect(shown[k] - shown[k - 1]).toBeGreaterThanOrEqual(3);
   });
 
-  it("never shows more than CURVE_MAX_LABELS per row, up to the 12-hour maximum window", () => {
+  it("never shows more than CURVE_MAX_LABELS per row, up to the 18-hour maximum window", () => {
     for (let n = 1; n <= PUBLISH_MAX_WINDOW_HOURS * 2 + 1; n++) {
       const pcts = Array.from({ length: n }, (_, i) => 30 + i * 2);
       expect(curvePctLabelIndexes(pcts).size).toBeLessThanOrEqual(CURVE_MAX_LABELS);
