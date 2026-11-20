@@ -465,13 +465,13 @@ export function SurplusPublisherView() {
     <MerchantPage className="pb-32 lg:pb-8">
       <MerchantPageHeader
         backHref="/merchant/dashboard"
-        title="Publikasi surplus"
-        subtitle="Pilih menu, isi jumlah porsi, cek saran harga. Selesai dalam 60 detik."
+        title="Pasang porsi menu"
+        subtitle="Pilih menu, tentukan porsi dan harga. Bisa harga normal untuk siang atau diskon untuk porsi surplus."
       />
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
         <div className="min-w-0 space-y-4">
-          <SectionCard title={<StepLabel n={1}>Menu apa yang tersisa?</StepLabel>}>
+          <SectionCard title={<StepLabel n={1}>Pilih menu makanan</StepLabel>}>
             <MenuTemplateSelector
               menus={menus}
               value={menuId}
@@ -493,7 +493,7 @@ export function SurplusPublisherView() {
             description={
               predictedForMenu && stockChoice === null
                 ? `Diisi dari perkiraan porsi sisa malam ini (±${roundPortions(predictedForMenu)} porsi). Ubah bila perlu.`
-                : "Jumlah porsi siap dijual malam ini."
+                : "Jumlah porsi yang siap dijual."
             }
           >
             <div className="mx-auto max-w-sm py-1">

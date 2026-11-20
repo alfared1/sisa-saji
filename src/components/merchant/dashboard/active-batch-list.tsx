@@ -19,6 +19,7 @@ import { formatClockId } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { LaukToggles } from "../common/lauk-toggles";
 import { BatchDiscountDialog } from "./batch-discount-dialog";
+import { BulkDiscountDialog } from "./bulk-discount-dialog";
 import { PhotoFileButton, photoAudienceText } from "../common/photo-file-button";
 import { photoVisibilityText, useBatchPhotoMutations } from "../lib/batch-photo";
 import { applyStockDelta, escalationLabel, percent, stockSegments, STOCK_MAX } from "../lib/logic";
@@ -496,24 +497,62 @@ function BatchCard({
 /** Blueprint ActiveSurplusBatchList. */
 export function ActiveSurplusBatchList({ batches, isPilot = false }: { batches: MerchantBatchView[]; isPilot?: boolean }) {
   const m = useBatchMutations();
+  const qc = useQueryClient();
   const isDemo = useSession().user?.is_demo ?? false;
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   const sorted = [...batches].sort((a, b) => {
     const rank = (s: MerchantBatchView["status"]) => (s === "ACTIVE" ? 0 : s === "SCHEDULED" ? 1 : s === "SOLD_OUT" ? 2 : 3);
     return rank(a.status) - rank(b.status) || Date.parse(a.pickup_end_time) - Date.parse(b.pickup_end_time);
   });
 
+  const activeBatches = sorted.filter((b) => b.status === "ACTIVE" || b.status === "SCHEDULED");
+
+  const handleBulkApply = async (pct: number) => {
+    setBulkSaving(true);
+    try {
+      await Promise.all(
+        activeBatches.map((b) =>
+          api.patch<BatchResponse>(`/merchant/surplus/${b.id}`, { discount_pct: pct } satisfies BatchPatchBody),
+        ),
+      );
+      toast.success(`Diskon ${pct}% berhasil diterapkan untuk ${activeBatches.length} menu!`, {
+        description: "Semua porsi sisa kini masuk ke mode obral tutup toko.",
+      });
+      setBulkOpen(false);
+      void qc.invalidateQueries({ queryKey: merchantKeys.dashboard });
+    } catch (err) {
+      toast.error(errorMessage(err, "Sebagian menu gagal diubah diskonnya."));
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   return (
     <section aria-labelledby="batches-heading">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 id="batches-heading" className="text-lg font-bold">
-          Surplus aktif <span className="text-muted-foreground tabular-nums">({batches.length})</span>
+          Porsi aktif <span className="text-muted-foreground tabular-nums">({batches.length})</span>
         </h2>
-        <Link
-          href="/merchant/surplus/new"
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <PlusIcon className="size-4" /> Tambah
-        </Link>
+        <div className="flex items-center gap-2">
+          {activeBatches.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setBulkOpen(true)}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-deal/10 px-3.5 text-xs font-bold text-deal ring-1 ring-deal/30 transition-colors hover:bg-deal/20"
+            >
+              <ZapIcon className="size-3.5" aria-hidden />
+              Obral semua ({activeBatches.length})
+            </button>
+          )}
+          <Link
+            href="/merchant/surplus/new"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-semibold text-background outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <PlusIcon className="size-4" /> Tambah
+          </Link>
+        </div>
       </div>
       {sorted.some((b) => b.status !== "EXPIRED" && b.status !== "CANCELLED") && (
         <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Foto etalase: {photoAudienceText({ isDemo, isPilot })}</p>
@@ -522,8 +561,8 @@ export function ActiveSurplusBatchList({ batches, isPilot = false }: { batches: 
         <div className="rounded-3xl bg-card ring-1 ring-border">
           <EmptyState
             icon={MegaphoneIcon}
-            title="Belum ada surplus yang tayang"
-            description="Ada porsi tersisa malam ini? Publikasikan dalam 60 detik, harga diskonnya dihitung otomatis."
+            title="Belum ada porsi yang tayang"
+            description="Ada porsi makanan siap dijual? Pasang dalam 60 detik, bisa harga normal atau diskon."
           />
         </div>
       ) : (
@@ -533,6 +572,14 @@ export function ActiveSurplusBatchList({ batches, isPilot = false }: { batches: 
           ))}
         </ul>
       )}
+
+      <BulkDiscountDialog
+        batches={sorted}
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        saving={bulkSaving}
+        onApply={handleBulkApply}
+      />
     </section>
   );
 }

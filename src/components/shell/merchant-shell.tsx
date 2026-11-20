@@ -51,7 +51,7 @@ export type MerchantNavItem = { href: string; label: string; icon: LucideIcon; e
 /** Desktop sidebar: the work of the evening. */
 export const MERCHANT_NAV: readonly MerchantNavItem[] = [
   { href: "/merchant/dashboard", label: "Dasbor", icon: LayoutDashboardIcon },
-  { href: "/merchant/surplus/new", label: "Publikasi", icon: MegaphoneIcon },
+  { href: "/merchant/surplus/new", label: "Pasang Porsi", icon: MegaphoneIcon },
   { href: "/merchant/orders", label: "Pesanan", icon: ClipboardListIcon },
   { href: "/merchant/orders/scan", label: "Scan", icon: ScanLineIcon, emphasis: true },
   { href: "/merchant/menus", label: "Menu", icon: UtensilsCrossedIcon },

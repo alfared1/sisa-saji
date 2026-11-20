@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { SurplusPublisherView } from "@/components/merchant/publisher/publisher-view";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const metadata: Metadata = { title: "Publikasi Surplus" };
+export const metadata: Metadata = { title: "Pasang Porsi Menu" };
 
 export default function SurplusNewPage() {
   return (
