@@ -50,7 +50,7 @@ export function HelpSection() {
       <div className="mt-3 grid gap-2">
         {SUPPORT_WHATSAPP && (
           <a
-            href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent("Halo tim Sisa-Saji, saya mitra warung dan butuh bantuan.")}`}
+            href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent("Halo tim Sisa-Saji, saya penjual dan butuh bantuan.")}`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-11 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground"
@@ -59,7 +59,7 @@ export function HelpSection() {
           </a>
         )}
         <Link href="/tour?peran=mitra" className="inline-flex h-11 items-center justify-center rounded-xl bg-card text-sm font-semibold ring-1 ring-border hover:bg-muted">
-          Lihat tur mitra
+          Lihat tur penjual
         </Link>
       </div>
     </SectionCard>

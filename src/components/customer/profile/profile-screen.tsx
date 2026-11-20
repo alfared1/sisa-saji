@@ -323,7 +323,7 @@ export function ProfileScreen() {
             <LinkRow href="/impact" icon={LeafIcon} label="Dampak & level" hint="kg pangan, CO₂e, uang dihemat" />
             <LinkRow href="/impact#fav-title" icon={HeartIcon} label="Warung favorit" hint="Pengingat surplus & perkiraan porsi sisa" />
             {user?.merchant_id ? (
-              <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Mitra Warung" hint="Kelola surplus warungmu" />
+              <LinkRow href="/merchant/dashboard" icon={StoreIcon} label="Dasbor Penjual" hint="Kelola surplus warungmu" />
             ) : user?.cashier_of ? (
               <LinkRow
                 href="/merchant/orders"
@@ -335,7 +335,7 @@ export function ProfileScreen() {
               <LinkRow
                 href={user && !user.is_demo ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"}
                 icon={StoreIcon}
-                label="Daftar jadi Mitra Warung"
+                label="Daftar jadi Penjual"
                 hint={user?.is_demo ? "Pakai nomor HP-mu sendiri" : "Jual porsi surplus, kurangi makanan terbuang"}
               />
             )}

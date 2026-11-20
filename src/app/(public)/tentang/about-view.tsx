@@ -112,7 +112,7 @@ const RESEARCH = [
 const BUSINESS = [
   { value: formatIdr(PLATFORM_COMMISSION_DEFAULT_IDR), label: "biaya layanan per pesanan online, dibayar pembeli (tunai di warung tanpa biaya layanan)" },
   { value: "100%", label: "harga pemulihan diterima warung, tanpa potongan komisi" },
-  { value: formatIdr(MERCHANT_PREMIUM_PRICE_IDR), label: "per bulan untuk Mitra Terverifikasi: badge dan urutan teratas" },
+  { value: formatIdr(MERCHANT_PREMIUM_PRICE_IDR), label: "per bulan untuk Penjual Terverifikasi: badge dan urutan teratas" },
   { value: formatIdr(0), label: "ongkir, karena pembeli selalu mengambil sendiri" },
 ] as const;
 

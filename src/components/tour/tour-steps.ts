@@ -171,7 +171,7 @@ const STEPS: Record<TourRole, TourStep[]> = {
         { icon: LeafIcon, text: "Makin sedikit makanan yang dibuang tiap malam" },
       ],
       tint: "deal",
-      mockLabel: "Contoh dasbor mitra: saldo warung dan pesanan surplus yang sudah diambil malam ini.",
+      mockLabel: "Contoh dasbor penjual: saldo warung dan pesanan surplus yang sudah diambil malam ini.",
     },
     {
       id: "mitra-publikasi",

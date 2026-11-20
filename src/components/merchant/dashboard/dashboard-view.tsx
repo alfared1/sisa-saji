@@ -129,7 +129,7 @@ export function MerchantDashboardView() {
 
   return (
     <MerchantPage className="space-y-4 lg:space-y-6">
-      <StoreStatusHeader merchant={d.merchant} ownerName={user?.full_name ?? "Mitra"} greeting={greeting} liveStatus={live.status} />
+      <StoreStatusHeader merchant={d.merchant} ownerName={user?.full_name ?? "Penjual"} greeting={greeting} liveStatus={live.status} />
 
       <TodaySummary today={t} />
 

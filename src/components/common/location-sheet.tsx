@@ -64,7 +64,7 @@ export function LocationSheet({ open, onOpenChange }: { open: boolean; onOpenCha
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">Seluruh Indonesia</span>
-                <span className="block text-xs text-muted-foreground">Lihat semua warung mitra di peta</span>
+                <span className="block text-xs text-muted-foreground">Lihat semua warung penjual di peta</span>
               </span>
               {allIndonesia && <CheckIcon className="size-5 text-primary" />}
             </button>

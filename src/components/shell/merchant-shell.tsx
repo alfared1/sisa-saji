@@ -246,7 +246,7 @@ export function MerchantShell({
             <Logo />
           </Link>
           <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-semibold text-deal">
-            Mitra
+            Penjual
           </span>
           <ThemeToggle align="start" className="-mr-2 ml-auto size-10" />
         </div>
@@ -266,7 +266,7 @@ export function MerchantShell({
           </div>
           {merchant?.merchant_verified && <VerifiedBadge className="mt-2" />}
         </div>
-        <nav aria-label="Menu mitra" className="flex-1 space-y-1 overflow-y-auto px-3">
+        <nav aria-label="Menu penjual" className="flex-1 space-y-1 overflow-y-auto px-3">
           {nav.map(({ href, label, icon: Icon, emphasis }) => {
             const isActive = active === href;
             return (
@@ -385,7 +385,7 @@ export function MerchantShell({
 
       {/* ---------- Mobile bottom nav ---------- */}
       <nav
-        aria-label="Menu mitra"
+        aria-label="Menu penjual"
         className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 backdrop-blur-xl lg:hidden"
       >
         <ul className="mx-auto grid max-w-2xl" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>

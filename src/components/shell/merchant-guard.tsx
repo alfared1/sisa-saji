@@ -24,7 +24,7 @@ function OnboardingFrame({ children }: { children: ReactNode }) {
       <header className="safe-top mx-auto flex h-16 w-full max-w-2xl items-center px-4">
         <Logo />
         <span className="ml-2 rounded-md bg-deal-soft px-1.5 py-0.5 text-[10px] font-semibold text-deal">
-          Mitra
+          Penjual
         </span>
       </header>
       <main id="konten" className="safe-bottom mx-auto w-full max-w-2xl px-4 pb-10">

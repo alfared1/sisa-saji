@@ -4,7 +4,7 @@ import { freshPhone } from "../helpers";
 test("fresh merchant: OTP login → 5-step onboarding wizard → dashboard", async ({ page }) => {
   const phone = freshPhone();
   await page.goto("/auth/login?role=MERCHANT");
-  await expect(page.getByRole("heading", { name: "Masuk sebagai Mitra Warung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Masuk sebagai Penjual" })).toBeVisible();
   await page.getByLabel("Nomor WhatsApp").fill(phone);
   await page.getByRole("button", { name: "Kirim kode OTP" }).click();
   const banner = page.getByText(/Mode demo\. Kode OTP: \d{6}/);

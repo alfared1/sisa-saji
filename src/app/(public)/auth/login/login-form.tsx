@@ -39,7 +39,7 @@ const COPY: Record<AuthRole, { title: string; subtitle: string }> = {
     subtitle: "Tanpa kata sandi. Kami kirim kode 6 digit untuk verifikasi.",
   },
   MERCHANT: {
-    title: "Masuk sebagai Mitra Warung",
+    title: "Masuk sebagai Penjual",
     subtitle: "Publikasikan porsi surplus dalam 60 detik dan pantau pesanan masuk.",
   },
 };
@@ -138,7 +138,7 @@ export function LoginForm() {
             Pembeli
           </TabsTrigger>
           <TabsTrigger value="MERCHANT" className="h-full rounded-xl text-sm font-semibold data-active:shadow-soft">
-            Mitra Warung
+            Penjual
           </TabsTrigger>
         </TabsList>
       </Tabs>

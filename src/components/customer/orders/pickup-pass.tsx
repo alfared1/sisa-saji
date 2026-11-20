@@ -63,7 +63,7 @@ function PayAtWarungCard({ order }: { order: OrderDetail }) {
       </p>
       {audience === "demo" && (
         <p className="mt-2 rounded-xl bg-warning-soft px-3 py-2 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
-          Warung ini data demo. Tiket bisa diverifikasi lewat akun demo mitra.
+          Warung ini data demo. Tiket bisa diverifikasi lewat akun demo penjual.
         </p>
       )}
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

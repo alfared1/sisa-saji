@@ -270,7 +270,7 @@ function ForWarung() {
               <strong>Biaya layanan {formatIdr(PLATFORM_COMMISSION_DEFAULT_IDR)}</strong> per transaksi yang berhasil, dibayar pembeli.
             </p>
             <p className="mt-1">
-              <strong>Mitra Terverifikasi {formatIdr(MERCHANT_PREMIUM_PRICE_IDR)} per bulan</strong>, opsional.
+              <strong>Penjual Terverifikasi {formatIdr(MERCHANT_PREMIUM_PRICE_IDR)} per bulan</strong>, opsional.
             </p>
           </div>
           <Link

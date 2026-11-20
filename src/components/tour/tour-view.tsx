@@ -227,7 +227,7 @@ export function TourView() {
       <Button asChild className={cn(ACTION, "flex-1 md:flex-none")}>
         <Link href="/merchant/dashboard" onClick={markTourSeen}>
           <StoreIcon />
-          Buka dasbor mitra
+          Buka dasbor penjual
         </Link>
       </Button>
     ) : (
@@ -235,7 +235,7 @@ export function TourView() {
         {/* Same target as the profile's "Daftar jadi mitra": a signed-in customer goes straight to onboarding. */}
         <Link href={user ? "/merchant/onboarding" : "/auth/login?role=MERCHANT"} onClick={markTourSeen}>
           <StoreIcon />
-          Daftar jadi mitra
+          Daftar jadi penjual
         </Link>
       </Button>
     );

@@ -589,7 +589,7 @@ export function DiscoverScreen() {
             <section aria-labelledby="sec-near" className="space-y-3">
               <SectionHeader
                 id="sec-near"
-                title="Mitra Terdekat"
+                title="Penjual Terdekat"
                 subtitle={`${sections.merchants.length} warung dalam ${scopeLabel}`}
                 icon={StoreIcon}
                 iconClassName="text-primary"

@@ -15,7 +15,7 @@ test.describe("discovery", () => {
     await first;
 
     await expect(liveLine(page)).toContainText("2 km");
-    await expect(page.getByRole("heading", { name: "Mitra Terdekat" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Penjual Terdekat" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Hampir Habis & Diskon Tertinggi" })).toBeVisible();
     const at2km = await liveMenuCount(page);
     expect(at2km).toBeGreaterThan(0);

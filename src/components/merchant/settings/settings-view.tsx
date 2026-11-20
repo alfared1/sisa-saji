@@ -211,7 +211,7 @@ export function MerchantSettingsView() {
         onOpenChange={setConfirmLogout}
         destructive
         icon={<LogOutIcon className="size-7" />}
-        title="Keluar dari akun mitra?"
+        title="Keluar dari akun penjual?"
         description="Kamu perlu kode OTP lagi untuk masuk."
         confirmLabel="Keluar"
         loading={isLoggingOut}

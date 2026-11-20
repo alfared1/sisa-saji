@@ -72,7 +72,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
       void qc.invalidateQueries({ queryKey: MERCHANT_ME_QUERY_KEY });
       void qc.invalidateQueries({ queryKey: merchantKeys.dashboard });
       setOpen(false);
-      toast.success("Selamat! Warungmu kini Mitra Terverifikasi", {
+      toast.success("Selamat! Warungmu kini Penjual Terverifikasi", {
         description: merchant.subscription_expires_at ? `Premium aktif s/d ${formatDateId(merchant.subscription_expires_at)}.` : undefined,
       });
     },
@@ -81,7 +81,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
 
   const benefits = [
     { icon: ListOrderedIcon, text: "Tampil lebih dulu di daftar pembeli dalam radius 2 km" },
-    { icon: BadgeCheckIcon, text: "Badge “Mitra Terverifikasi” di peta & halaman warung" },
+    { icon: BadgeCheckIcon, text: "Badge “Penjual Terverifikasi” di peta & halaman warung" },
     { icon: ChartColumnIcon, text: "Perkiraan porsi sisa & notifikasi ke pelanggan setia" },
   ];
 
@@ -94,7 +94,7 @@ function PremiumPlanUpgradeCard({ a }: { a: AnalyticsResponse }) {
               <CrownIcon className="size-3.5" aria-hidden /> Premium
             </span>
             <h2 id="premium-h" className="mt-2 text-lg font-bold">
-              {isPremium ? "Kamu Mitra Terverifikasi" : "Jadi Mitra Terverifikasi"}
+              {isPremium ? "Kamu Penjual Terverifikasi" : "Jadi Penjual Terverifikasi"}
             </h2>
           </div>
           <p className="text-right">

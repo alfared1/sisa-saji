@@ -8,7 +8,7 @@ import { ConfirmDialog } from "./confirm-dialog";
 
 /** Blueprint DiffMerchantModal (single-merchant cart guardrail). */
 export const DIFF_MERCHANT_COPY =
-  "Pesanan kamu sebelumnya akan terhapus apabila memesan item di mitra ini. Lanjutkan?";
+  "Pesanan kamu sebelumnya akan terhapus apabila memesan item di penjual ini. Lanjutkan?";
 
 export function DiffMerchantDialog({
   open,

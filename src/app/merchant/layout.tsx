@@ -3,7 +3,7 @@ import { DemoNotice } from "@/components/common/demo-notice";
 import { MerchantGuard } from "@/components/shell/merchant-guard";
 
 export const metadata: Metadata = {
-  title: { default: "Mitra Warung", template: "%s · Mitra Sisa-Saji" },
+  title: { default: "Area Penjual", template: "%s · Penjual Sisa-Saji" },
 };
 
 /** Merchant area: client auth/onboarding guard + responsive MerchantShell. */

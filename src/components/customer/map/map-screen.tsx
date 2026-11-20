@@ -489,7 +489,7 @@ export function MapScreen() {
           </div>
           {indonesia ? (
             <p className="rounded-2xl bg-brand-soft/70 px-3 py-2.5 text-xs leading-relaxed font-medium text-foreground">
-              Semua warung mitra Sisa-Saji. Pilih kota di bawah atau pakai lokasimu untuk melihat surplus di
+              Semua warung penjual Sisa-Saji. Pilih kota di bawah atau pakai lokasimu untuk melihat surplus di
               sekitarnya.
             </p>
           ) : (

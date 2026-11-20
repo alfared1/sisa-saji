@@ -32,7 +32,7 @@ const control = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true }).or(page.getByRole("link", { name, exact: true }));
 
 /** Option of the "Pilih peran" switch (radiogroup or tablist). */
-function roleOption(page: Page, name: "Pembeli" | "Mitra Warung", selected?: boolean) {
+function roleOption(page: Page, name: "Pembeli" | "Penjual", selected?: boolean) {
   const radio = page
     .getByRole("radiogroup", { name: ROLE_GROUP, exact: true })
     .getByRole("radio", { name, exact: true, ...(selected === undefined ? {} : { checked: selected }) });
@@ -42,7 +42,7 @@ function roleOption(page: Page, name: "Pembeli" | "Mitra Warung", selected?: boo
   return radio.or(tab);
 }
 
-async function expectTrack(page: Page, name: "Pembeli" | "Mitra Warung") {
+async function expectTrack(page: Page, name: "Pembeli" | "Penjual") {
   await expect(roleOption(page, name, true)).toHaveCount(1);
 }
 
@@ -79,7 +79,7 @@ test.describe("product tour", () => {
     await expect(slide(page, 1, total)).toHaveAttribute("aria-roledescription", "slide");
     await expect(slideTitle(page, 1, total)).toBeVisible();
     await expectTrack(page, "Pembeli");
-    await expect(roleOption(page, "Mitra Warung")).toHaveCount(1);
+    await expect(roleOption(page, "Penjual")).toHaveCount(1);
     await expect(button(page, "Lewati tur")).toBeVisible();
     await expect(button(page, "Kembali")).toBeHidden();
     await expect(button(page, "Ke langkah 1")).toHaveAttribute("aria-current", "step");
@@ -137,7 +137,7 @@ test.describe("product tour", () => {
     const pembeliFirst = ((await slideTitle(page, 1, total).textContent()) ?? "").trim();
 
     const mitraTotal = await openTour(page, "/tour?peran=mitra");
-    await expectTrack(page, "Mitra Warung");
+    await expectTrack(page, "Penjual");
     await expect(counter(page, 1, mitraTotal)).toBeVisible();
     const mitraFirst = slideTitle(page, 1, mitraTotal);
     await expect(mitraFirst).toBeVisible();
@@ -145,9 +145,9 @@ test.describe("product tour", () => {
 
     // ?langkah is 1-based and clamped to the last step.
     await openTour(page, "/tour?peran=mitra&langkah=99");
-    await expectTrack(page, "Mitra Warung");
+    await expectTrack(page, "Penjual");
     await expect(counter(page, mitraTotal, mitraTotal)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Daftar jadi mitra", exact: true })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "Daftar jadi penjual", exact: true })).toHaveAttribute(
       "href",
       "/auth/login?role=MERCHANT",
     );
@@ -160,12 +160,12 @@ test.describe("product tour", () => {
     await expect(page).not.toHaveURL(/peran=mitra/);
 
     // The role switch keeps ?peran in sync the other way too.
-    await roleOption(page, "Mitra Warung").click();
-    await expectTrack(page, "Mitra Warung");
+    await roleOption(page, "Penjual").click();
+    await expectTrack(page, "Penjual");
     await expect(page).toHaveURL(/[?&]peran=mitra(&|$)/);
 
     await openTour(page, "/tour?peran=mitra&langkah=99");
-    await page.getByRole("link", { name: "Daftar jadi mitra", exact: true }).click();
+    await page.getByRole("link", { name: "Daftar jadi penjual", exact: true }).click();
     await expect(page).toHaveURL(/\/auth\/login\?role=MERCHANT/);
     expect(await tourSeenFlag(page)).toBe("1");
   });

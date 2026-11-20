@@ -13,7 +13,7 @@ export const TOUR_ROLES: readonly TourRole[] = ["pembeli", "mitra"];
 /** Visible names of the role options; e2e selects them by these exact names. */
 export const TOUR_ROLE_LABELS: Record<TourRole, string> = {
   pembeli: "Pembeli",
-  mitra: "Mitra Warung",
+  mitra: "Penjual",
 };
 
 /** ?peran=mitra opens the merchant track; anything else (or nothing) is the pembeli track. */

@@ -111,7 +111,7 @@ export function GuestImpactBanner() {
               pangan terselamatkan
             </span>
             <span>
-              <b className="text-sm font-extrabold tabular-nums">{s.active_merchants}</b> warung mitra
+              <b className="text-sm font-extrabold tabular-nums">{s.active_merchants}</b> warung penjual
             </span>
             {s.is_demo_data && <span className="font-semibold">(data demo)</span>}
           </>

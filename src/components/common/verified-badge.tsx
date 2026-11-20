@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
  */
 export function VerifiedBadge({
   compact = false,
-  label = "Mitra Terverifikasi",
+  label = "Penjual Terverifikasi",
   className,
 }: {
   compact?: boolean;
